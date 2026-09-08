@@ -1,0 +1,85 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A805171E-5E07-466A-BCD5-D0A0288F4351}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeeCloud.Api", "src\BeeCloud.Api\BeeCloud.Api.csproj", "{79C10F08-4019-45B1-A26C-632478C62FAE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeeCloud.Application", "src\BeeCloud.Application\BeeCloud.Application.csproj", "{B6AE5743-8F7F-4B32-B3D3-C3702A4633B0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeeCloud.Domain", "src\BeeCloud.Domain\BeeCloud.Domain.csproj", "{6CF931AD-43BA-4473-9D12-EA286975D157}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeeCloud.Infrastructure", "src\BeeCloud.Infrastructure\BeeCloud.Infrastructure.csproj", "{5401B89B-19D2-4FE8-A70E-F34CC57B626E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeeCloud.Worker", "src\BeeCloud.Worker\BeeCloud.Worker.csproj", "{F372DF45-63C5-4E25-ABBA-24D789A96EB3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{B8C2977B-771A-4227-8C9A-D58FDA4037B1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeeCloud.UnitTests", "tests\BeeCloud.UnitTests\BeeCloud.UnitTests.csproj", "{86BE6478-126B-4839-8160-EE890540A12B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeeCloud.IntegrationTests", "tests\BeeCloud.IntegrationTests\BeeCloud.IntegrationTests.csproj", "{9526101B-599E-4357-8CD2-F8A73A86B3B4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeeCloud.ApiTests", "tests\BeeCloud.ApiTests\BeeCloud.ApiTests.csproj", "{CD3BC923-1169-45A5-8C7F-E8C4CF6826AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeeCloud.UiTests", "tests\BeeCloud.UiTests\BeeCloud.UiTests.csproj", "{4CC5F398-099A-4A73-8AF7-19FDEEAB3ECA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{79C10F08-4019-45B1-A26C-632478C62FAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79C10F08-4019-45B1-A26C-632478C62FAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79C10F08-4019-45B1-A26C-632478C62FAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79C10F08-4019-45B1-A26C-632478C62FAE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6AE5743-8F7F-4B32-B3D3-C3702A4633B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6AE5743-8F7F-4B32-B3D3-C3702A4633B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6AE5743-8F7F-4B32-B3D3-C3702A4633B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6AE5743-8F7F-4B32-B3D3-C3702A4633B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6CF931AD-43BA-4473-9D12-EA286975D157}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6CF931AD-43BA-4473-9D12-EA286975D157}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6CF931AD-43BA-4473-9D12-EA286975D157}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6CF931AD-43BA-4473-9D12-EA286975D157}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5401B89B-19D2-4FE8-A70E-F34CC57B626E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5401B89B-19D2-4FE8-A70E-F34CC57B626E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5401B89B-19D2-4FE8-A70E-F34CC57B626E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5401B89B-19D2-4FE8-A70E-F34CC57B626E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F372DF45-63C5-4E25-ABBA-24D789A96EB3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F372DF45-63C5-4E25-ABBA-24D789A96EB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F372DF45-63C5-4E25-ABBA-24D789A96EB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F372DF45-63C5-4E25-ABBA-24D789A96EB3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86BE6478-126B-4839-8160-EE890540A12B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86BE6478-126B-4839-8160-EE890540A12B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86BE6478-126B-4839-8160-EE890540A12B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86BE6478-126B-4839-8160-EE890540A12B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9526101B-599E-4357-8CD2-F8A73A86B3B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9526101B-599E-4357-8CD2-F8A73A86B3B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9526101B-599E-4357-8CD2-F8A73A86B3B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9526101B-599E-4357-8CD2-F8A73A86B3B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CD3BC923-1169-45A5-8C7F-E8C4CF6826AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CD3BC923-1169-45A5-8C7F-E8C4CF6826AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CD3BC923-1169-45A5-8C7F-E8C4CF6826AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CD3BC923-1169-45A5-8C7F-E8C4CF6826AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4CC5F398-099A-4A73-8AF7-19FDEEAB3ECA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4CC5F398-099A-4A73-8AF7-19FDEEAB3ECA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4CC5F398-099A-4A73-8AF7-19FDEEAB3ECA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4CC5F398-099A-4A73-8AF7-19FDEEAB3ECA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{79C10F08-4019-45B1-A26C-632478C62FAE} = {A805171E-5E07-466A-BCD5-D0A0288F4351}
+		{B6AE5743-8F7F-4B32-B3D3-C3702A4633B0} = {A805171E-5E07-466A-BCD5-D0A0288F4351}
+		{6CF931AD-43BA-4473-9D12-EA286975D157} = {A805171E-5E07-466A-BCD5-D0A0288F4351}
+		{5401B89B-19D2-4FE8-A70E-F34CC57B626E} = {A805171E-5E07-466A-BCD5-D0A0288F4351}
+		{F372DF45-63C5-4E25-ABBA-24D789A96EB3} = {A805171E-5E07-466A-BCD5-D0A0288F4351}
+		{86BE6478-126B-4839-8160-EE890540A12B} = {B8C2977B-771A-4227-8C9A-D58FDA4037B1}
+		{9526101B-599E-4357-8CD2-F8A73A86B3B4} = {B8C2977B-771A-4227-8C9A-D58FDA4037B1}
+		{CD3BC923-1169-45A5-8C7F-E8C4CF6826AB} = {B8C2977B-771A-4227-8C9A-D58FDA4037B1}
+		{4CC5F398-099A-4A73-8AF7-19FDEEAB3ECA} = {B8C2977B-771A-4227-8C9A-D58FDA4037B1}
+	EndGlobalSection
+EndGlobal

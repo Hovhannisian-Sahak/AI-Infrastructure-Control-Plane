@@ -1,0 +1,17 @@
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\bin\Debug\net8.0\BeeCloud.Infrastructure.deps.json
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\bin\Debug\net8.0\BeeCloud.Infrastructure.dll
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\bin\Debug\net8.0\BeeCloud.Infrastructure.pdb
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\bin\Debug\net8.0\BeeCloud.Application.dll
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\bin\Debug\net8.0\BeeCloud.Domain.dll
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\bin\Debug\net8.0\BeeCloud.Application.pdb
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\bin\Debug\net8.0\BeeCloud.Domain.pdb
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\obj\Debug\net8.0\BeeCloud.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\obj\Debug\net8.0\BeeCloud.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\obj\Debug\net8.0\BeeCloud.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\obj\Debug\net8.0\BeeCloud.Infrastructure.AssemblyInfo.cs
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\obj\Debug\net8.0\BeeCloud.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\obj\Debug\net8.0\BeeCloud.8A0DA510.Up2Date
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\obj\Debug\net8.0\BeeCloud.Infrastructure.dll
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\obj\Debug\net8.0\refint\BeeCloud.Infrastructure.dll
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\obj\Debug\net8.0\BeeCloud.Infrastructure.pdb
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Infrastructure\obj\Debug\net8.0\ref\BeeCloud.Infrastructure.dll

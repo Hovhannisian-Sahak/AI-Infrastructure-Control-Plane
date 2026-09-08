@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "8C1+Y+7v8SFOqi+mJ1lQNjJSc7qov1ad+Up4C8weo2w=",
+  "Source": "BeeCloud.Api",
+  "BasePath": "_content/BeeCloud.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

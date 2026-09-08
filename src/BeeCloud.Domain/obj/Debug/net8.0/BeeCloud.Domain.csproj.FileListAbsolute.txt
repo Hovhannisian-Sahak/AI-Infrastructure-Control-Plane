@@ -1,0 +1,11 @@
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Domain\bin\Debug\net8.0\BeeCloud.Domain.deps.json
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Domain\bin\Debug\net8.0\BeeCloud.Domain.dll
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Domain\bin\Debug\net8.0\BeeCloud.Domain.pdb
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Domain\obj\Debug\net8.0\BeeCloud.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Domain\obj\Debug\net8.0\BeeCloud.Domain.AssemblyInfoInputs.cache
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Domain\obj\Debug\net8.0\BeeCloud.Domain.AssemblyInfo.cs
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Domain\obj\Debug\net8.0\BeeCloud.Domain.csproj.CoreCompileInputs.cache
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Domain\obj\Debug\net8.0\BeeCloud.Domain.dll
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Domain\obj\Debug\net8.0\refint\BeeCloud.Domain.dll
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Domain\obj\Debug\net8.0\BeeCloud.Domain.pdb
+C:\Users\Honor\RiderProjects\BeeCloud\src\BeeCloud.Domain\obj\Debug\net8.0\ref\BeeCloud.Domain.dll
