@@ -1,0 +1,20 @@
+﻿services:
+
+  postgres:
+    image: postgres:16
+    container_name: beecloud-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: beecloud
+      POSTGRES_USER: beecloud
+      POSTGRES_PASSWORD: beecloud_dev_password
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - beecloud-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  beecloud-postgres-data:
