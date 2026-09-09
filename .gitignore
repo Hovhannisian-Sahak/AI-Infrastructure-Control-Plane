@@ -1,0 +1,29 @@
+﻿# .NET build output
+**/bin/
+**/obj/
+
+# Rider
+.idea/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Test results
+TestResults/
+**/TestResults/
+
+# Coverage
+coverage/
+*.coverage
+*.coveragexml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local environment/configuration
+.env
+.env.*
+!.env.example
