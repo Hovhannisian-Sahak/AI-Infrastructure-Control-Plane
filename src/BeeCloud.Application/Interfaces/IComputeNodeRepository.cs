@@ -8,6 +8,9 @@ public interface IComputeNodeRepository
         Guid id,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ComputeNode>> GetAllAsync(
+        CancellationToken cancellationToken = default);
+
     Task<bool> ExistsByNameAsync(
         string name,
         CancellationToken cancellationToken = default);

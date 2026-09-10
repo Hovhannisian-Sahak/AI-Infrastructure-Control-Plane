@@ -23,6 +23,15 @@ public class ComputeNodeRepository : IComputeNodeRepository
                 cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ComputeNode>> GetAllAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.ComputeNodes
+            .AsNoTracking()
+            .OrderBy(node => node.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> ExistsByNameAsync(
         string name,
         CancellationToken cancellationToken = default)

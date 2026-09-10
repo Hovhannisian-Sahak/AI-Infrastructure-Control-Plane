@@ -29,7 +29,8 @@ public class ComputeNodeService : IComputeNodeService
 
         if (request.GpuCount <= 0)
         {
-            throw new ArgumentException("GPU count must be greater than zero.");
+            throw new ArgumentException(
+                "GPU count must be greater than zero.");
         }
 
         var nameExists = await _repository.ExistsByNameAsync(
@@ -65,5 +66,51 @@ public class ComputeNodeService : IComputeNodeService
             UpdatedAt = node.UpdatedAt,
             LastHealthCheck = node.LastHealthCheck
         };
+    }
+
+    public async Task<ComputeNodeResponse?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var node = await _repository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (node is null)
+        {
+            return null;
+        }
+
+        return new ComputeNodeResponse
+        {
+            Id = node.Id,
+            Name = node.Name,
+            GpuModel = node.GpuModel,
+            GpuCount = node.GpuCount,
+            Status = node.Status.ToString(),
+            CreatedAt = node.CreatedAt,
+            UpdatedAt = node.UpdatedAt,
+            LastHealthCheck = node.LastHealthCheck
+        };
+    }
+    public async Task<IReadOnlyList<ComputeNodeResponse>> GetAllAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var nodes = await _repository.GetAllAsync(
+            cancellationToken);
+
+        return nodes
+            .Select(node => new ComputeNodeResponse
+            {
+                Id = node.Id,
+                Name = node.Name,
+                GpuModel = node.GpuModel,
+                GpuCount = node.GpuCount,
+                Status = node.Status.ToString(),
+                CreatedAt = node.CreatedAt,
+                UpdatedAt = node.UpdatedAt,
+                LastHealthCheck = node.LastHealthCheck
+            })
+            .ToList();
     }
 }

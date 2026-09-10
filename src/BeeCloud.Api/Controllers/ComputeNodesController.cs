@@ -26,4 +26,29 @@ public class ComputeNodesController : ControllerBase
 
         return Accepted(response);
     }
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<ComputeNodeResponse>>> GetAll(
+        CancellationToken cancellationToken)
+    {
+        var response = await _service.GetAllAsync(
+            cancellationToken);
+
+        return Ok(response);
+    }
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<ComputeNodeResponse>> GetById(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var response = await _service.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (response is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(response);
+    }
 }
