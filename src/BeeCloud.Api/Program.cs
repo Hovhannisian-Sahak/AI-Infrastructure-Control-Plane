@@ -1,3 +1,4 @@
+using BeeCloud.Api.Middleware;
 using BeeCloud.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +10,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddControllers();
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 builder.Services.AddInfrastructure(
     builder.Configuration);
 
@@ -20,7 +23,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 var summaries = new[]
