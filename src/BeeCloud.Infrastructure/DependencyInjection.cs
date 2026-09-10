@@ -1,4 +1,6 @@
-﻿using BeeCloud.Infrastructure.Persistence;
+﻿using BeeCloud.Application.Interfaces;
+using BeeCloud.Infrastructure.Persistence;
+using BeeCloud.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +17,7 @@ public static class DependencyInjection
             options.UseNpgsql(
                 configuration.GetConnectionString(
                     "BeeCloudDatabase")));
-
+        services.AddScoped<IComputeNodeRepository, ComputeNodeRepository>();
         return services;
     }
 }
