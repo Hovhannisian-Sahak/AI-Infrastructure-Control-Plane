@@ -1,4 +1,5 @@
 ﻿using BeeCloud.Application.Interfaces;
+using BeeCloud.Application.Services;
 using BeeCloud.Infrastructure.Persistence;
 using BeeCloud.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,7 @@ public static class DependencyInjection
                 configuration.GetConnectionString(
                     "BeeCloudDatabase")));
         services.AddScoped<IComputeNodeRepository, ComputeNodeRepository>();
+        services.AddScoped<IComputeNodeService, ComputeNodeService>();
         return services;
     }
 }
