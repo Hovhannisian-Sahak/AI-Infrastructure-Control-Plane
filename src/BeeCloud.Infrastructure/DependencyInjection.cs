@@ -20,6 +20,8 @@ public static class DependencyInjection
                     "BeeCloudDatabase")));
         services.AddScoped<IComputeNodeRepository, ComputeNodeRepository>();
         services.AddScoped<IComputeNodeService, ComputeNodeService>();
+        services.AddScoped<INetworkRepository, NetworkRepository>();
+        services.AddScoped<INetworkService, NetworkService>();
         return services;
     }
 }
