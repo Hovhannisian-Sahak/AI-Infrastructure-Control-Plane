@@ -22,6 +22,8 @@ public static class DependencyInjection
         services.AddScoped<IComputeNodeService, ComputeNodeService>();
         services.AddScoped<INetworkRepository, NetworkRepository>();
         services.AddScoped<INetworkService, NetworkService>();
+        services.AddScoped<INetworkAttachmentRepository, NetworkAttachmentRepository>();
+        services.AddScoped<INetworkAttachmentService, NetworkAttachmentService>();
         return services;
     }
 }
