@@ -13,6 +13,11 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<ComputeNode> ComputeNodes => Set<ComputeNode>();
+    public DbSet<Network> Networks =>
+        Set<Network>();
+
+    public DbSet<NetworkAttachment> NetworkAttachments =>
+        Set<NetworkAttachment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
