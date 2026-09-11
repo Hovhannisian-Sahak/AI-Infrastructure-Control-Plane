@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Diagnostics;
+﻿using BeeCloud.Domain.Exceptions;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BeeCloud.Api.Middleware;
@@ -24,12 +25,20 @@ public class GlobalExceptionHandler : IExceptionHandler
 
         var statusCode = exception switch
         {
-            ArgumentException => StatusCodes.Status400BadRequest,
+            ArgumentException =>
+                StatusCodes.Status400BadRequest,
+
+            KeyNotFoundException =>
+                StatusCodes.Status404NotFound,
+
+            InvalidNodeStateTransitionException =>
+                StatusCodes.Status409Conflict,
 
             InvalidOperationException =>
                 StatusCodes.Status409Conflict,
 
-            _ => StatusCodes.Status500InternalServerError
+            _ =>
+                StatusCodes.Status500InternalServerError
         };
 
         var problemDetails = new ProblemDetails
@@ -39,6 +48,9 @@ public class GlobalExceptionHandler : IExceptionHandler
             {
                 StatusCodes.Status400BadRequest =>
                     "Invalid request",
+
+                StatusCodes.Status404NotFound =>
+                    "Resource not found",
 
                 StatusCodes.Status409Conflict =>
                     "Conflict",

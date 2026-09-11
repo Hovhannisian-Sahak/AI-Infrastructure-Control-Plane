@@ -113,4 +113,66 @@ public class ComputeNodeService : IComputeNodeService
             })
             .ToList();
     }
+    public async Task<ComputeNodeResponse> StartAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var node = await _repository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (node is null)
+        {
+            throw new KeyNotFoundException(
+                $"Compute node with id '{id}' was not found.");
+        }
+
+        node.Start();
+
+        await _repository.SaveChangesAsync(
+            cancellationToken);
+
+        return new ComputeNodeResponse
+        {
+            Id = node.Id,
+            Name = node.Name,
+            GpuModel = node.GpuModel,
+            GpuCount = node.GpuCount,
+            Status = node.Status.ToString(),
+            CreatedAt = node.CreatedAt,
+            UpdatedAt = node.UpdatedAt,
+            LastHealthCheck = node.LastHealthCheck
+        };
+    }
+    public async Task<ComputeNodeResponse> StopAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var node = await _repository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (node is null)
+        {
+            throw new KeyNotFoundException(
+                $"Compute node with id '{id}' was not found.");
+        }
+
+        node.Stop();
+
+        await _repository.SaveChangesAsync(
+            cancellationToken);
+
+        return new ComputeNodeResponse
+        {
+            Id = node.Id,
+            Name = node.Name,
+            GpuModel = node.GpuModel,
+            GpuCount = node.GpuCount,
+            Status = node.Status.ToString(),
+            CreatedAt = node.CreatedAt,
+            UpdatedAt = node.UpdatedAt,
+            LastHealthCheck = node.LastHealthCheck
+        };
+    }
 }

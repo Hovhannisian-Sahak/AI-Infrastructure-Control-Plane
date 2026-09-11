@@ -51,4 +51,26 @@ public class ComputeNodesController : ControllerBase
 
         return Ok(response);
     }
+    [HttpPost("{id:guid}/start")]
+    public async Task<ActionResult<ComputeNodeResponse>> Start(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var response = await _service.StartAsync(
+            id,
+            cancellationToken);
+
+        return Ok(response);
+    }
+    [HttpPost("{id:guid}/stop")]
+    public async Task<ActionResult<ComputeNodeResponse>> Stop(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var response = await _service.StopAsync(
+            id,
+            cancellationToken);
+
+        return Ok(response);
+    }
 }

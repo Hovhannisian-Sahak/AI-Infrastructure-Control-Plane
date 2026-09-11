@@ -1,5 +1,8 @@
 using BeeCloud.Api.Middleware;
+using BeeCloud.Application.Validators;
 using BeeCloud.Infrastructure;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,9 +12,18 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddControllers();
-
+// ExceptionHandler
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+// FluentValidation
+builder.Services
+    .AddFluentValidationAutoValidation();
+
+builder.Services
+    .AddValidatorsFromAssemblyContaining<
+        CreateComputeNodeRequestValidator>();
+// ProblemDetails
 builder.Services.AddProblemDetails();
+// Infrastructure
 builder.Services.AddInfrastructure(
     builder.Configuration);
 
