@@ -192,6 +192,58 @@ public class ComputeNodeTests
             node.Status,
             Is.EqualTo(NodeStatus.Failed));
     }
+    
+    [Test]
+    public void Start_WhenProvisioning_ShouldThrow()
+    {
+        // Arrange
+        var node = CreateNode();
+
+        // Act & Assert
+        Assert.Throws<InvalidNodeStateTransitionException>(
+            () => node.Start());
+    }
+
+    [Test]
+    public void Start_WhenStopped_ShouldThrow()
+    {
+        // Arrange
+        var node = CreateRunningNode();
+
+        node.Stop();
+        node.CompleteStopping();
+
+        // Act & Assert
+        Assert.Throws<InvalidNodeStateTransitionException>(
+            () => node.Start());
+    }
+
+    [Test]
+    public void Stop_WhenAvailable_ShouldThrow()
+    {
+        // Arrange
+        var node = CreateNode();
+        node.MarkAvailable();
+
+        // Act & Assert
+        Assert.Throws<InvalidNodeStateTransitionException>(
+            () => node.Stop());
+    }
+    [Test]
+    public void RecordHealthCheck_ShouldUpdateLastHealthCheck()
+    {
+        // Arrange
+        var node = CreateNode();
+        var timestamp = DateTime.UtcNow;
+
+        // Act
+        node.RecordHealthCheck(timestamp);
+
+        // Assert
+        Assert.That(
+            node.LastHealthCheck,
+            Is.EqualTo(timestamp));
+    }
 
     private static ComputeNode CreateNode()
     {
