@@ -15,5 +15,8 @@ public interface IHealthCheckService
 
     Task<IReadOnlyList<HealthCheckResponse>> GetHistoryAsync(
         Guid computeNodeId,
+        DateTime? from = null,
+        DateTime? to = null,
+        int limit = 100,
         CancellationToken cancellationToken = default);
 }

@@ -53,10 +53,16 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<HealthCheckResponse>>>
         GetHistory(
             Guid nodeId,
-            CancellationToken cancellationToken)
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] int limit = 100,
+            CancellationToken cancellationToken = default)
     {
         var response = await _service.GetHistoryAsync(
             nodeId,
+            from,
+            to,
+            limit,
             cancellationToken);
 
         return Ok(response);

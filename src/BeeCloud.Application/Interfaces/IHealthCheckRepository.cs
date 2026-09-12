@@ -10,6 +10,9 @@ public interface IHealthCheckRepository
 
     Task<IReadOnlyList<HealthCheck>> GetHistoryAsync(
         Guid computeNodeId,
+        DateTime? from = null,
+        DateTime? to = null,
+        int limit = 100,
         CancellationToken cancellationToken = default);
 
     Task AddAsync(

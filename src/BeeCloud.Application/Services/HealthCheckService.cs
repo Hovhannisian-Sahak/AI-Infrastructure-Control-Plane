@@ -84,6 +84,9 @@ public class HealthCheckService : IHealthCheckService
 
     public async Task<IReadOnlyList<HealthCheckResponse>> GetHistoryAsync(
         Guid computeNodeId,
+        DateTime? from = null,
+        DateTime? to = null,
+        int limit = 100,
         CancellationToken cancellationToken = default)
     {
         var node = await _computeNodeRepository.GetByIdAsync(
@@ -96,9 +99,32 @@ public class HealthCheckService : IHealthCheckService
                 $"Compute node with id '{computeNodeId}' was not found.");
         }
 
+        if (limit <= 0)
+        {
+            throw new ArgumentException(
+                "Limit must be greater than zero.",
+                nameof(limit));
+        }
+
+        if (limit > 1000)
+        {
+            throw new ArgumentException(
+                "Limit cannot be greater than 1000.",
+                nameof(limit));
+        }
+
+        if (from.HasValue && to.HasValue && from > to)
+        {
+            throw new ArgumentException(
+                "'from' must be earlier than or equal to 'to'.");
+        }
+
         var healthChecks =
             await _healthCheckRepository.GetHistoryAsync(
                 computeNodeId,
+                from,
+                to,
+                limit,
                 cancellationToken);
 
         return healthChecks

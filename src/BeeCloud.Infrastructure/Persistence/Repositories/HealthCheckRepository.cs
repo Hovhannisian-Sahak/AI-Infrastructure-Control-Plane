@@ -27,13 +27,31 @@ public class HealthCheckRepository : IHealthCheckRepository
 
     public async Task<IReadOnlyList<HealthCheck>> GetHistoryAsync(
         Guid computeNodeId,
+        DateTime? from = null,
+        DateTime? to = null,
+        int limit = 100,
         CancellationToken cancellationToken = default)
     {
-        return await _dbContext.HealthChecks
+        var query = _dbContext.HealthChecks
             .AsNoTracking()
             .Where(healthCheck =>
-                healthCheck.ComputeNodeId == computeNodeId)
+                healthCheck.ComputeNodeId == computeNodeId);
+
+        if (from.HasValue)
+        {
+            query = query.Where(
+                healthCheck => healthCheck.CheckedAt >= from.Value);
+        }
+
+        if (to.HasValue)
+        {
+            query = query.Where(
+                healthCheck => healthCheck.CheckedAt <= to.Value);
+        }
+
+        return await query
             .OrderByDescending(healthCheck => healthCheck.CheckedAt)
+            .Take(limit)
             .ToListAsync(cancellationToken);
     }
 
