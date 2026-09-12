@@ -19,6 +19,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<NetworkAttachment> NetworkAttachments =>
         Set<NetworkAttachment>();
     public DbSet<HealthCheck> HealthChecks => Set<HealthCheck>();
+    public DbSet<Incident> Incidents => Set<Incident>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
