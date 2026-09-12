@@ -12,7 +12,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(
                 "BeeCloudDatabase")));
 
 builder.Services.AddScoped<IComputeNodeRepository, ComputeNodeRepository>();
+builder.Services.AddScoped<IHealthCheckRepository, HealthCheckRepository>();
 builder.Services.AddHostedService<ProvisioningWorker>();
-
+builder.Services.AddHostedService<HealthMonitoringWorker>();
+builder.Services.AddHostedService<RemediationWorker>();
 var host = builder.Build();
 host.Run();
