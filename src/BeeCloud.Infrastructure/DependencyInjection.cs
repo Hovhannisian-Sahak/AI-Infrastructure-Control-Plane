@@ -26,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<INetworkAttachmentService, NetworkAttachmentService>();
         services.AddScoped<IHealthCheckRepository, HealthCheckRepository>();
         services.AddScoped<IHealthCheckService, HealthCheckService>();
+        services.AddScoped<IIncidentRepository, IncidentRepository>();
+        services.AddScoped<IIncidentService, IncidentService>();
         return services;
     }
 }

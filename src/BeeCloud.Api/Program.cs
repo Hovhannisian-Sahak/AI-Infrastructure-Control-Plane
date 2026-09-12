@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using BeeCloud.Api.Middleware;
 using BeeCloud.Application.Validators;
 using BeeCloud.Infrastructure;
@@ -11,7 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter());
+    });
 // ExceptionHandler
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 // FluentValidation
