@@ -1,4 +1,5 @@
 ﻿using BeeCloud.Domain.Entities;
+using BeeCloud.Domain.Enums;
 
 namespace BeeCloud.Application.Interfaces;
 
@@ -9,6 +10,10 @@ public interface IComputeNodeRepository
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ComputeNode>> GetAllAsync(
+        CancellationToken cancellationToken = default);
+    
+    Task<IReadOnlyList<ComputeNode>> GetByStatusAsync(
+        NodeStatus status,
         CancellationToken cancellationToken = default);
 
     Task<bool> ExistsByNameAsync(

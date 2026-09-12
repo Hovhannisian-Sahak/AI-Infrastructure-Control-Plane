@@ -1,5 +1,6 @@
 ﻿using BeeCloud.Application.Interfaces;
 using BeeCloud.Domain.Entities;
+using BeeCloud.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace BeeCloud.Infrastructure.Persistence.Repositories;
@@ -31,7 +32,15 @@ public class ComputeNodeRepository : IComputeNodeRepository
             .OrderBy(node => node.CreatedAt)
             .ToListAsync(cancellationToken);
     }
-
+    public async Task<IReadOnlyList<ComputeNode>> GetByStatusAsync(
+        NodeStatus status,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.ComputeNodes
+            .Where(node => node.Status == status)
+            .OrderBy(node => node.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
     public async Task<bool> ExistsByNameAsync(
         string name,
         CancellationToken cancellationToken = default)
