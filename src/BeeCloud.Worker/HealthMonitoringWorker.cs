@@ -87,6 +87,15 @@ public class HealthMonitoringWorker : BackgroundService
                         "Node {NodeId} ({NodeName}) is unhealthy.",
                         node.Id,
                         node.Name);
+                    
+                    var incidentService =
+                        scope.ServiceProvider
+                            .GetRequiredService<IIncidentService>();
+
+                    await incidentService.CreateForUnhealthyNodeAsync(
+                        node,
+                        healthCheck,
+                        cancellationToken);
                 }
                 else
                 {

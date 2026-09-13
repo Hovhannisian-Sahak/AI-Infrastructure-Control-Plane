@@ -31,6 +31,21 @@ public class IncidentTests
     }
 
     [Test]
+    public void NewIncident_ShouldStoreNodeId()
+    {
+        var nodeId = Guid.NewGuid();
+
+        var incident = new Incident(
+            nodeId,
+            IncidentSeverity.High,
+            "GPU failure");
+
+        Assert.That(
+            incident.ComputeNodeId,
+            Is.EqualTo(nodeId));
+    }
+
+    [Test]
     public void StartInvestigation_WhenOpen_ShouldBecomeInvestigating()
     {
         var incident = CreateIncident();
@@ -69,6 +84,10 @@ public class IncidentTests
         Assert.That(
             incident.Status,
             Is.EqualTo(IncidentStatus.Resolved));
+
+        Assert.That(
+            incident.ResolvedAt,
+            Is.Not.Null);
     }
 
     [Test]

@@ -1,5 +1,4 @@
-﻿using BeeCloud.Application.DTOs.Incidents;
-using BeeCloud.Application.Interfaces;
+﻿using BeeCloud.Application.Interfaces;
 using BeeCloud.Application.Services;
 using BeeCloud.Domain.Entities;
 using BeeCloud.Domain.Enums;
@@ -27,35 +26,33 @@ public class IncidentServiceTests
     }
 
     [Test]
-    public async Task CreateAsync_WhenNodeExists_ShouldCreateIncident()
+    public async Task CreateForUnhealthyNodeAsync_WhenNoActiveIncidentExists_ShouldCreateIncident()
     {
         var node = CreateNode();
+        var healthCheck = CreateUnhealthyHealthCheck(node.Id);
 
-        _computeNodeRepository
-            .Setup(repository => repository.GetByIdAsync(
+        _incidentRepository
+            .Setup(repository => repository.GetActiveForNodeAsync(
                 node.Id,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(node);
+            .ReturnsAsync((Incident?)null);
 
-        var request = new CreateIncidentRequest
-        {
-            ComputeNodeId = node.Id,
-            Severity = IncidentSeverity.Critical,
-            Title = "GPU overheating",
-            Description = "GPU temperature exceeded the threshold."
-        };
-
-        var result = await _service.CreateAsync(request);
+        var result = await _service.CreateForUnhealthyNodeAsync(
+            node,
+            healthCheck);
 
         Assert.That(result, Is.Not.Null);
-        Assert.That(result.ComputeNodeId, Is.EqualTo(node.Id));
-        Assert.That(result.Severity, Is.EqualTo(IncidentSeverity.Critical));
+        Assert.That(result!.ComputeNodeId, Is.EqualTo(node.Id));
         Assert.That(result.Status, Is.EqualTo(IncidentStatus.Open));
-        Assert.That(result.Title, Is.EqualTo("GPU overheating"));
+        Assert.That(result.Severity, Is.EqualTo(IncidentSeverity.Critical));
+        Assert.That(result.Title, Is.EqualTo("GPU overheat detected"));
 
         _incidentRepository.Verify(
             repository => repository.AddAsync(
-                It.IsAny<Incident>(),
+                It.Is<Incident>(incident =>
+                    incident.ComputeNodeId == node.Id &&
+                    incident.Status == IncidentStatus.Open &&
+                    incident.Severity == IncidentSeverity.Critical),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -66,29 +63,58 @@ public class IncidentServiceTests
     }
 
     [Test]
-    public void CreateAsync_WhenNodeDoesNotExist_ShouldThrow()
+    public async Task CreateForUnhealthyNodeAsync_WhenActiveIncidentExists_ShouldNotCreateDuplicate()
     {
-        var nodeId = Guid.NewGuid();
+        var node = CreateNode();
+        var healthCheck = CreateUnhealthyHealthCheck(node.Id);
+        var existingIncident = CreateIncident(
+            node.Id,
+            IncidentStatus.Open);
 
-        _computeNodeRepository
-            .Setup(repository => repository.GetByIdAsync(
-                nodeId,
+        _incidentRepository
+            .Setup(repository => repository.GetActiveForNodeAsync(
+                node.Id,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((ComputeNode?)null);
+            .ReturnsAsync(existingIncident);
 
-        var request = new CreateIncidentRequest
-        {
-            ComputeNodeId = nodeId,
-            Severity = IncidentSeverity.High,
-            Title = "GPU failure"
-        };
+        var result = await _service.CreateForUnhealthyNodeAsync(
+            node,
+            healthCheck);
 
-        var exception = Assert.ThrowsAsync<KeyNotFoundException>(
-            async () => await _service.CreateAsync(request));
+        Assert.That(result, Is.Null);
 
-        Assert.That(
-            exception!.Message,
-            Does.Contain(nodeId.ToString()));
+        _incidentRepository.Verify(
+            repository => repository.AddAsync(
+                It.IsAny<Incident>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _incidentRepository.Verify(
+            repository => repository.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Test]
+    public async Task CreateForUnhealthyNodeAsync_WhenInvestigatingIncidentExists_ShouldNotCreateDuplicate()
+    {
+        var node = CreateNode();
+        var healthCheck = CreateUnhealthyHealthCheck(node.Id);
+        var existingIncident = CreateIncident(
+            node.Id,
+            IncidentStatus.Investigating);
+
+        _incidentRepository
+            .Setup(repository => repository.GetActiveForNodeAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingIncident);
+
+        var result = await _service.CreateForUnhealthyNodeAsync(
+            node,
+            healthCheck);
+
+        Assert.That(result, Is.Null);
 
         _incidentRepository.Verify(
             repository => repository.AddAsync(
@@ -98,82 +124,117 @@ public class IncidentServiceTests
     }
 
     [Test]
-    public void CreateAsync_WhenNodeIdIsEmpty_ShouldThrow()
+    public async Task CreateForUnhealthyNodeAsync_WhenOnlyResolvedIncidentExists_ShouldCreateNewIncident()
     {
-        var request = new CreateIncidentRequest
-        {
-            ComputeNodeId = Guid.Empty,
-            Severity = IncidentSeverity.High,
-            Title = "GPU failure"
-        };
+        var node = CreateNode();
+        var healthCheck = CreateUnhealthyHealthCheck(node.Id);
+        var resolvedIncident = CreateIncident(
+            node.Id,
+            IncidentStatus.Resolved);
 
-        Assert.ThrowsAsync<ArgumentException>(
-            async () => await _service.CreateAsync(request));
+        _incidentRepository
+            .Setup(repository => repository.GetActiveForNodeAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Incident?)null);
+
+        var result = await _service.CreateForUnhealthyNodeAsync(
+            node,
+            healthCheck);
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Status, Is.EqualTo(IncidentStatus.Open));
+
+        _incidentRepository.Verify(
+            repository => repository.AddAsync(
+                It.IsAny<Incident>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Test]
-    public void CreateAsync_WhenTitleIsEmpty_ShouldThrow()
+    public async Task CreateForUnhealthyNodeAsync_WhenGpuTemperatureIsHigh_ShouldCreateHighSeverityIncident()
     {
         var node = CreateNode();
 
-        _computeNodeRepository
-            .Setup(repository => repository.GetByIdAsync(
+        var healthCheck = new HealthCheck(
+            node.Id,
+            isHealthy: false,
+            cpuUsagePercent: 70,
+            gpuUsagePercent: 90,
+            gpuTemperatureCelsius: 95);
+
+        _incidentRepository
+            .Setup(repository => repository.GetActiveForNodeAsync(
                 node.Id,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(node);
+            .ReturnsAsync((Incident?)null);
 
-        var request = new CreateIncidentRequest
-        {
-            ComputeNodeId = node.Id,
-            Severity = IncidentSeverity.High,
-            Title = ""
-        };
+        var result = await _service.CreateForUnhealthyNodeAsync(
+            node,
+            healthCheck);
 
-        Assert.ThrowsAsync<ArgumentException>(
-            async () => await _service.CreateAsync(request));
+        Assert.That(result, Is.Not.Null);
+        Assert.That(
+            result!.Severity,
+            Is.EqualTo(IncidentSeverity.High));
     }
 
     [Test]
-    public async Task StartInvestigationAsync_WhenIncidentIsOpen_ShouldInvestigate()
+    public async Task CreateForUnhealthyNodeAsync_WhenGpuFailureIsDetected_ShouldCreateHighSeverityIncident()
     {
-        var incident = CreateIncident();
+        var node = CreateNode();
+
+        var healthCheck = new HealthCheck(
+            node.Id,
+            isHealthy: false,
+            cpuUsagePercent: 40,
+            gpuUsagePercent: 0,
+            gpuTemperatureCelsius: 45);
 
         _incidentRepository
-            .Setup(repository => repository.GetByIdAsync(
-                incident.Id,
+            .Setup(repository => repository.GetActiveForNodeAsync(
+                node.Id,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(incident);
+            .ReturnsAsync((Incident?)null);
 
-        var result = await _service.StartInvestigationAsync(incident.Id);
+        var result = await _service.CreateForUnhealthyNodeAsync(
+            node,
+            healthCheck);
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(
+            result!.Severity,
+            Is.EqualTo(IncidentSeverity.High));
 
         Assert.That(
-            result.Status,
-            Is.EqualTo(IncidentStatus.Investigating));
-
-        _incidentRepository.Verify(
-            repository => repository.SaveChangesAsync(
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+            result.Title,
+            Is.EqualTo("GPU failure detected"));
     }
 
     [Test]
-    public async Task ResolveAsync_WhenIncidentIsOpen_ShouldResolve()
+    public async Task ResolveForNodeAsync_WhenActiveIncidentExists_ShouldResolveIncident()
     {
-        var incident = CreateIncident();
+        var node = CreateNode();
+        var incident = CreateIncident(
+            node.Id,
+            IncidentStatus.Open);
 
         _incidentRepository
-            .Setup(repository => repository.GetByIdAsync(
-                incident.Id,
+            .Setup(repository => repository.GetActiveForNodeAsync(
+                node.Id,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(incident);
 
-        var result = await _service.ResolveAsync(incident.Id);
+        await _service.ResolveForNodeAsync(node.Id);
 
         Assert.That(
-            result.Status,
+            incident.Status,
             Is.EqualTo(IncidentStatus.Resolved));
 
-        Assert.That(result.ResolvedAt, Is.Not.Null);
+        Assert.That(
+            incident.ResolvedAt,
+            Is.Not.Null);
 
         _incidentRepository.Verify(
             repository => repository.SaveChangesAsync(
@@ -182,49 +243,22 @@ public class IncidentServiceTests
     }
 
     [Test]
-    public void GetByIdAsync_WhenIncidentDoesNotExist_ShouldReturnNull()
+    public async Task ResolveForNodeAsync_WhenNoActiveIncidentExists_ShouldDoNothing()
     {
-        var incidentId = Guid.NewGuid();
+        var nodeId = Guid.NewGuid();
 
         _incidentRepository
-            .Setup(repository => repository.GetByIdAsync(
-                incidentId,
+            .Setup(repository => repository.GetActiveForNodeAsync(
+                nodeId,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((Incident?)null);
 
-        var result = _service.GetByIdAsync(incidentId);
+        await _service.ResolveForNodeAsync(nodeId);
 
-        Assert.That(result.Result, Is.Null);
-    }
-
-    [Test]
-    public async Task StartInvestigationAsync_WhenIncidentDoesNotExist_ShouldThrow()
-    {
-        var incidentId = Guid.NewGuid();
-
-        _incidentRepository
-            .Setup(repository => repository.GetByIdAsync(
-                incidentId,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Incident?)null);
-
-        Assert.ThrowsAsync<KeyNotFoundException>(
-            async () => await _service.StartInvestigationAsync(incidentId));
-    }
-
-    [Test]
-    public async Task ResolveAsync_WhenIncidentDoesNotExist_ShouldThrow()
-    {
-        var incidentId = Guid.NewGuid();
-
-        _incidentRepository
-            .Setup(repository => repository.GetByIdAsync(
-                incidentId,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Incident?)null);
-
-        Assert.ThrowsAsync<KeyNotFoundException>(
-            async () => await _service.ResolveAsync(incidentId));
+        _incidentRepository.Verify(
+            repository => repository.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private static ComputeNode CreateNode()
@@ -235,12 +269,36 @@ public class IncidentServiceTests
             8);
     }
 
-    private static Incident CreateIncident()
+    private static HealthCheck CreateUnhealthyHealthCheck(
+        Guid nodeId)
     {
-        return new Incident(
-            Guid.NewGuid(),
+        return new HealthCheck(
+            nodeId,
+            isHealthy: false,
+            cpuUsagePercent: 65,
+            gpuUsagePercent: 95,
+            gpuTemperatureCelsius: 105);
+    }
+
+    private static Incident CreateIncident(
+        Guid nodeId,
+        IncidentStatus status)
+    {
+        var incident = new Incident(
+            nodeId,
             IncidentSeverity.High,
             "GPU failure",
             "GPU became unavailable.");
+
+        if (status == IncidentStatus.Investigating)
+        {
+            incident.StartInvestigation();
+        }
+        else if (status == IncidentStatus.Resolved)
+        {
+            incident.Resolve();
+        }
+
+        return incident;
     }
 }

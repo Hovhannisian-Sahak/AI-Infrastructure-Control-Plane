@@ -14,13 +14,16 @@ public class IncidentRepository : IIncidentRepository
         _dbContext = dbContext;
     }
 
-    public async Task<Incident?> GetByIdAsync(
-        Guid id,
+    public async Task<Incident?> GetActiveForNodeAsync(
+        Guid computeNodeId,
         CancellationToken cancellationToken = default)
     {
         return await _dbContext.Incidents
             .FirstOrDefaultAsync(
-                incident => incident.Id == id,
+                incident =>
+                    incident.ComputeNodeId == computeNodeId &&
+                    (incident.Status == IncidentStatus.Open ||
+                     incident.Status == IncidentStatus.Investigating),
                 cancellationToken);
     }
 

@@ -106,7 +106,9 @@ public class RemediationWorker : BackgroundService
     var repository =
         scope.ServiceProvider
             .GetRequiredService<IComputeNodeRepository>();
-
+    var incidentService =
+        scope.ServiceProvider
+            .GetRequiredService<IIncidentService>();
     var nodes = await repository.GetByStatusAsync(
         NodeStatus.Quarantined,
         cancellationToken);
@@ -136,10 +138,14 @@ public class RemediationWorker : BackgroundService
 
             node.ClearFault();
             node.Recover();
-
+            
             await repository.SaveChangesAsync(
                 cancellationToken);
 
+            await incidentService.ResolveForNodeAsync(
+                node.Id,
+                cancellationToken);
+            
             _logger.LogInformation(
                 "Node {NodeId} ({NodeName}) successfully recovered.",
                 node.Id,

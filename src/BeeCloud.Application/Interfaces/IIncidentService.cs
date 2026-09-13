@@ -1,12 +1,14 @@
 ﻿using BeeCloud.Application.DTOs.Incidents;
+using BeeCloud.Domain.Entities;
 using BeeCloud.Domain.Enums;
 
 namespace BeeCloud.Application.Interfaces;
 
 public interface IIncidentService
 {
-    Task<IncidentResponse> CreateAsync(
-        CreateIncidentRequest request,
+    Task<IncidentResponse?> CreateForUnhealthyNodeAsync(
+        ComputeNode node,
+        HealthCheck healthCheck,
         CancellationToken cancellationToken = default);
 
     Task<IncidentResponse?> GetByIdAsync(
@@ -23,7 +25,7 @@ public interface IIncidentService
         Guid id,
         CancellationToken cancellationToken = default);
 
-    Task<IncidentResponse> ResolveAsync(
-        Guid id,
+    Task ResolveForNodeAsync(
+        Guid nodeId,
         CancellationToken cancellationToken = default);
 }
