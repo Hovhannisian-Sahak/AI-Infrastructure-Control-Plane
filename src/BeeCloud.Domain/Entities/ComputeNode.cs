@@ -16,6 +16,8 @@ public class ComputeNode
     public int GpuCount { get; private set; }
 
     public NodeStatus Status { get; private set; }
+    
+    public NodeFault ActiveFault { get; private set; }
 
     public DateTime CreatedAt { get; private set; }
 
@@ -54,7 +56,7 @@ public class ComputeNode
         GpuCount = gpuCount;
 
         Status = NodeStatus.Provisioning;
-
+        ActiveFault = NodeFault.None;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
     }
@@ -155,8 +157,25 @@ public class ComputeNode
 
             (NodeStatus.Quarantined, NodeStatus.Failed)
                 => true,
-
+            
+            (NodeStatus.Remediating, NodeStatus.Failed) => true,
             _ => false
         };
+    }
+    public void SimulateFault(NodeFault fault)
+    {
+        if (fault == NodeFault.None)
+            throw new ArgumentException(
+                "Fault must be specified.",
+                nameof(fault));
+
+        ActiveFault = fault;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ClearFault()
+    {
+        ActiveFault = NodeFault.None;
+        UpdatedAt = DateTime.UtcNow;
     }
 }

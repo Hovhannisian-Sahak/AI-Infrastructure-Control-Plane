@@ -32,7 +32,12 @@ public class ComputeNodeConfiguration
             .HasConversion<string>()
             .HasMaxLength(30)
             .IsRequired();
-
+        
+        builder.Property(node => node.ActiveFault)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(50);
+        
         builder.Property(node => node.CreatedAt)
             .IsRequired();
 

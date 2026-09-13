@@ -62,6 +62,7 @@ public class ComputeNodeService : IComputeNodeService
             GpuModel = node.GpuModel,
             GpuCount = node.GpuCount,
             Status = node.Status.ToString(),
+            ActiveFault = node.ActiveFault.ToString(),
             CreatedAt = node.CreatedAt,
             UpdatedAt = node.UpdatedAt,
             LastHealthCheck = node.LastHealthCheck
@@ -88,6 +89,7 @@ public class ComputeNodeService : IComputeNodeService
             GpuModel = node.GpuModel,
             GpuCount = node.GpuCount,
             Status = node.Status.ToString(),
+            ActiveFault = node.ActiveFault.ToString(),
             CreatedAt = node.CreatedAt,
             UpdatedAt = node.UpdatedAt,
             LastHealthCheck = node.LastHealthCheck
@@ -107,6 +109,7 @@ public class ComputeNodeService : IComputeNodeService
                 GpuModel = node.GpuModel,
                 GpuCount = node.GpuCount,
                 Status = node.Status.ToString(),
+                ActiveFault = node.ActiveFault.ToString(),
                 CreatedAt = node.CreatedAt,
                 UpdatedAt = node.UpdatedAt,
                 LastHealthCheck = node.LastHealthCheck
@@ -139,6 +142,7 @@ public class ComputeNodeService : IComputeNodeService
             GpuModel = node.GpuModel,
             GpuCount = node.GpuCount,
             Status = node.Status.ToString(),
+            ActiveFault = node.ActiveFault.ToString(),
             CreatedAt = node.CreatedAt,
             UpdatedAt = node.UpdatedAt,
             LastHealthCheck = node.LastHealthCheck
@@ -170,6 +174,7 @@ public class ComputeNodeService : IComputeNodeService
             GpuModel = node.GpuModel,
             GpuCount = node.GpuCount,
             Status = node.Status.ToString(),
+            ActiveFault = node.ActiveFault.ToString(),
             CreatedAt = node.CreatedAt,
             UpdatedAt = node.UpdatedAt,
             LastHealthCheck = node.LastHealthCheck

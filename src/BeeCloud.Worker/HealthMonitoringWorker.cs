@@ -73,7 +73,7 @@ public class HealthMonitoringWorker : BackgroundService
         {
             try
             {
-                var healthCheck = CreateSimulatedHealthCheck(node.Id);
+                var healthCheck = CreateSimulatedHealthCheck(node);
 
                 await healthCheckRepository.AddAsync(
                     healthCheck,
@@ -116,8 +116,49 @@ public class HealthMonitoringWorker : BackgroundService
     }
 
     private static BeeCloud.Domain.Entities.HealthCheck
-        CreateSimulatedHealthCheck(Guid nodeId)
+        CreateSimulatedHealthCheck(
+            BeeCloud.Domain.Entities.ComputeNode node)
     {
+        if (node.ActiveFault == NodeFault.GpuOverheat)
+        {
+            return new BeeCloud.Domain.Entities.HealthCheck(
+                node.Id,
+                isHealthy: false,
+                cpuUsagePercent: 65,
+                gpuUsagePercent: 95,
+                gpuTemperatureCelsius: 105);
+        }
+
+        if (node.ActiveFault == NodeFault.GpuFailure)
+        {
+            return new BeeCloud.Domain.Entities.HealthCheck(
+                node.Id,
+                isHealthy: false,
+                cpuUsagePercent: 40,
+                gpuUsagePercent: 0,
+                gpuTemperatureCelsius: 45);
+        }
+
+        if (node.ActiveFault == NodeFault.NetworkFailure)
+        {
+            return new BeeCloud.Domain.Entities.HealthCheck(
+                node.Id,
+                isHealthy: false,
+                cpuUsagePercent: 40,
+                gpuUsagePercent: 50,
+                gpuTemperatureCelsius: 60);
+        }
+
+        if (node.ActiveFault == NodeFault.ServiceCrash)
+        {
+            return new BeeCloud.Domain.Entities.HealthCheck(
+                node.Id,
+                isHealthy: false,
+                cpuUsagePercent: 0,
+                gpuUsagePercent: 0,
+                gpuTemperatureCelsius: 40);
+        }
+
         var random = Random.Shared;
 
         var cpuUsage = random.NextDouble() * 100;
@@ -129,7 +170,7 @@ public class HealthMonitoringWorker : BackgroundService
             gpuTemperature < 90;
 
         return new BeeCloud.Domain.Entities.HealthCheck(
-            nodeId,
+            node.Id,
             isHealthy,
             cpuUsage,
             gpuUsage,

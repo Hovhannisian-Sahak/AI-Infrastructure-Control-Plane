@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IHealthCheckService, HealthCheckService>();
         services.AddScoped<IIncidentRepository, IncidentRepository>();
         services.AddScoped<IIncidentService, IncidentService>();
+        services.AddScoped<INodeSimulationService, NodeSimulationService>();
         return services;
     }
 }
