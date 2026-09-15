@@ -2,6 +2,7 @@ using BeeCloud.Application.Interfaces;
 using BeeCloud.Infrastructure.Persistence;
 using BeeCloud.Infrastructure.Persistence.Repositories;
 using BeeCloud.Worker;
+using BeeCloud.Worker.Processors;
 using Microsoft.EntityFrameworkCore;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -16,5 +17,6 @@ builder.Services.AddScoped<IHealthCheckRepository, HealthCheckRepository>();
 builder.Services.AddHostedService<ProvisioningWorker>();
 builder.Services.AddHostedService<HealthMonitoringWorker>();
 builder.Services.AddHostedService<RemediationWorker>();
+builder.Services.AddScoped<IHealthMonitoringProcessor, HealthMonitoringProcessor>();
 var host = builder.Build();
 host.Run();
