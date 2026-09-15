@@ -1,6 +1,4 @@
-﻿using BeeCloud.Application.Interfaces;
-using BeeCloud.Domain.Enums;
-using Microsoft.Extensions.DependencyInjection;
+﻿using BeeCloud.Worker.Processors;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -8,14 +6,14 @@ namespace BeeCloud.Worker;
 
 public class ProvisioningWorker : BackgroundService
 {
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IProvisioningProcessor _processor;
     private readonly ILogger<ProvisioningWorker> _logger;
 
     public ProvisioningWorker(
-        IServiceScopeFactory scopeFactory,
+        IProvisioningProcessor processor,
         ILogger<ProvisioningWorker> logger)
     {
-        _scopeFactory = scopeFactory;
+        _processor = processor;
         _logger = logger;
     }
 
@@ -29,7 +27,7 @@ public class ProvisioningWorker : BackgroundService
         {
             try
             {
-                await ProcessProvisioningNodesAsync(
+                await _processor.ProcessAsync(
                     stoppingToken);
             }
             catch (OperationCanceledException)
@@ -41,7 +39,7 @@ public class ProvisioningWorker : BackgroundService
             {
                 _logger.LogError(
                     exception,
-                    "Error occurred while processing provisioning nodes.");
+                    "Error occurred while provisioning nodes.");
             }
 
             await Task.Delay(
@@ -51,61 +49,5 @@ public class ProvisioningWorker : BackgroundService
 
         _logger.LogInformation(
             "Provisioning worker stopped.");
-    }
-
-    private async Task ProcessProvisioningNodesAsync(
-        CancellationToken cancellationToken)
-    {
-        using var scope = _scopeFactory.CreateScope();
-
-        var repository =
-            scope.ServiceProvider
-                .GetRequiredService<IComputeNodeRepository>();
-
-        var nodes = await repository.GetByStatusAsync(
-            NodeStatus.Provisioning,
-            cancellationToken);
-
-        foreach (var node in nodes)
-        {
-            try
-            {
-                _logger.LogInformation(
-                    "Provisioning node {NodeId} ({NodeName}).",
-                    node.Id,
-                    node.Name);
-
-                await ProvisionNodeAsync(
-                    node,
-                    cancellationToken);
-
-                node.MarkAvailable();
-
-                await repository.SaveChangesAsync(
-                    cancellationToken);
-
-                _logger.LogInformation(
-                    "Node {NodeId} ({NodeName}) is now available.",
-                    node.Id,
-                    node.Name);
-            }
-            catch (Exception exception)
-            {
-                _logger.LogError(
-                    exception,
-                    "Failed to provision node {NodeId}.",
-                    node.Id);
-            }
-        }
-    }
-
-    private static async Task ProvisionNodeAsync(
-        BeeCloud.Domain.Entities.ComputeNode node,
-        CancellationToken cancellationToken)
-    {
-        // Simulate an asynchronous infrastructure operation.
-        await Task.Delay(
-            TimeSpan.FromSeconds(2),
-            cancellationToken);
     }
 }
