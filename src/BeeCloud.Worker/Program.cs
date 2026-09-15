@@ -18,5 +18,6 @@ builder.Services.AddHostedService<ProvisioningWorker>();
 builder.Services.AddHostedService<HealthMonitoringWorker>();
 builder.Services.AddHostedService<RemediationWorker>();
 builder.Services.AddScoped<IHealthMonitoringProcessor, HealthMonitoringProcessor>();
+builder.Services.AddScoped<IRemediationProcessor, RemediationProcessor>();
 var host = builder.Build();
 host.Run();
