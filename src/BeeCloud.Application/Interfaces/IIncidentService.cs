@@ -6,9 +6,10 @@ namespace BeeCloud.Application.Interfaces;
 
 public interface IIncidentService
 {
-    Task<IncidentResponse?> CreateForUnhealthyNodeAsync(
-        ComputeNode node,
-        HealthCheck healthCheck,
+    // REST API operations
+
+    Task<IncidentResponse> CreateAsync(
+        CreateIncidentRequest request,
         CancellationToken cancellationToken = default);
 
     Task<IncidentResponse?> GetByIdAsync(
@@ -16,13 +17,23 @@ public interface IIncidentService
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<IncidentResponse>> GetAllAsync(
-        Guid? computeNodeId = null,
         IncidentSeverity? severity = null,
         IncidentStatus? status = null,
         CancellationToken cancellationToken = default);
 
     Task<IncidentResponse> StartInvestigationAsync(
         Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<IncidentResponse> ResolveAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    // Worker operations
+
+    Task<IncidentResponse?> CreateForUnhealthyNodeAsync(
+        ComputeNode node,
+        HealthCheck healthCheck,
         CancellationToken cancellationToken = default);
 
     Task ResolveForNodeAsync(

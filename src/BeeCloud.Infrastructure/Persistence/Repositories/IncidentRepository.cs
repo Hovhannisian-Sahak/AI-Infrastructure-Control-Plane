@@ -9,26 +9,23 @@ public class IncidentRepository : IIncidentRepository
 {
     private readonly ApplicationDbContext _dbContext;
 
-    public IncidentRepository(ApplicationDbContext dbContext)
+    public IncidentRepository(
+        ApplicationDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
-    public async Task<Incident?> GetActiveForNodeAsync(
-        Guid computeNodeId,
+    public async Task<Incident?> GetByIdAsync(
+        Guid id,
         CancellationToken cancellationToken = default)
     {
         return await _dbContext.Incidents
             .FirstOrDefaultAsync(
-                incident =>
-                    incident.ComputeNodeId == computeNodeId &&
-                    (incident.Status == IncidentStatus.Open ||
-                     incident.Status == IncidentStatus.Investigating),
+                incident => incident.Id == id,
                 cancellationToken);
     }
 
     public async Task<IReadOnlyList<Incident>> GetAllAsync(
-        Guid? computeNodeId = null,
         IncidentSeverity? severity = null,
         IncidentStatus? status = null,
         CancellationToken cancellationToken = default)
@@ -36,12 +33,6 @@ public class IncidentRepository : IIncidentRepository
         var query = _dbContext.Incidents
             .AsNoTracking()
             .AsQueryable();
-
-        if (computeNodeId.HasValue)
-        {
-            query = query.Where(
-                incident => incident.ComputeNodeId == computeNodeId.Value);
-        }
 
         if (severity.HasValue)
         {
@@ -58,6 +49,19 @@ public class IncidentRepository : IIncidentRepository
         return await query
             .OrderByDescending(incident => incident.CreatedAt)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Incident?> GetActiveForNodeAsync(
+        Guid computeNodeId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Incidents
+            .FirstOrDefaultAsync(
+                incident =>
+                    incident.ComputeNodeId == computeNodeId &&
+                    (incident.Status == IncidentStatus.Open ||
+                     incident.Status == IncidentStatus.Investigating),
+                cancellationToken);
     }
 
     public async Task AddAsync(

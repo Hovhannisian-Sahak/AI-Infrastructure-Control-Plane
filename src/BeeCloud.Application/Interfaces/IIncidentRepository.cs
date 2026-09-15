@@ -5,12 +5,14 @@ namespace BeeCloud.Application.Interfaces;
 
 public interface IIncidentRepository
 {
+    Task<Incident?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
     Task<Incident?> GetActiveForNodeAsync(
         Guid computeNodeId,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Incident>> GetAllAsync(
-        Guid? computeNodeId = null,
         IncidentSeverity? severity = null,
         IncidentStatus? status = null,
         CancellationToken cancellationToken = default);

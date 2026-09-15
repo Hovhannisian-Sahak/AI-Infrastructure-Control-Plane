@@ -17,28 +17,70 @@ public class IncidentService : IIncidentService
         _incidentRepository = incidentRepository;
         _computeNodeRepository = computeNodeRepository;
     }
-    
+
+    // ============================================================
+    // REST API
+    // ============================================================
+
+    public async Task<IncidentResponse> CreateAsync(
+        CreateIncidentRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.ComputeNodeId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "Compute node ID cannot be empty.",
+                nameof(request.ComputeNodeId));
+        }
+
+        var node = await _computeNodeRepository.GetByIdAsync(
+            request.ComputeNodeId,
+            cancellationToken);
+
+        if (node is null)
+        {
+            throw new KeyNotFoundException(
+                $"Compute node with id '{request.ComputeNodeId}' was not found.");
+        }
+
+        var incident = new Incident(
+            request.ComputeNodeId,
+            request.Severity,
+            request.Title,
+            request.Description);
+
+        await _incidentRepository.AddAsync(
+            incident,
+            cancellationToken);
+
+        await _incidentRepository.SaveChangesAsync(
+            cancellationToken);
+
+        return MapToResponse(incident);
+    }
+
     public async Task<IncidentResponse?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default)
     {
-        var incident = await _incidentRepository.GetActiveForNodeAsync(
+        var incident = await _incidentRepository.GetByIdAsync(
             id,
             cancellationToken);
 
-        return incident is null
-            ? null
-            : MapToResponse(incident);
+        if (incident is null)
+        {
+            return null;
+        }
+
+        return MapToResponse(incident);
     }
 
     public async Task<IReadOnlyList<IncidentResponse>> GetAllAsync(
-        Guid? computeNodeId = null,
         IncidentSeverity? severity = null,
         IncidentStatus? status = null,
         CancellationToken cancellationToken = default)
     {
         var incidents = await _incidentRepository.GetAllAsync(
-            computeNodeId,
             severity,
             status,
             cancellationToken);
@@ -64,24 +106,27 @@ public class IncidentService : IIncidentService
         return MapToResponse(incident);
     }
 
-    private async Task<Incident> GetIncidentOrThrowAsync(
+    public async Task<IncidentResponse> ResolveAsync(
         Guid id,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
-        var incident = await _incidentRepository.GetActiveForNodeAsync(
+        var incident = await GetIncidentOrThrowAsync(
             id,
             cancellationToken);
 
-        if (incident is null)
-        {
-            throw new KeyNotFoundException(
-                $"Incident with id '{id}' was not found.");
-        }
+        incident.Resolve();
 
-        return incident;
+        await _incidentRepository.SaveChangesAsync(
+            cancellationToken);
+
+        return MapToResponse(incident);
     }
-    
-     public async Task<IncidentResponse?> CreateForUnhealthyNodeAsync(
+
+    // ============================================================
+    // HEALTH MONITORING / WORKER
+    // ============================================================
+
+    public async Task<IncidentResponse?> CreateForUnhealthyNodeAsync(
         ComputeNode node,
         HealthCheck healthCheck,
         CancellationToken cancellationToken = default)
@@ -124,7 +169,9 @@ public class IncidentService : IIncidentService
                 cancellationToken);
 
         if (incident is null)
+        {
             return;
+        }
 
         incident.Resolve();
 
@@ -132,17 +179,44 @@ public class IncidentService : IIncidentService
             cancellationToken);
     }
 
+    // ============================================================
+    // PRIVATE METHODS
+    // ============================================================
+
+    private async Task<Incident> GetIncidentOrThrowAsync(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var incident = await _incidentRepository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (incident is null)
+        {
+            throw new KeyNotFoundException(
+                $"Incident with id '{id}' was not found.");
+        }
+
+        return incident;
+    }
+
     private static IncidentSeverity DetermineSeverity(
         HealthCheck healthCheck)
     {
         if (healthCheck.GpuTemperatureCelsius >= 100)
+        {
             return IncidentSeverity.Critical;
+        }
 
         if (healthCheck.GpuTemperatureCelsius >= 90)
+        {
             return IncidentSeverity.High;
+        }
 
         if (healthCheck.GpuUsagePercent <= 1)
+        {
             return IncidentSeverity.High;
+        }
 
         return IncidentSeverity.Medium;
     }
@@ -151,10 +225,14 @@ public class IncidentService : IIncidentService
         HealthCheck healthCheck)
     {
         if (healthCheck.GpuTemperatureCelsius >= 100)
+        {
             return "GPU overheat detected";
+        }
 
         if (healthCheck.GpuUsagePercent <= 1)
+        {
             return "GPU failure detected";
+        }
 
         return "Compute node health check failed";
     }
@@ -185,5 +263,4 @@ public class IncidentService : IIncidentService
             ResolvedAt = incident.ResolvedAt
         };
     }
-    
 }

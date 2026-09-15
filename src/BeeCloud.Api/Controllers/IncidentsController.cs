@@ -11,7 +11,8 @@ public class IncidentsController : ControllerBase
 {
     private readonly IIncidentService _service;
 
-    public IncidentsController(IIncidentService service)
+    public IncidentsController(
+        IIncidentService service)
     {
         _service = service;
     }
@@ -48,13 +49,11 @@ public class IncidentsController : ControllerBase
 
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<IncidentResponse>>> GetAll(
-        [FromQuery] Guid? computeNodeId,
         [FromQuery] IncidentSeverity? severity,
         [FromQuery] IncidentStatus? status,
         CancellationToken cancellationToken)
     {
         var response = await _service.GetAllAsync(
-            computeNodeId,
             severity,
             status,
             cancellationToken);
