@@ -1,0 +1,100 @@
+﻿using BeeCloud.Application.Interfaces;
+using BeeCloud.Domain.Entities;
+using BeeCloud.Domain.Enums;
+using Microsoft.Extensions.Logging;
+
+namespace BeeCloud.Worker.Processors;
+
+public class MetricsProcessor : IMetricsProcessor
+{
+    private readonly IComputeNodeRepository _nodeRepository;
+    private readonly INodeMetricRepository _metricRepository;
+    private readonly ILogger<MetricsProcessor> _logger;
+
+    public MetricsProcessor(
+        IComputeNodeRepository nodeRepository,
+        INodeMetricRepository metricRepository,
+        ILogger<MetricsProcessor> logger)
+    {
+        _nodeRepository = nodeRepository;
+        _metricRepository = metricRepository;
+        _logger = logger;
+    }
+
+    public async Task ProcessAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var nodes = await _nodeRepository.GetByStatusAsync(
+            NodeStatus.Running,
+            cancellationToken);
+
+        foreach (var node in nodes)
+        {
+            try
+            {
+                await RecordMetricAsync(
+                    node,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Failed to record metrics for node {NodeId}.",
+                    node.Id);
+            }
+        }
+    }
+
+    private async Task RecordMetricAsync(
+        ComputeNode node,
+        CancellationToken cancellationToken)
+    {
+        var (cpuUsage, gpuUsage, gpuTemperature) =
+            GenerateMetrics(node);
+
+        var metric = new NodeMetric(
+            node.Id,
+            cpuUsage,
+            gpuUsage,
+            gpuTemperature);
+
+        await _metricRepository.AddAsync(
+            metric,
+            cancellationToken);
+
+        await _metricRepository.SaveChangesAsync(
+            cancellationToken);
+
+        _logger.LogInformation(
+            "Recorded metrics for node {NodeId}: CPU {CpuUsage}%, GPU {GpuUsage}%, temperature {GpuTemperature}°C.",
+            node.Id,
+            cpuUsage,
+            gpuUsage,
+            gpuTemperature);
+    }
+
+    private static (
+        double CpuUsage,
+        double GpuUsage,
+        double GpuTemperature)
+        GenerateMetrics(ComputeNode node)
+    {
+        var random = Random.Shared;
+
+        var cpuUsage = random.NextDouble() * 100;
+        var gpuUsage = random.NextDouble() * 100;
+
+        var gpuTemperature = 40 + random.NextDouble() * 60;
+
+        return (
+            Math.Round(cpuUsage, 2),
+            Math.Round(gpuUsage, 2),
+            Math.Round(gpuTemperature, 2));
+    }
+}

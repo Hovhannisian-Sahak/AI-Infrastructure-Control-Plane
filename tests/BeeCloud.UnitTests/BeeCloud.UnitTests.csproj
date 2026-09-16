@@ -25,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\BeeCloud.Domain\BeeCloud.Domain.csproj" />
     <ProjectReference Include="..\..\src\BeeCloud.Application\BeeCloud.Application.csproj" />
+    <ProjectReference Include="..\..\src\BeeCloud.Worker\BeeCloud.Worker.csproj" />
   </ItemGroup>
 
 </Project>
