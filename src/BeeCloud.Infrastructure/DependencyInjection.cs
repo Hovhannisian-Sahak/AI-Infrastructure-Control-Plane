@@ -29,6 +29,8 @@ public static class DependencyInjection
         services.AddScoped<IIncidentRepository, IncidentRepository>();
         services.AddScoped<IIncidentService, IncidentService>();
         services.AddScoped<INodeSimulationService, NodeSimulationService>();
+        services.AddScoped<INodeMetricRepository, NodeMetricRepository>();
+        services.AddScoped<INodeMetricService, NodeMetricService>();
         return services;
     }
 }
