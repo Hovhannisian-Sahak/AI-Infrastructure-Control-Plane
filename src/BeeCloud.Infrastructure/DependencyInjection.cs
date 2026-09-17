@@ -5,7 +5,7 @@ using BeeCloud.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
+using BeeCloud.Infrastructure.Redis;
 namespace BeeCloud.Infrastructure;
 
 public static class DependencyInjection
@@ -18,6 +18,11 @@ public static class DependencyInjection
             options.UseNpgsql(
                 configuration.GetConnectionString(
                     "BeeCloudDatabase")));
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration =
+                configuration.GetConnectionString("Redis");
+        });
         services.AddScoped<IComputeNodeRepository, ComputeNodeRepository>();
         services.AddScoped<IComputeNodeService, ComputeNodeService>();
         services.AddScoped<INetworkRepository, NetworkRepository>();
@@ -31,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<INodeSimulationService, NodeSimulationService>();
         services.AddScoped<INodeMetricRepository, NodeMetricRepository>();
         services.AddScoped<INodeMetricService, NodeMetricService>();
+        services.AddScoped<IProvisioningQueue, RedisProvisioningQueue>();
         return services;
     }
 }
