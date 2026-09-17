@@ -3,93 +3,215 @@ using BeeCloud.Domain.Entities;
 using BeeCloud.Domain.Enums;
 using BeeCloud.Infrastructure.Persistence;
 using BeeCloud.Infrastructure.Persistence.Repositories;
-using BeeCloud.IntegrationTests.Infrastructure;
+using BeeCloud.Infrastructure.Redis;
 using BeeCloud.Worker.Processors;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
-using NUnit.Framework;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
+using Testcontainers.PostgreSql;
+using Testcontainers.Redis;
 
 namespace BeeCloud.IntegrationTests.Provisioning;
 
 [TestFixture]
 public class ProvisioningProcessorIntegrationTests
 {
-    private PostgreSqlTestContainer _postgres = null!;
+    private PostgreSqlContainer _postgres = null!;
+    private RedisContainer _redis = null!;
+
     private ApplicationDbContext _dbContext = null!;
+    private IDistributedCache _cache = null!;
+    private RedisProvisioningQueue _queue = null!;
     private ProvisioningProcessor _processor = null!;
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        _postgres = new PostgreSqlTestContainer();
+        _postgres = new PostgreSqlBuilder()
+            .WithImage("postgres:16")
+            .WithDatabase("beecloud_test")
+            .WithUsername("beecloud_test")
+            .WithPassword("beecloud_test_password")
+            .Build();
+
+        _redis = new RedisBuilder()
+            .WithImage("redis:7")
+            .Build();
 
         await _postgres.StartAsync();
+        await _redis.StartAsync();
 
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(_postgres.ConnectionString)
-            .Options;
+        var dbOptions =
+            new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseNpgsql(_postgres.GetConnectionString())
+                .Options;
 
-        _dbContext = new ApplicationDbContext(options);
+        _dbContext = new ApplicationDbContext(dbOptions);
 
-        await _dbContext.Database.MigrateAsync();
+        await _dbContext.Database.EnsureCreatedAsync();
 
-        IComputeNodeRepository nodeRepository =
-            new ComputeNodeRepository(_dbContext);
+        var redisOptions = new RedisCacheOptions
+        {
+            Configuration = _redis.GetConnectionString()
+        };
 
+        _cache = new RedisCache(redisOptions);
+
+        _queue = new RedisProvisioningQueue(_cache);
+
+        var logger =
+            LoggerFactory
+                .Create(builder => builder.AddConsole())
+                .CreateLogger<ProvisioningProcessor>();
+        var repository = new ComputeNodeRepository(_dbContext);
         _processor = new ProvisioningProcessor(
-            nodeRepository,
-            NullLogger<ProvisioningProcessor>.Instance);
+            repository,
+            _queue,
+            logger);
+    }
+
+    [SetUp]
+    public async Task SetUp()
+    {
+        await _dbContext.NodeMetrics.ExecuteDeleteAsync();
+        await _dbContext.ComputeNodes.ExecuteDeleteAsync();
+
+        var connection = await ConnectionMultiplexer.ConnectAsync(
+            _redis.GetConnectionString());
+
+        var database = connection.GetDatabase();
+
+        await database.KeyDeleteAsync(
+            "beecloud:provisioning:queue");
+
+        await connection.DisposeAsync();
     }
 
     [OneTimeTearDown]
     public async Task OneTimeTearDown()
     {
         await _dbContext.DisposeAsync();
+
+        if (_cache is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+
+        await _redis.DisposeAsync();
         await _postgres.DisposeAsync();
     }
 
     [Test]
-    public async Task ProcessAsync_WithProvisioningNode_ShouldMakeNodeAvailable()
+    public async Task ProcessAsync_WhenNodeIsQueued_ShouldProvisionNode()
     {
-        var node = await CreateProvisioningNodeAsync();
+        var node = new ComputeNode(
+            $"integration-node-{Guid.NewGuid():N}",
+            "NVIDIA RTX 4090",
+            1);
+
+        await _dbContext.ComputeNodes.AddAsync(node);
+        await _dbContext.SaveChangesAsync();
+
+        await _queue.EnqueueAsync(node.Id);
 
         await _processor.ProcessAsync();
 
-        var persistedNode = await _dbContext.ComputeNodes
-            .AsNoTracking()
-            .FirstAsync(n => n.Id == node.Id);
+        var updatedNode =
+            await _dbContext.ComputeNodes
+                .AsNoTracking()
+                .SingleAsync(x => x.Id == node.Id);
 
         Assert.That(
-            persistedNode.Status,
+            updatedNode.Status,
             Is.EqualTo(NodeStatus.Available));
     }
 
     [Test]
-    public async Task ProcessAsync_WithMultipleProvisioningNodes_ShouldMakeAllAvailable()
+    public async Task ProcessAsync_WhenNodeIsNotInQueue_ShouldNotChangeNode()
     {
-        var firstNode = await CreateProvisioningNodeAsync();
-        var secondNode = await CreateProvisioningNodeAsync();
+        var node = new ComputeNode(
+            $"integration-node-{Guid.NewGuid():N}",
+            "NVIDIA RTX 4090",
+            1);
+
+        await _dbContext.ComputeNodes.AddAsync(node);
+        await _dbContext.SaveChangesAsync();
 
         await _processor.ProcessAsync();
 
-        var persistedNodes = await _dbContext.ComputeNodes
-            .AsNoTracking()
-            .Where(n => n.Id == firstNode.Id || n.Id == secondNode.Id)
-            .ToListAsync();
-
-        Assert.That(persistedNodes, Has.Count.EqualTo(2));
+        var updatedNode =
+            await _dbContext.ComputeNodes
+                .AsNoTracking()
+                .SingleAsync(x => x.Id == node.Id);
 
         Assert.That(
-            persistedNodes.All(n => n.Status == NodeStatus.Available),
-            Is.True);
+            updatedNode.Status,
+            Is.EqualTo(NodeStatus.Provisioning));
     }
 
     [Test]
-    public async Task ProcessAsync_WithNonProvisioningNode_ShouldNotChangeStatus()
+    public async Task ProcessAsync_WhenMultipleNodesAreQueued_ShouldProvisionAllNodes()
+    {
+        var firstNode = new ComputeNode(
+            $"integration-node-{Guid.NewGuid():N}",
+            "NVIDIA RTX 4090",
+            1);
+
+        var secondNode = new ComputeNode(
+            $"integration-node-{Guid.NewGuid():N}",
+            "NVIDIA RTX 4090",
+            2);
+
+        await _dbContext.ComputeNodes.AddRangeAsync(
+            firstNode,
+            secondNode);
+
+        await _dbContext.SaveChangesAsync();
+
+        await _queue.EnqueueAsync(firstNode.Id);
+        await _queue.EnqueueAsync(secondNode.Id);
+
+        await _processor.ProcessAsync();
+
+        var nodes =
+            await _dbContext.ComputeNodes
+                .AsNoTracking()
+                .Where(x =>
+                    x.Id == firstNode.Id ||
+                    x.Id == secondNode.Id)
+                .ToListAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                nodes.Single(x => x.Id == firstNode.Id).Status,
+                Is.EqualTo(NodeStatus.Available));
+
+            Assert.That(
+                nodes.Single(x => x.Id == secondNode.Id).Status,
+                Is.EqualTo(NodeStatus.Available));
+        });
+    }
+
+    [Test]
+    public async Task ProcessAsync_WhenQueuedNodeDoesNotExist_ShouldNotThrow()
+    {
+        var missingNodeId = Guid.NewGuid();
+
+        await _queue.EnqueueAsync(missingNodeId);
+
+        Assert.DoesNotThrowAsync(
+            async () => await _processor.ProcessAsync());
+    }
+
+    [Test]
+    public async Task ProcessAsync_WhenQueuedNodeIsAlreadyAvailable_ShouldNotChangeIt()
     {
         var node = new ComputeNode(
-            $"provisioning-test-node-{Guid.NewGuid():N}",
-            "NVIDIA A100",
+            $"integration-node-{Guid.NewGuid():N}",
+            "NVIDIA RTX 4090",
             1);
 
         node.MarkAvailable();
@@ -97,34 +219,17 @@ public class ProvisioningProcessorIntegrationTests
         await _dbContext.ComputeNodes.AddAsync(node);
         await _dbContext.SaveChangesAsync();
 
+        await _queue.EnqueueAsync(node.Id);
+
         await _processor.ProcessAsync();
 
-        var persistedNode = await _dbContext.ComputeNodes
-            .AsNoTracking()
-            .FirstAsync(n => n.Id == node.Id);
+        var updatedNode =
+            await _dbContext.ComputeNodes
+                .AsNoTracking()
+                .SingleAsync(x => x.Id == node.Id);
 
         Assert.That(
-            persistedNode.Status,
+            updatedNode.Status,
             Is.EqualTo(NodeStatus.Available));
-    }
-
-    [Test]
-    public async Task ProcessAsync_WithNoProvisioningNodes_ShouldCompleteSuccessfully()
-    {
-        Assert.DoesNotThrowAsync(
-            async () => await _processor.ProcessAsync());
-    }
-
-    private async Task<ComputeNode> CreateProvisioningNodeAsync()
-    {
-        var node = new ComputeNode(
-            $"provisioning-test-node-{Guid.NewGuid():N}",
-            "NVIDIA A100",
-            1);
-
-        await _dbContext.ComputeNodes.AddAsync(node);
-        await _dbContext.SaveChangesAsync();
-
-        return node;
     }
 }
