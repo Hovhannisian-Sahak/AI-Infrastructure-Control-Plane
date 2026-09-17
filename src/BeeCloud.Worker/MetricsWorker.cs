@@ -21,31 +21,44 @@ public class MetricsWorker : BackgroundService
         _logger.LogInformation(
             "Metrics worker started.");
 
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                await _processor.ProcessAsync(
-                    stoppingToken);
-            }
-            catch (OperationCanceledException)
-                when (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception exception)
-            {
-                _logger.LogError(
-                    exception,
-                    "Error occurred while recording node metrics.");
-            }
+                try
+                {
+                    await _processor.ProcessAsync(
+                        stoppingToken);
+                }
+                catch (OperationCanceledException)
+                    when (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogError(
+                        exception,
+                        "Error occurred while recording node metrics.");
+                }
 
-            await Task.Delay(
-                TimeSpan.FromSeconds(10),
-                stoppingToken);
+                try
+                {
+                    await Task.Delay(
+                        TimeSpan.FromSeconds(10),
+                        stoppingToken);
+                }
+                catch (OperationCanceledException)
+                    when (stoppingToken.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
         }
-
-        _logger.LogInformation(
-            "Metrics worker stopped.");
+        finally
+        {
+            _logger.LogInformation(
+                "Metrics worker stopped.");
+        }
     }
 }
