@@ -7,10 +7,12 @@ namespace BeeCloud.Application.Services;
 public class ComputeNodeService : IComputeNodeService
 {
     private readonly IComputeNodeRepository _repository;
+    private readonly IProvisioningQueue _provisioningQueue;
 
-    public ComputeNodeService(IComputeNodeRepository repository)
+    public ComputeNodeService(IComputeNodeRepository repository, IProvisioningQueue provisioningQueue)
     {
         _repository = repository;
+        _provisioningQueue = provisioningQueue;
     }
 
     public async Task<ComputeNodeResponse> CreateAsync(
@@ -53,6 +55,10 @@ public class ComputeNodeService : IComputeNodeService
             cancellationToken);
 
         await _repository.SaveChangesAsync(
+            cancellationToken);
+        
+        await _provisioningQueue.EnqueueAsync(
+            node.Id,
             cancellationToken);
 
         return new ComputeNodeResponse

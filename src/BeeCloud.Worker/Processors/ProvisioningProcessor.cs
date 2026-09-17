@@ -1,5 +1,4 @@
 ﻿using BeeCloud.Application.Interfaces;
-using BeeCloud.Domain.Entities;
 using BeeCloud.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -8,45 +7,90 @@ namespace BeeCloud.Worker.Processors;
 public class ProvisioningProcessor : IProvisioningProcessor
 {
     private readonly IComputeNodeRepository _nodeRepository;
+    private readonly IProvisioningQueue _provisioningQueue;
     private readonly ILogger<ProvisioningProcessor> _logger;
 
     public ProvisioningProcessor(
         IComputeNodeRepository nodeRepository,
+        IProvisioningQueue provisioningQueue,
         ILogger<ProvisioningProcessor> logger)
     {
         _nodeRepository = nodeRepository;
+        _provisioningQueue = provisioningQueue;
         _logger = logger;
     }
 
     public async Task ProcessAsync(
         CancellationToken cancellationToken = default)
     {
-        var nodes = await _nodeRepository.GetByStatusAsync(
-            NodeStatus.Provisioning,
-            cancellationToken);
-
-        foreach (var node in nodes)
+        while (!cancellationToken.IsCancellationRequested)
         {
+            Guid? nodeId;
+
+            try
+            {
+                nodeId = await _provisioningQueue.DequeueAsync(
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+
+            if (nodeId is null)
+            {
+                break;
+            }
+
             try
             {
                 await ProvisionNodeAsync(
-                    node,
+                    nodeId.Value,
                     cancellationToken);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception exception)
             {
                 _logger.LogError(
                     exception,
                     "Failed to provision node {NodeId}.",
-                    node.Id);
+                    nodeId.Value);
             }
         }
     }
 
     private async Task ProvisionNodeAsync(
-        ComputeNode node,
+        Guid nodeId,
         CancellationToken cancellationToken)
     {
+        var node = await _nodeRepository.GetByIdAsync(
+            nodeId,
+            cancellationToken);
+
+        if (node is null)
+        {
+            _logger.LogWarning(
+                "Provisioning job references node {NodeId}, but the node was not found.",
+                nodeId);
+
+            return;
+        }
+
+        if (node.Status != NodeStatus.Provisioning)
+        {
+            _logger.LogInformation(
+                "Skipping provisioning for node {NodeId} because its current status is {Status}.",
+                node.Id,
+                node.Status);
+
+            return;
+        }
+
         _logger.LogInformation(
             "Starting provisioning for node {NodeId} ({NodeName}).",
             node.Id,
