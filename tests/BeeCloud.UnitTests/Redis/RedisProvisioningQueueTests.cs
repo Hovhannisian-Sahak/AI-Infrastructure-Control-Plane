@@ -8,6 +8,8 @@ namespace BeeCloud.UnitTests.Redis;
 [TestFixture]
 public class RedisProvisioningQueueTests
 {
+    private const string QueueKey = "beecloud:provisioning:queue";
+
     private Mock<IDistributedCache> _cache = null!;
     private RedisProvisioningQueue _queue = null!;
 
@@ -27,19 +29,19 @@ public class RedisProvisioningQueueTests
         var nodeId = Guid.NewGuid();
 
         _cache
-            .Setup(cache => cache.GetStringAsync(
-                "beecloud:provisioning:queue",
+            .Setup(cache => cache.GetAsync(
+                QueueKey,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
+            .ReturnsAsync((byte[]?)null);
 
         // Act
         await _queue.EnqueueAsync(nodeId);
 
         // Assert
         _cache.Verify(
-            cache => cache.SetStringAsync(
-                "beecloud:provisioning:queue",
-                It.Is<string>(value =>
+            cache => cache.SetAsync(
+                QueueKey,
+                It.Is<byte[]>(value =>
                     ContainsNodeId(value, nodeId)),
                 It.IsAny<DistributedCacheEntryOptions>(),
                 It.IsAny<CancellationToken>()),
@@ -53,15 +55,15 @@ public class RedisProvisioningQueueTests
         var existingNodeId = Guid.NewGuid();
         var newNodeId = Guid.NewGuid();
 
-        var existingQueue = JsonSerializer.Serialize(
+        var existingQueue = JsonSerializer.SerializeToUtf8Bytes(
             new List<Guid>
             {
                 existingNodeId
             });
 
         _cache
-            .Setup(cache => cache.GetStringAsync(
-                "beecloud:provisioning:queue",
+            .Setup(cache => cache.GetAsync(
+                QueueKey,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingQueue);
 
@@ -70,9 +72,9 @@ public class RedisProvisioningQueueTests
 
         // Assert
         _cache.Verify(
-            cache => cache.SetStringAsync(
-                "beecloud:provisioning:queue",
-                It.Is<string>(value =>
+            cache => cache.SetAsync(
+                QueueKey,
+                It.Is<byte[]>(value =>
                     ContainsNodeIds(
                         value,
                         existingNodeId,
@@ -87,10 +89,10 @@ public class RedisProvisioningQueueTests
     {
         // Arrange
         _cache
-            .Setup(cache => cache.GetStringAsync(
-                "beecloud:provisioning:queue",
+            .Setup(cache => cache.GetAsync(
+                QueueKey,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
+            .ReturnsAsync((byte[]?)null);
 
         // Act
         var result = await _queue.DequeueAsync();
@@ -99,9 +101,9 @@ public class RedisProvisioningQueueTests
         Assert.That(result, Is.Null);
 
         _cache.Verify(
-            cache => cache.SetStringAsync(
+            cache => cache.SetAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
+                It.IsAny<byte[]>(),
                 It.IsAny<DistributedCacheEntryOptions>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
@@ -111,12 +113,12 @@ public class RedisProvisioningQueueTests
     public async Task DequeueAsync_WhenQueueIsEmpty_ShouldReturnNull()
     {
         // Arrange
-        var emptyQueue = JsonSerializer.Serialize(
+        var emptyQueue = JsonSerializer.SerializeToUtf8Bytes(
             new List<Guid>());
 
         _cache
-            .Setup(cache => cache.GetStringAsync(
-                "beecloud:provisioning:queue",
+            .Setup(cache => cache.GetAsync(
+                QueueKey,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(emptyQueue);
 
@@ -127,9 +129,9 @@ public class RedisProvisioningQueueTests
         Assert.That(result, Is.Null);
 
         _cache.Verify(
-            cache => cache.SetStringAsync(
+            cache => cache.SetAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
+                It.IsAny<byte[]>(),
                 It.IsAny<DistributedCacheEntryOptions>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
@@ -142,7 +144,7 @@ public class RedisProvisioningQueueTests
         var firstNodeId = Guid.NewGuid();
         var secondNodeId = Guid.NewGuid();
 
-        var queue = JsonSerializer.Serialize(
+        var queue = JsonSerializer.SerializeToUtf8Bytes(
             new List<Guid>
             {
                 firstNodeId,
@@ -150,8 +152,8 @@ public class RedisProvisioningQueueTests
             });
 
         _cache
-            .Setup(cache => cache.GetStringAsync(
-                "beecloud:provisioning:queue",
+            .Setup(cache => cache.GetAsync(
+                QueueKey,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(queue);
 
@@ -162,9 +164,9 @@ public class RedisProvisioningQueueTests
         Assert.That(result, Is.EqualTo(firstNodeId));
 
         _cache.Verify(
-            cache => cache.SetStringAsync(
-                "beecloud:provisioning:queue",
-                It.Is<string>(value =>
+            cache => cache.SetAsync(
+                QueueKey,
+                It.Is<byte[]>(value =>
                     ContainsOnlyNode(value, secondNodeId)),
                 It.IsAny<DistributedCacheEntryOptions>(),
                 It.IsAny<CancellationToken>()),
@@ -179,7 +181,7 @@ public class RedisProvisioningQueueTests
         var secondNodeId = Guid.NewGuid();
         var thirdNodeId = Guid.NewGuid();
 
-        var queue = JsonSerializer.Serialize(
+        var queue = JsonSerializer.SerializeToUtf8Bytes(
             new List<Guid>
             {
                 firstNodeId,
@@ -188,8 +190,8 @@ public class RedisProvisioningQueueTests
             });
 
         _cache
-            .Setup(cache => cache.GetStringAsync(
-                "beecloud:provisioning:queue",
+            .Setup(cache => cache.GetAsync(
+                QueueKey,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(queue);
 
@@ -200,9 +202,9 @@ public class RedisProvisioningQueueTests
         Assert.That(result, Is.EqualTo(firstNodeId));
 
         _cache.Verify(
-            cache => cache.SetStringAsync(
-                "beecloud:provisioning:queue",
-                It.Is<string>(value =>
+            cache => cache.SetAsync(
+                QueueKey,
+                It.Is<byte[]>(value =>
                     HasRemainingNodesInOrder(
                         value,
                         secondNodeId,
@@ -219,18 +221,18 @@ public class RedisProvisioningQueueTests
         var nodeId = Guid.NewGuid();
 
         _cache
-            .Setup(cache => cache.GetStringAsync(
+            .Setup(cache => cache.GetAsync(
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
+            .ReturnsAsync((byte[]?)null);
 
         // Act
         await _queue.EnqueueAsync(nodeId);
 
         // Assert
         _cache.Verify(
-            cache => cache.GetStringAsync(
-                "beecloud:provisioning:queue",
+            cache => cache.GetAsync(
+                QueueKey,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -240,66 +242,68 @@ public class RedisProvisioningQueueTests
     {
         // Arrange
         _cache
-            .Setup(cache => cache.GetStringAsync(
+            .Setup(cache => cache.GetAsync(
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
+            .ReturnsAsync((byte[]?)null);
 
         // Act
         await _queue.DequeueAsync();
 
         // Assert
         _cache.Verify(
-            cache => cache.GetStringAsync(
-                "beecloud:provisioning:queue",
+            cache => cache.GetAsync(
+                QueueKey,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     private static bool ContainsNodeId(
-        string json,
+        byte[] value,
         Guid expectedNodeId)
     {
-        var nodes = JsonSerializer.Deserialize<List<Guid>>(json);
+        var nodes = Deserialize(value);
 
-        return nodes is not null &&
-               nodes.Contains(expectedNodeId);
+        return nodes.Contains(expectedNodeId);
     }
 
     private static bool ContainsNodeIds(
-        string json,
+        byte[] value,
         Guid firstExpectedNodeId,
         Guid secondExpectedNodeId)
     {
-        var nodes = JsonSerializer.Deserialize<List<Guid>>(json);
+        var nodes = Deserialize(value);
 
-        return nodes is not null &&
-               nodes.Count == 2 &&
+        return nodes.Count == 2 &&
                nodes[0] == firstExpectedNodeId &&
                nodes[1] == secondExpectedNodeId;
     }
 
     private static bool ContainsOnlyNode(
-        string json,
+        byte[] value,
         Guid expectedNodeId)
     {
-        var nodes = JsonSerializer.Deserialize<List<Guid>>(json);
+        var nodes = Deserialize(value);
 
-        return nodes is not null &&
-               nodes.Count == 1 &&
+        return nodes.Count == 1 &&
                nodes[0] == expectedNodeId;
     }
 
     private static bool HasRemainingNodesInOrder(
-        string json,
+        byte[] value,
         Guid firstExpectedNodeId,
         Guid secondExpectedNodeId)
     {
-        var nodes = JsonSerializer.Deserialize<List<Guid>>(json);
+        var nodes = Deserialize(value);
 
-        return nodes is not null &&
-               nodes.Count == 2 &&
+        return nodes.Count == 2 &&
                nodes[0] == firstExpectedNodeId &&
                nodes[1] == secondExpectedNodeId;
+    }
+
+    private static List<Guid> Deserialize(byte[] value)
+    {
+        return JsonSerializer.Deserialize<List<Guid>>(value)
+               ?? [];
     }
 }
