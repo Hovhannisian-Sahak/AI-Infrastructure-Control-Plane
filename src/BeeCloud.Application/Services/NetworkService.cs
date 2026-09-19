@@ -83,6 +83,7 @@ public class NetworkService : INetworkService
             Name = network.Name,
             Description = network.Description,
             IsActive = network.IsActive,
+            MaxAttachments = network.MaxAttachments,
             CreatedAt = network.CreatedAt
         };
     }
