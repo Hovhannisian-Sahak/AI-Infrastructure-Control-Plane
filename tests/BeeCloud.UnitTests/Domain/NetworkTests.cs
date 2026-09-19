@@ -60,4 +60,36 @@ public class NetworkTests
             exception!.ParamName,
             Is.EqualTo("name"));
     }
+    [Test]
+    public void Constructor_ShouldCreateActiveNetwork()
+    {
+        var network = new Network("test-network");
+
+        Assert.That(
+            network.IsActive,
+            Is.True);
+    }
+    [Test]
+    public void Deactivate_ShouldMakeNetworkInactive()
+    {
+        var network = new Network("test-network");
+
+        network.Deactivate();
+
+        Assert.That(
+            network.IsActive,
+            Is.False);
+    }
+    [Test]
+    public void Activate_ShouldMakeNetworkActive()
+    {
+        var network = new Network("test-network");
+
+        network.Deactivate();
+        network.Activate();
+
+        Assert.That(
+            network.IsActive,
+            Is.True);
+    }
 }

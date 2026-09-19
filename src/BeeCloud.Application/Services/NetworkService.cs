@@ -75,14 +75,14 @@ public class NetworkService : INetworkService
             .ToList();
     }
 
-    private static NetworkResponse MapToResponse(
-        Network network)
+    private static NetworkResponse MapToResponse(Network network)
     {
         return new NetworkResponse
         {
             Id = network.Id,
             Name = network.Name,
             Description = network.Description,
+            IsActive = network.IsActive,
             CreatedAt = network.CreatedAt
         };
     }

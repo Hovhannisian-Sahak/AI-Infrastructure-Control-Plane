@@ -45,7 +45,12 @@ public class NetworkAttachmentService
             throw new KeyNotFoundException(
                 $"Network with id '{networkId}' was not found.");
         }
-
+        if (!network.IsActive)
+        {
+            throw new InvalidOperationException(
+                $"Network '{networkId}' must be active " +
+                "before a compute node can be attached.");
+        }
         var existingAttachment =
             await _attachmentRepository.GetAsync(
                 computeNodeId,

@@ -445,4 +445,55 @@ public class NetworkAttachmentServiceTests
             Assert.That(result[1].ComputeNodeId, Is.EqualTo(node2.Id));
         });
     }
+    [Test]
+    public async Task AttachAsync_WhenNetworkIsInactive_ShouldThrowConflict()
+    {
+        // Arrange
+        var node = new ComputeNode(
+            "test-node",
+            "NVIDIA A100",
+            2);
+
+        node.MarkAvailable();
+
+        var network = new Network(
+            "test-network");
+
+        network.Deactivate();
+
+        _computeNodeRepositoryMock
+            .Setup(x => x.GetByIdAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+
+        _networkRepositoryMock
+            .Setup(x => x.GetByIdAsync(
+                network.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(network);
+
+        // Act
+        var exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () =>
+                await _service.AttachAsync(
+                    node.Id,
+                    network.Id));
+
+        // Assert
+        Assert.That(
+            exception!.Message,
+            Does.Contain("must be active"));
+
+        _attachmentRepositoryMock.Verify(
+            x => x.AddAsync(
+                It.IsAny<NetworkAttachment>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _attachmentRepositoryMock.Verify(
+            x => x.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }
