@@ -1,7 +1,7 @@
 ﻿using BeeCloud.Application.DTOs.Networks;
 using BeeCloud.Application.Interfaces;
 using BeeCloud.Domain.Entities;
-
+using Microsoft.EntityFrameworkCore;
 namespace BeeCloud.Application.Services;
 
 public class NetworkAttachmentService
@@ -82,8 +82,18 @@ public class NetworkAttachmentService
             attachment,
             cancellationToken);
 
-        await _attachmentRepository.SaveChangesAsync(
-            cancellationToken);
+        try
+        {
+            await _attachmentRepository.SaveChangesAsync(
+                cancellationToken);
+        }
+        catch (DbUpdateException exception)
+        {
+            throw new InvalidOperationException(
+                $"Compute node '{computeNodeId}' is already attached " +
+                $"to network '{networkId}'.",
+                exception);
+        }
 
         return MapToResponse(attachment);
     }

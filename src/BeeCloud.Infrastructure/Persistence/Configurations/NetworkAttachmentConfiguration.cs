@@ -12,33 +12,32 @@ public class NetworkAttachmentConfiguration
     {
         builder.ToTable("network_attachments");
 
-        builder.HasKey(attachment => attachment.Id);
+        builder.HasKey(x => x.Id);
 
-        builder.Property(attachment => attachment.ComputeNodeId)
+        builder.Property(x => x.ComputeNodeId)
             .IsRequired();
 
-        builder.Property(attachment => attachment.NetworkId)
+        builder.Property(x => x.NetworkId)
             .IsRequired();
 
-        builder.Property(attachment => attachment.AttachedAt)
+        builder.Property(x => x.AttachedAt)
             .IsRequired();
 
-        builder.HasIndex(attachment =>
-                new
-                {
-                    attachment.ComputeNodeId,
-                    attachment.NetworkId
-                })
+        builder.HasIndex(x => new
+            {
+                x.ComputeNodeId,
+                x.NetworkId
+            })
             .IsUnique();
 
         builder.HasOne<ComputeNode>()
             .WithMany()
-            .HasForeignKey(attachment => attachment.ComputeNodeId)
+            .HasForeignKey(x => x.ComputeNodeId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne<Network>()
             .WithMany()
-            .HasForeignKey(attachment => attachment.NetworkId)
+            .HasForeignKey(x => x.NetworkId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
