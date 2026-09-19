@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using BeeCloud.ApiTests.Clients;
 using NUnit.Framework;
 
@@ -287,7 +288,7 @@ public class NetworkAttachmentApiTests
         TestContext.WriteLine(
             $"Detach missing attachment response: {response.Content}");
     }
-
+  
     private async Task<Guid> CreateNodeAsync()
     {
         var nodeName = $"api-test-node-{Guid.NewGuid():N}";

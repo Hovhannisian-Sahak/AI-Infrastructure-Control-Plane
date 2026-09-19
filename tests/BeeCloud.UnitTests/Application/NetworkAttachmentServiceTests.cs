@@ -496,4 +496,89 @@ public class NetworkAttachmentServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
+    [Test]
+    public async Task AttachAsync_WhenNetworkCapacityIsReached_ShouldThrowConflict()
+{
+    // Arrange
+    var node = new ComputeNode(
+        "new-node",
+        "NVIDIA A100",
+        2);
+
+    node.MarkAvailable();
+
+    var network = new Network(
+        "test-network",
+        maxAttachments: 2);
+
+    var existingNode1 = new ComputeNode(
+        "existing-node-1",
+        "NVIDIA A100",
+        2);
+
+    var existingNode2 = new ComputeNode(
+        "existing-node-2",
+        "NVIDIA A100",
+        2);
+
+    var attachment1 = new NetworkAttachment(
+        existingNode1.Id,
+        network.Id);
+
+    var attachment2 = new NetworkAttachment(
+        existingNode2.Id,
+        network.Id);
+
+    _computeNodeRepositoryMock
+        .Setup(x => x.GetByIdAsync(
+            node.Id,
+            It.IsAny<CancellationToken>()))
+        .ReturnsAsync(node);
+
+    _networkRepositoryMock
+        .Setup(x => x.GetByIdAsync(
+            network.Id,
+            It.IsAny<CancellationToken>()))
+        .ReturnsAsync(network);
+
+    _attachmentRepositoryMock
+        .Setup(x => x.GetAsync(
+            node.Id,
+            network.Id,
+            It.IsAny<CancellationToken>()))
+        .ReturnsAsync((NetworkAttachment?)null);
+
+    _attachmentRepositoryMock
+        .Setup(x => x.GetByNetworkIdAsync(
+            network.Id,
+            It.IsAny<CancellationToken>()))
+        .ReturnsAsync(new List<NetworkAttachment>
+        {
+            attachment1,
+            attachment2
+        });
+
+    // Act
+    var exception = Assert.ThrowsAsync<InvalidOperationException>(
+        async () =>
+            await _service.AttachAsync(
+                node.Id,
+                network.Id));
+
+    // Assert
+    Assert.That(
+        exception!.Message,
+        Does.Contain("maximum attachment capacity"));
+
+    _attachmentRepositoryMock.Verify(
+        x => x.AddAsync(
+            It.IsAny<NetworkAttachment>(),
+            It.IsAny<CancellationToken>()),
+        Times.Never);
+
+    _attachmentRepositoryMock.Verify(
+        x => x.SaveChangesAsync(
+            It.IsAny<CancellationToken>()),
+        Times.Never);
+}
 }

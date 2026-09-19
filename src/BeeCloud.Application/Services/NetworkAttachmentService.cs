@@ -63,7 +63,17 @@ public class NetworkAttachmentService
                 $"Compute node '{computeNodeId}' is already attached " +
                 $"to network '{networkId}'.");
         }
+        var existingAttachments =
+            await _attachmentRepository.GetByNetworkIdAsync(
+                networkId,
+                cancellationToken);
 
+        if (existingAttachments.Count >= network.MaxAttachments)
+        {
+            throw new InvalidOperationException(
+                $"Network '{networkId}' has reached its maximum " +
+                $"attachment capacity of {network.MaxAttachments}.");
+        }
         var attachment = new NetworkAttachment(
             computeNodeId,
             networkId);

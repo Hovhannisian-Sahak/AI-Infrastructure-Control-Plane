@@ -282,5 +282,40 @@ public class NetworkAttachmentRepositoryIntegrationTests
 
         Assert.That(exists, Is.False);
     }
-    
+    [Test]
+    public async Task AddAsync_WhenDuplicateAttachmentExists_ShouldFail()
+    {
+        // Arrange
+        var node = new ComputeNode(
+            $"integration-node-{Guid.NewGuid():N}",
+            "NVIDIA A100",
+            4);
+
+        var network = new Network(
+            $"integration-network-{Guid.NewGuid():N}");
+
+        await _dbContext.ComputeNodes.AddAsync(node);
+        await _dbContext.Networks.AddAsync(network);
+
+        await _dbContext.SaveChangesAsync();
+
+        var firstAttachment = new NetworkAttachment(
+            node.Id,
+            network.Id);
+
+        var secondAttachment = new NetworkAttachment(
+            node.Id,
+            network.Id);
+
+        await _repository.AddAsync(firstAttachment);
+        await _repository.SaveChangesAsync();
+
+        // Act
+        await _repository.AddAsync(secondAttachment);
+
+        // Assert
+        Assert.ThrowsAsync<DbUpdateException>(
+            async () =>
+                await _repository.SaveChangesAsync());
+    }
 }
