@@ -293,7 +293,7 @@ public class NetworkAttachmentApiTests
     public async Task AttachNetworkToNode_WhenNetworkIsInactive_ShouldReturnConflict()
     {
         // Arrange
-        var nodeId = await CreateNodeAsync();
+        var nodeId = await CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         var deactivateResponse =
@@ -385,5 +385,14 @@ public class NetworkAttachmentApiTests
             $"Created network: {networkId}");
 
         return networkId;
+    }
+    
+    private async Task<Guid> CreateAvailableNodeAsync()
+    {
+        var nodeId = await CreateNodeAsync();
+
+        await _nodesClient.WaitForAvailableAsync(nodeId);
+
+        return nodeId;
     }
 }
