@@ -34,9 +34,13 @@ public class NetworkAttachmentRepositoryIntegrationTests
     [SetUp]
     public async Task SetUp()
     {
+        _dbContext.ChangeTracker.Clear();
+
         await _dbContext.NetworkAttachments.ExecuteDeleteAsync();
         await _dbContext.ComputeNodes.ExecuteDeleteAsync();
         await _dbContext.Networks.ExecuteDeleteAsync();
+
+        _dbContext.ChangeTracker.Clear();
     }
 
     [OneTimeTearDown]
@@ -108,13 +112,14 @@ public class NetworkAttachmentRepositoryIntegrationTests
         await _dbContext.ComputeNodes.AddAsync(node);
         await _dbContext.Networks.AddAsync(network);
 
+        await _dbContext.SaveChangesAsync();
+
         var attachment = new NetworkAttachment(
             node.Id,
             network.Id);
 
-        await _dbContext.NetworkAttachments.AddAsync(attachment);
-
-        await _dbContext.SaveChangesAsync();
+        await _repository.AddAsync(attachment);
+        await _repository.SaveChangesAsync();
 
         // Act
         var result = await _repository.GetAsync(
@@ -126,10 +131,14 @@ public class NetworkAttachmentRepositoryIntegrationTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(result!.Id, Is.EqualTo(attachment.Id));
+            Assert.That(
+                result!.Id,
+                Is.EqualTo(attachment.Id));
+
             Assert.That(
                 result.ComputeNodeId,
                 Is.EqualTo(node.Id));
+
             Assert.That(
                 result.NetworkId,
                 Is.EqualTo(network.Id));
@@ -168,7 +177,7 @@ public class NetworkAttachmentRepositoryIntegrationTests
         await _dbContext.Networks.AddRangeAsync(
             network1,
             network2);
-
+        await _dbContext.SaveChangesAsync();
         var attachment1 = new NetworkAttachment(
             node.Id,
             network1.Id);
@@ -220,7 +229,7 @@ public class NetworkAttachmentRepositoryIntegrationTests
             node2);
 
         await _dbContext.Networks.AddAsync(network);
-
+        await _dbContext.SaveChangesAsync();
         var attachment1 = new NetworkAttachment(
             node1.Id,
             network.Id);
@@ -268,6 +277,7 @@ public class NetworkAttachmentRepositoryIntegrationTests
 
         await _dbContext.ComputeNodes.AddAsync(node);
         await _dbContext.Networks.AddAsync(network);
+        await _dbContext.SaveChangesAsync();
         await _dbContext.NetworkAttachments.AddAsync(attachment);
 
         await _dbContext.SaveChangesAsync();

@@ -23,6 +23,7 @@ public class ProvisioningProcessor : IProvisioningProcessor
     public async Task ProcessAsync(
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         while (!cancellationToken.IsCancellationRequested)
         {
             Guid? nodeId;

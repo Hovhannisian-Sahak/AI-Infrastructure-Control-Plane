@@ -193,6 +193,11 @@ public class NetworkAttachmentServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((NetworkAttachment?)null);
 
+        _attachmentRepositoryMock
+            .Setup(x => x.GetByNetworkIdAsync(
+                network.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NetworkAttachment>());
         // Act
         var result = await _service.AttachAsync(
             node.Id,
