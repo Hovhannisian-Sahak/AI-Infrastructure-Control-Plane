@@ -14,4 +14,12 @@ public interface INetworkService
 
     Task<IReadOnlyList<NetworkResponse>> GetAllAsync(
         CancellationToken cancellationToken = default);
+    
+    Task DeactivateAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task ActivateAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
 }

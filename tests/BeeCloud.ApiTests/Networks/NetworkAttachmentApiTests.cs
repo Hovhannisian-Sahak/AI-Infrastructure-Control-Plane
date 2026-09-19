@@ -289,6 +289,35 @@ public class NetworkAttachmentApiTests
             $"Detach missing attachment response: {response.Content}");
     }
   
+    [Test]
+    public async Task AttachNetworkToNode_WhenNetworkIsInactive_ShouldReturnConflict()
+    {
+        // Arrange
+        var nodeId = await CreateNodeAsync();
+        var networkId = await CreateNetworkAsync();
+
+        var deactivateResponse =
+            await _networksClient.DeactivateAsync(
+                networkId);
+
+        Assert.That(
+            deactivateResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.NoContent));
+
+        // Act
+        var response =
+            await _networksClient.AttachToNodeAsync(
+                nodeId,
+                networkId);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.Conflict));
+
+        TestContext.WriteLine(
+            $"Attach to inactive network response: {response.Content}");
+    }
     private async Task<Guid> CreateNodeAsync()
     {
         var nodeName = $"api-test-node-{Guid.NewGuid():N}";

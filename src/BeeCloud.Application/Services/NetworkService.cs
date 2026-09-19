@@ -74,7 +74,45 @@ public class NetworkService : INetworkService
             .Select(MapToResponse)
             .ToList();
     }
+    public async Task DeactivateAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var network = await _repository.GetByIdAsync(
+            id,
+            cancellationToken);
 
+        if (network is null)
+        {
+            throw new KeyNotFoundException(
+                $"Network with id '{id}' was not found.");
+        }
+
+        network.Deactivate();
+
+        await _repository.SaveChangesAsync(
+            cancellationToken);
+    }
+
+    public async Task ActivateAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var network = await _repository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (network is null)
+        {
+            throw new KeyNotFoundException(
+                $"Network with id '{id}' was not found.");
+        }
+
+        network.Activate();
+
+        await _repository.SaveChangesAsync(
+            cancellationToken);
+    }
     private static NetworkResponse MapToResponse(Network network)
     {
         return new NetworkResponse

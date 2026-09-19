@@ -85,4 +85,23 @@ public class NetworksClient
 
         return await _client.ExecuteAsync(request);
     }
+    public async Task<RestResponse> DeactivateAsync(
+        Guid networkId)
+    {
+        var request = new RestRequest(
+            $"/api/v1/networks/{networkId}/deactivate",
+            Method.Post);
+
+        return await _client.ExecuteAsync(request);
+    }
+
+    public async Task<RestResponse> ActivateAsync(
+        Guid networkId)
+    {
+        var request = new RestRequest(
+            $"/api/v1/networks/{networkId}/activate",
+            Method.Post);
+
+        return await _client.ExecuteAsync(request);
+    }
 }

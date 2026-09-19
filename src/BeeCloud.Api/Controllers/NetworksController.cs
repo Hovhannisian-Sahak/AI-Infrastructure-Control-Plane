@@ -57,4 +57,27 @@ public class NetworksController : ControllerBase
 
         return Ok(response);
     }
+    [HttpPost("{id:guid}/deactivate")]
+    public async Task<IActionResult> Deactivate(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        await _service.DeactivateAsync(
+            id,
+            cancellationToken);
+
+        return NoContent();
+    }
+
+    [HttpPost("{id:guid}/activate")]
+    public async Task<IActionResult> Activate(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        await _service.ActivateAsync(
+            id,
+            cancellationToken);
+
+        return NoContent();
+    }
 }
