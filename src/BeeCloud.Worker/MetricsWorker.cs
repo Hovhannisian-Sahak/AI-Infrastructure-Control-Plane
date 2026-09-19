@@ -1,17 +1,20 @@
 ﻿using BeeCloud.Worker.Processors;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace BeeCloud.Worker.Workers;
 
 public class MetricsWorker : BackgroundService
 {
-    private readonly IMetricsProcessor _processor;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<MetricsWorker> _logger;
 
     public MetricsWorker(
-        IMetricsProcessor processor,
+        IServiceScopeFactory scopeFactory,
         ILogger<MetricsWorker> logger)
     {
-        _processor = processor;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -27,7 +30,14 @@ public class MetricsWorker : BackgroundService
             {
                 try
                 {
-                    await _processor.ProcessAsync(
+                    using var scope =
+                        _scopeFactory.CreateScope();
+
+                    var processor =
+                        scope.ServiceProvider
+                            .GetRequiredService<IMetricsProcessor>();
+
+                    await processor.ProcessAsync(
                         stoppingToken);
                 }
                 catch (OperationCanceledException)

@@ -1,4 +1,5 @@
 ﻿using BeeCloud.Worker.Processors;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -6,14 +7,14 @@ namespace BeeCloud.Worker;
 
 public class HealthMonitoringWorker : BackgroundService
 {
-    private readonly IHealthMonitoringProcessor _processor;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<HealthMonitoringWorker> _logger;
 
     public HealthMonitoringWorker(
-        IHealthMonitoringProcessor processor,
+        IServiceScopeFactory scopeFactory,
         ILogger<HealthMonitoringWorker> logger)
     {
-        _processor = processor;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -27,7 +28,14 @@ public class HealthMonitoringWorker : BackgroundService
         {
             try
             {
-                await _processor.ProcessAsync(
+                using var scope =
+                    _scopeFactory.CreateScope();
+
+                var processor =
+                    scope.ServiceProvider
+                        .GetRequiredService<IHealthMonitoringProcessor>();
+
+                await processor.ProcessAsync(
                     stoppingToken);
             }
             catch (OperationCanceledException)
@@ -42,9 +50,17 @@ public class HealthMonitoringWorker : BackgroundService
                     "Error occurred while monitoring node health.");
             }
 
-            await Task.Delay(
-                TimeSpan.FromSeconds(10),
-                stoppingToken);
+            try
+            {
+                await Task.Delay(
+                    TimeSpan.FromSeconds(10),
+                    stoppingToken);
+            }
+            catch (OperationCanceledException)
+                when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
         }
 
         _logger.LogInformation(

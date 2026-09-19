@@ -1,5 +1,6 @@
 ﻿using BeeCloud.Worker.Processors;
 using BeeCloud.Worker.Workers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -33,9 +34,7 @@ public class MetricsWorkerTests
             })
             .Returns(Task.CompletedTask);
 
-        var worker = new MetricsWorker(
-            _processor.Object,
-            _logger.Object);
+        var worker = CreateWorker();
 
         await worker.StartAsync(
             cancellationTokenSource.Token);
@@ -72,9 +71,7 @@ public class MetricsWorkerTests
             .ThrowsAsync(
                 new InvalidOperationException("Test error"));
 
-        var worker = new MetricsWorker(
-            _processor.Object,
-            _logger.Object);
+        var worker = CreateWorker();
 
         await worker.StartAsync(
             cancellationTokenSource.Token);
@@ -82,7 +79,9 @@ public class MetricsWorkerTests
         await worker.StopAsync(
             CancellationToken.None);
 
-        Assert.That(callCount, Is.EqualTo(1));
+        Assert.That(
+            callCount,
+            Is.EqualTo(1));
 
         _processor.Verify(
             processor => processor.ProcessAsync(
@@ -105,9 +104,7 @@ public class MetricsWorkerTests
                 new OperationCanceledException(
                     cancellationTokenSource.Token));
 
-        var worker = new MetricsWorker(
-            _processor.Object,
-            _logger.Object);
+        var worker = CreateWorker();
 
         await worker.StartAsync(
             cancellationTokenSource.Token);
@@ -140,9 +137,7 @@ public class MetricsWorkerTests
             })
             .Returns(Task.CompletedTask);
 
-        var worker = new MetricsWorker(
-            _processor.Object,
-            _logger.Object);
+        var worker = CreateWorker();
 
         await worker.StartAsync(
             cancellationTokenSource.Token);
@@ -156,5 +151,23 @@ public class MetricsWorkerTests
             CancellationToken.None);
 
         Assert.Pass();
+    }
+
+    private MetricsWorker CreateWorker()
+    {
+        var services = new ServiceCollection();
+
+        services.AddScoped<IMetricsProcessor>(
+            _ => _processor.Object);
+
+        var serviceProvider =
+            services.BuildServiceProvider();
+
+        var scopeFactory =
+            serviceProvider.GetRequiredService<IServiceScopeFactory>();
+
+        return new MetricsWorker(
+            scopeFactory,
+            _logger.Object);
     }
 }

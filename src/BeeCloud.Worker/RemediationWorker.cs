@@ -1,4 +1,5 @@
 ﻿using BeeCloud.Worker.Processors;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -6,14 +7,14 @@ namespace BeeCloud.Worker;
 
 public class RemediationWorker : BackgroundService
 {
-    private readonly IRemediationProcessor _processor;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RemediationWorker> _logger;
 
     public RemediationWorker(
-        IRemediationProcessor processor,
+        IServiceScopeFactory scopeFactory,
         ILogger<RemediationWorker> logger)
     {
-        _processor = processor;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -27,7 +28,14 @@ public class RemediationWorker : BackgroundService
         {
             try
             {
-                await _processor.ProcessAsync(
+                using var scope =
+                    _scopeFactory.CreateScope();
+
+                var processor =
+                    scope.ServiceProvider
+                        .GetRequiredService<IRemediationProcessor>();
+
+                await processor.ProcessAsync(
                     stoppingToken);
             }
             catch (OperationCanceledException)
@@ -42,9 +50,17 @@ public class RemediationWorker : BackgroundService
                     "Error occurred while processing node remediation.");
             }
 
-            await Task.Delay(
-                TimeSpan.FromSeconds(10),
-                stoppingToken);
+            try
+            {
+                await Task.Delay(
+                    TimeSpan.FromSeconds(10),
+                    stoppingToken);
+            }
+            catch (OperationCanceledException)
+                when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
         }
 
         _logger.LogInformation(

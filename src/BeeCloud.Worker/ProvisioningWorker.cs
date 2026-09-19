@@ -1,4 +1,5 @@
 ﻿using BeeCloud.Worker.Processors;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -6,14 +7,14 @@ namespace BeeCloud.Worker;
 
 public class ProvisioningWorker : BackgroundService
 {
-    private readonly IProvisioningProcessor _processor;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ProvisioningWorker> _logger;
 
     public ProvisioningWorker(
-        IProvisioningProcessor processor,
+        IServiceScopeFactory scopeFactory,
         ILogger<ProvisioningWorker> logger)
     {
-        _processor = processor;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -27,7 +28,14 @@ public class ProvisioningWorker : BackgroundService
         {
             try
             {
-                await _processor.ProcessAsync(
+                using var scope =
+                    _scopeFactory.CreateScope();
+
+                var processor =
+                    scope.ServiceProvider
+                        .GetRequiredService<IProvisioningProcessor>();
+
+                await processor.ProcessAsync(
                     stoppingToken);
             }
             catch (OperationCanceledException)
@@ -42,9 +50,17 @@ public class ProvisioningWorker : BackgroundService
                     "Error occurred while provisioning nodes.");
             }
 
-            await Task.Delay(
-                TimeSpan.FromSeconds(5),
-                stoppingToken);
+            try
+            {
+                await Task.Delay(
+                    TimeSpan.FromSeconds(5),
+                    stoppingToken);
+            }
+            catch (OperationCanceledException)
+                when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
         }
 
         _logger.LogInformation(
