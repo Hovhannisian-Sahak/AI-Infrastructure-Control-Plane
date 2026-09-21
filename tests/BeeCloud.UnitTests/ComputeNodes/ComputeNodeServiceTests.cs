@@ -353,7 +353,65 @@ public class ComputeNodeServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
+    [Test]
+    public async Task SimulateFaultAsync_WhenNodeExists_ShouldSetFault()
+    {
+        // Arrange
+        var node = new ComputeNode(
+            "test-node",
+            "NVIDIA A100",
+            2);
 
+        _repository
+            .Setup(x => x.GetByIdAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+
+        // Act
+        await _service.SimulateFaultAsync(
+            node.Id,
+            NodeFault.GpuFailure);
+
+        // Assert
+        Assert.That(
+            node.ActiveFault,
+            Is.EqualTo(NodeFault.GpuFailure));
+
+        _repository.Verify(
+            x => x.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+    [Test]
+    public void SimulateFaultAsync_WhenNodeDoesNotExist_ShouldThrowNotFound()
+    {
+        // Arrange
+        var nodeId = Guid.NewGuid();
+
+        _repository
+            .Setup(x => x.GetByIdAsync(
+                nodeId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ComputeNode?)null);
+
+        // Act
+        var exception = Assert.ThrowsAsync<KeyNotFoundException>(
+            async () =>
+                await _service.SimulateFaultAsync(
+                    nodeId,
+                    NodeFault.GpuFailure));
+
+        // Assert
+        Assert.That(
+            exception!.Message,
+            Does.Contain(nodeId.ToString()));
+
+        _repository.Verify(
+            x => x.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
     private static ComputeNode CreateNode()
     {
         return new ComputeNode(

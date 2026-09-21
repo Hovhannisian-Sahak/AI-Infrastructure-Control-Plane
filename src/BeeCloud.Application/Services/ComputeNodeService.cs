@@ -1,6 +1,7 @@
 ﻿using BeeCloud.Application.DTOs.ComputeNodes;
 using BeeCloud.Application.Interfaces;
 using BeeCloud.Domain.Entities;
+using BeeCloud.Domain.Enums;
 
 namespace BeeCloud.Application.Services;
 
@@ -185,5 +186,25 @@ public class ComputeNodeService : IComputeNodeService
             UpdatedAt = node.UpdatedAt,
             LastHealthCheck = node.LastHealthCheck
         };
+    }
+    public async Task SimulateFaultAsync(
+        Guid nodeId,
+        NodeFault fault,
+        CancellationToken cancellationToken = default)
+    {
+        var node = await _repository.GetByIdAsync(
+            nodeId,
+            cancellationToken);
+
+        if (node is null)
+        {
+            throw new KeyNotFoundException(
+                $"Compute node with id '{nodeId}' was not found.");
+        }
+
+        node.SimulateFault(fault);
+
+        await _repository.SaveChangesAsync(
+            cancellationToken);
     }
 }

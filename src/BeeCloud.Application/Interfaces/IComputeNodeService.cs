@@ -1,4 +1,5 @@
 ﻿using BeeCloud.Application.DTOs.ComputeNodes;
+using BeeCloud.Domain.Enums;
 
 namespace BeeCloud.Application.Interfaces;
 
@@ -21,5 +22,10 @@ public interface IComputeNodeService
 
     Task<ComputeNodeResponse> StopAsync(
         Guid id,
+        CancellationToken cancellationToken = default);
+    
+    Task SimulateFaultAsync(
+        Guid nodeId,
+        NodeFault fault,
         CancellationToken cancellationToken = default);
 }
