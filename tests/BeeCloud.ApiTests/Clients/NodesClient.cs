@@ -1,4 +1,6 @@
 ﻿using System.Text.Json;
+using BeeCloud.Domain.Enums;
+using NUnit.Framework;
 using RestSharp;
 
 namespace BeeCloud.ApiTests.Clients;
@@ -31,7 +33,8 @@ public class NodesClient
         return await _client.ExecuteAsync(request);
     }
 
-    public async Task<RestResponse> GetByIdAsync(Guid nodeId)
+    public async Task<RestResponse> GetByIdAsync(
+        Guid nodeId)
     {
         var request = new RestRequest(
             $"/api/v1/nodes/{nodeId}",
@@ -39,6 +42,27 @@ public class NodesClient
 
         return await _client.ExecuteAsync(request);
     }
+
+    public async Task<RestResponse> StartAsync(
+        Guid nodeId)
+    {
+        var request = new RestRequest(
+            $"/api/v1/nodes/{nodeId}/start",
+            Method.Post);
+
+        return await _client.ExecuteAsync(request);
+    }
+
+    public async Task<RestResponse> StopAsync(
+        Guid nodeId)
+    {
+        var request = new RestRequest(
+            $"/api/v1/nodes/{nodeId}/stop",
+            Method.Post);
+
+        return await _client.ExecuteAsync(request);
+    }
+
     public async Task WaitForAvailableAsync(
         Guid nodeId,
         TimeSpan? timeout = null)
@@ -46,11 +70,15 @@ public class NodesClient
         var maxWait =
             timeout ?? TimeSpan.FromSeconds(15);
 
-        var deadline = DateTime.UtcNow.Add(maxWait);
+        var deadline =
+            DateTime.UtcNow.Add(maxWait);
+
+        string? lastStatus = null;
 
         while (DateTime.UtcNow < deadline)
         {
-            var response = await GetByIdAsync(nodeId);
+            var response =
+                await GetByIdAsync(nodeId);
 
             if (!response.IsSuccessful)
             {
@@ -63,14 +91,14 @@ public class NodesClient
             using var document =
                 JsonDocument.Parse(response.Content!);
 
-            var status =
+            lastStatus =
                 document.RootElement
                     .GetProperty("status")
                     .GetString();
 
             if (string.Equals(
-                    status,
-                    "Available",
+                    lastStatus,
+                    nameof(NodeStatus.Available),
                     StringComparison.OrdinalIgnoreCase))
             {
                 return;
@@ -82,6 +110,23 @@ public class NodesClient
 
         throw new AssertionException(
             $"Node '{nodeId}' did not become Available " +
-            $"within {maxWait.TotalSeconds} seconds.");
+            $"within {maxWait.TotalSeconds} seconds. " +
+            $"Last observed status: {lastStatus}.");
+    }
+
+    public async Task<RestResponse> SimulateFaultAsync(
+        Guid nodeId,
+        NodeFault fault)
+    {
+        var request = new RestRequest(
+            $"/api/v1/nodes/{nodeId}/simulate/fault",
+            Method.Post);
+
+        request.AddJsonBody(new
+        {
+            fault = fault.ToString()
+        });
+
+        return await _client.ExecuteAsync(request);
     }
 }
