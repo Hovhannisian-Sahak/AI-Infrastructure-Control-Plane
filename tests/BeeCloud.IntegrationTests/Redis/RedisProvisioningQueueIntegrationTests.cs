@@ -1,153 +1,165 @@
 ﻿using BeeCloud.Infrastructure.Redis;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
+using BeeCloud.IntegrationTests.Infrastructure;
 using StackExchange.Redis;
-using Testcontainers.Redis;
 
 namespace BeeCloud.IntegrationTests.Redis;
 
 [TestFixture]
 public class RedisProvisioningQueueIntegrationTests
 {
-    private RedisContainer _container = null!;
+    private RedisTestContainer _redisContainer = null!;
+    private IConnectionMultiplexer _redis = null!;
     private RedisProvisioningQueue _queue = null!;
-    private IDistributedCache _cache = null!;
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        _container = new RedisBuilder()
-            .WithImage("redis:7")
-            .Build();
+        _redisContainer =
+            new RedisTestContainer();
 
-        await _container.StartAsync();
+        await _redisContainer.StartAsync();
 
-        var options = new RedisCacheOptions
-        {
-            Configuration = _container.GetConnectionString()
-        };
+        _redis =
+            await ConnectionMultiplexer.ConnectAsync(
+                _redisContainer.ConnectionString);
 
-        _cache = new RedisCache(options);
-
-        _queue = new RedisProvisioningQueue(_cache);
-    }
-
-    [OneTimeTearDown]
-    public async Task OneTimeTearDown()
-    {
-        if (_cache is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
-
-        await _container.DisposeAsync();
+        _queue =
+            new RedisProvisioningQueue(_redis);
     }
 
     [SetUp]
     public async Task SetUp()
     {
-        var connection = await ConnectionMultiplexer.ConnectAsync(
-            _container.GetConnectionString());
-
-        var database = connection.GetDatabase();
+        var database =
+            _redis.GetDatabase();
 
         await database.KeyDeleteAsync(
             "beecloud:provisioning:queue");
-
-        await connection.DisposeAsync();
     }
 
-    [Test]
-    public async Task EnqueueAsync_ShouldPersistNodeInRedis()
+    [OneTimeTearDown]
+    public async Task OneTimeTearDown()
     {
-        // Arrange
-        var nodeId = Guid.NewGuid();
+        await _redis.CloseAsync();
+        _redis.Dispose();
 
-        // Act
-        await _queue.EnqueueAsync(nodeId);
-
-        // Assert
-        var result = await _queue.DequeueAsync();
-
-        Assert.That(result, Is.EqualTo(nodeId));
+        await _redisContainer.DisposeAsync();
     }
 
     [Test]
-    public async Task DequeueAsync_ShouldReturnNodesInFifoOrder()
+    public async Task EnqueueAndDequeueAsync_ShouldPreserveFifoOrder()
     {
         // Arrange
         var firstNodeId = Guid.NewGuid();
         var secondNodeId = Guid.NewGuid();
         var thirdNodeId = Guid.NewGuid();
 
+        // Act
         await _queue.EnqueueAsync(firstNodeId);
         await _queue.EnqueueAsync(secondNodeId);
         await _queue.EnqueueAsync(thirdNodeId);
 
-        // Act
-        var first = await _queue.DequeueAsync();
-        var second = await _queue.DequeueAsync();
-        var third = await _queue.DequeueAsync();
+        var first =
+            await _queue.DequeueAsync();
+
+        var second =
+            await _queue.DequeueAsync();
+
+        var third =
+            await _queue.DequeueAsync();
+
+        var empty =
+            await _queue.DequeueAsync();
 
         // Assert
         Assert.That(first, Is.EqualTo(firstNodeId));
         Assert.That(second, Is.EqualTo(secondNodeId));
         Assert.That(third, Is.EqualTo(thirdNodeId));
+        Assert.That(empty, Is.Null);
     }
 
     [Test]
-    public async Task DequeueAsync_WhenQueueIsEmpty_ShouldReturnNull()
-    {
-        // Act
-        var result = await _queue.DequeueAsync();
-
-        // Assert
-        Assert.That(result, Is.Null);
-    }
-
-    [Test]
-    public async Task DequeueAsync_ShouldRemoveNodeFromQueue()
+    public async Task EnqueueAsync_WhenCalledConcurrently_ShouldPreserveAllNodeIds()
     {
         // Arrange
-        var nodeId = Guid.NewGuid();
+        const int nodeCount = 50;
 
-        await _queue.EnqueueAsync(nodeId);
+        var nodeIds =
+            Enumerable
+                .Range(0, nodeCount)
+                .Select(_ => Guid.NewGuid())
+                .ToList();
 
         // Act
-        var firstResult = await _queue.DequeueAsync();
-        var secondResult = await _queue.DequeueAsync();
+        await Task.WhenAll(
+            nodeIds.Select(
+                nodeId => _queue.EnqueueAsync(nodeId)));
 
-        // Assert
-        Assert.That(firstResult, Is.EqualTo(nodeId));
-        Assert.That(secondResult, Is.Null);
-    }
+        var dequeuedNodeIds =
+            new List<Guid>();
 
-    [Test]
-    public async Task EnqueueAsync_MultipleTimes_ShouldPreserveAllNodes()
-    {
-        // Arrange
-        var nodeIds = new[]
+        for (var i = 0; i < nodeCount; i++)
         {
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            Guid.NewGuid()
-        };
+            var nodeId =
+                await _queue.DequeueAsync();
 
-        // Act
+            Assert.That(nodeId, Is.Not.Null);
+
+            dequeuedNodeIds.Add(
+                nodeId!.Value);
+        }
+
+        // Assert
+        Assert.That(
+            dequeuedNodeIds.Count,
+            Is.EqualTo(nodeCount));
+
+        Assert.That(
+            dequeuedNodeIds.ToHashSet(),
+            Is.EquivalentTo(nodeIds));
+    }
+
+    [Test]
+    public async Task DequeueAsync_WhenCalledConcurrently_ShouldReturnEachNodeOnlyOnce()
+    {
+        // Arrange
+        const int nodeCount = 50;
+
+        var nodeIds =
+            Enumerable
+                .Range(0, nodeCount)
+                .Select(_ => Guid.NewGuid())
+                .ToList();
+
         foreach (var nodeId in nodeIds)
         {
             await _queue.EnqueueAsync(nodeId);
         }
 
-        // Assert
-        foreach (var expectedNodeId in nodeIds)
-        {
-            var actualNodeId = await _queue.DequeueAsync();
+        // Act
+        var results =
+            await Task.WhenAll(
+                Enumerable
+                    .Range(0, nodeCount)
+                    .Select(_ => _queue.DequeueAsync()));
 
-            Assert.That(
-                actualNodeId,
-                Is.EqualTo(expectedNodeId));
-        }
+        // Assert
+        var dequeuedNodeIds =
+            results
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .ToList();
+
+        Assert.That(
+            dequeuedNodeIds.Count,
+            Is.EqualTo(nodeCount));
+
+        Assert.That(
+            dequeuedNodeIds.Distinct().Count(),
+            Is.EqualTo(nodeCount));
+
+        Assert.That(
+            dequeuedNodeIds.ToHashSet(),
+            Is.EquivalentTo(nodeIds));
     }
 }

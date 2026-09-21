@@ -53,7 +53,7 @@ public class ProvisioningWorker : BackgroundService
             try
             {
                 await Task.Delay(
-                    TimeSpan.FromSeconds(5),
+                    TimeSpan.FromMilliseconds(500),
                     stoppingToken);
             }
             catch (OperationCanceledException)

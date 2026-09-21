@@ -7,6 +7,7 @@ using BeeCloud.Worker;
 using BeeCloud.Worker.Processors;
 using BeeCloud.Worker.Workers;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(
@@ -14,11 +15,16 @@ builder.Services.AddDbContext<ApplicationDbContext>(
         options.UseNpgsql(
             builder.Configuration.GetConnectionString(
                 "BeeCloudDatabase")));
+var redisConnection =
+    builder.Configuration.GetConnectionString("Redis");
+
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-    options.Configuration =
-        builder.Configuration.GetConnectionString("Redis");
+    options.Configuration = redisConnection;
 });
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    _ => ConnectionMultiplexer.Connect(redisConnection!));
 builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
 builder.Services.AddScoped<IIncidentService, IncidentService>();
 

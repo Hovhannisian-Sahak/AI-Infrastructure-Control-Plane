@@ -1,76 +1,60 @@
 ﻿using BeeCloud.Application.Interfaces;
-using Microsoft.Extensions.Caching.Distributed;
-using System.Text.Json;
+using StackExchange.Redis;
 
 namespace BeeCloud.Infrastructure.Redis;
 
 public class RedisProvisioningQueue : IProvisioningQueue
 {
-    private const string QueueKey = "beecloud:provisioning:queue";
+    private const string QueueKey =
+        "beecloud:provisioning:queue";
 
-    private readonly IDistributedCache _cache;
+    private readonly IConnectionMultiplexer _redis;
 
-    public RedisProvisioningQueue(IDistributedCache cache)
+    public RedisProvisioningQueue(
+        IConnectionMultiplexer redis)
     {
-        _cache = cache;
+        _redis = redis;
     }
 
     public async Task EnqueueAsync(
         Guid nodeId,
         CancellationToken cancellationToken = default)
     {
-        var existing = await GetQueueAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        existing.Add(nodeId);
+        var database =
+            _redis.GetDatabase();
 
-        await SaveQueueAsync(
-            existing,
-            cancellationToken);
+        await database.ListRightPushAsync(
+            QueueKey,
+            nodeId.ToString());
     }
 
     public async Task<Guid?> DequeueAsync(
         CancellationToken cancellationToken = default)
     {
-        var queue = await GetQueueAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        if (queue.Count == 0)
+        var database =
+            _redis.GetDatabase();
+
+        var value =
+            await database.ListLeftPopAsync(
+                QueueKey);
+
+        if (value.IsNullOrEmpty)
+        {
             return null;
+        }
 
-        var nodeId = queue[0];
-
-        queue.RemoveAt(0);
-
-        await SaveQueueAsync(
-            queue,
-            cancellationToken);
+        if (!Guid.TryParse(
+                value.ToString(),
+                out var nodeId))
+        {
+            throw new InvalidOperationException(
+                $"Invalid node ID '{value}' found in provisioning queue.");
+        }
 
         return nodeId;
-    }
-
-    private async Task<List<Guid>> GetQueueAsync(
-        CancellationToken cancellationToken)
-    {
-        var data = await _cache.GetStringAsync(
-            QueueKey,
-            cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(data))
-            return [];
-
-        return JsonSerializer.Deserialize<List<Guid>>(data)
-               ?? [];
-    }
-
-    private async Task SaveQueueAsync(
-        List<Guid> queue,
-        CancellationToken cancellationToken)
-    {
-        var data = JsonSerializer.Serialize(queue);
-
-        await _cache.SetStringAsync(
-            QueueKey,
-            data,
-            new DistributedCacheEntryOptions(),
-            cancellationToken);
     }
 }

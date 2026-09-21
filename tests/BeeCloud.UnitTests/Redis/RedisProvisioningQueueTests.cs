@@ -1,216 +1,66 @@
-﻿using System.Text.Json;
-using BeeCloud.Infrastructure.Redis;
-using Microsoft.Extensions.Caching.Distributed;
+﻿using BeeCloud.Infrastructure.Redis;
 using Moq;
+using StackExchange.Redis;
 
 namespace BeeCloud.UnitTests.Redis;
 
 [TestFixture]
 public class RedisProvisioningQueueTests
 {
-    private const string QueueKey = "beecloud:provisioning:queue";
+    private const string QueueKey =
+        "beecloud:provisioning:queue";
 
-    private Mock<IDistributedCache> _cache = null!;
+    private Mock<IConnectionMultiplexer> _redis = null!;
+    private Mock<IDatabase> _database = null!;
     private RedisProvisioningQueue _queue = null!;
 
     [SetUp]
     public void SetUp()
     {
-        _cache = new Mock<IDistributedCache>();
+        _redis =
+            new Mock<IConnectionMultiplexer>();
 
-        _queue = new RedisProvisioningQueue(
-            _cache.Object);
+        _database =
+            new Mock<IDatabase>();
+
+        _redis
+            .Setup(redis =>
+                redis.GetDatabase(
+                    It.IsAny<int>(),
+                    It.IsAny<object?>()))
+            .Returns(_database.Object);
+
+        _queue =
+            new RedisProvisioningQueue(
+                _redis.Object);
     }
 
     [Test]
-    public async Task EnqueueAsync_WhenQueueDoesNotExist_ShouldStoreNodeId()
+    public async Task EnqueueAsync_ShouldPushNodeIdToRedisQueue()
     {
         // Arrange
         var nodeId = Guid.NewGuid();
 
-        _cache
-            .Setup(cache => cache.GetAsync(
-                QueueKey,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((byte[]?)null);
+        _database
+            .Setup(database =>
+                database.ListRightPushAsync(
+                    QueueKey,
+                    nodeId.ToString(),
+                    It.IsAny<When>(),
+                    It.IsAny<CommandFlags>()))
+            .ReturnsAsync(1);
 
         // Act
         await _queue.EnqueueAsync(nodeId);
 
         // Assert
-        _cache.Verify(
-            cache => cache.SetAsync(
-                QueueKey,
-                It.Is<byte[]>(value =>
-                    ContainsNodeId(value, nodeId)),
-                It.IsAny<DistributedCacheEntryOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Test]
-    public async Task EnqueueAsync_WhenQueueExists_ShouldPreserveExistingNodes()
-    {
-        // Arrange
-        var existingNodeId = Guid.NewGuid();
-        var newNodeId = Guid.NewGuid();
-
-        var existingQueue = JsonSerializer.SerializeToUtf8Bytes(
-            new List<Guid>
-            {
-                existingNodeId
-            });
-
-        _cache
-            .Setup(cache => cache.GetAsync(
-                QueueKey,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingQueue);
-
-        // Act
-        await _queue.EnqueueAsync(newNodeId);
-
-        // Assert
-        _cache.Verify(
-            cache => cache.SetAsync(
-                QueueKey,
-                It.Is<byte[]>(value =>
-                    ContainsNodeIds(
-                        value,
-                        existingNodeId,
-                        newNodeId)),
-                It.IsAny<DistributedCacheEntryOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Test]
-    public async Task DequeueAsync_WhenQueueDoesNotExist_ShouldReturnNull()
-    {
-        // Arrange
-        _cache
-            .Setup(cache => cache.GetAsync(
-                QueueKey,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((byte[]?)null);
-
-        // Act
-        var result = await _queue.DequeueAsync();
-
-        // Assert
-        Assert.That(result, Is.Null);
-
-        _cache.Verify(
-            cache => cache.SetAsync(
-                It.IsAny<string>(),
-                It.IsAny<byte[]>(),
-                It.IsAny<DistributedCacheEntryOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Test]
-    public async Task DequeueAsync_WhenQueueIsEmpty_ShouldReturnNull()
-    {
-        // Arrange
-        var emptyQueue = JsonSerializer.SerializeToUtf8Bytes(
-            new List<Guid>());
-
-        _cache
-            .Setup(cache => cache.GetAsync(
-                QueueKey,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(emptyQueue);
-
-        // Act
-        var result = await _queue.DequeueAsync();
-
-        // Assert
-        Assert.That(result, Is.Null);
-
-        _cache.Verify(
-            cache => cache.SetAsync(
-                It.IsAny<string>(),
-                It.IsAny<byte[]>(),
-                It.IsAny<DistributedCacheEntryOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Test]
-    public async Task DequeueAsync_WhenQueueContainsNodes_ShouldReturnFirstNode()
-    {
-        // Arrange
-        var firstNodeId = Guid.NewGuid();
-        var secondNodeId = Guid.NewGuid();
-
-        var queue = JsonSerializer.SerializeToUtf8Bytes(
-            new List<Guid>
-            {
-                firstNodeId,
-                secondNodeId
-            });
-
-        _cache
-            .Setup(cache => cache.GetAsync(
-                QueueKey,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(queue);
-
-        // Act
-        var result = await _queue.DequeueAsync();
-
-        // Assert
-        Assert.That(result, Is.EqualTo(firstNodeId));
-
-        _cache.Verify(
-            cache => cache.SetAsync(
-                QueueKey,
-                It.Is<byte[]>(value =>
-                    ContainsOnlyNode(value, secondNodeId)),
-                It.IsAny<DistributedCacheEntryOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Test]
-    public async Task DequeueAsync_WhenQueueContainsMultipleNodes_ShouldPreserveRemainingOrder()
-    {
-        // Arrange
-        var firstNodeId = Guid.NewGuid();
-        var secondNodeId = Guid.NewGuid();
-        var thirdNodeId = Guid.NewGuid();
-
-        var queue = JsonSerializer.SerializeToUtf8Bytes(
-            new List<Guid>
-            {
-                firstNodeId,
-                secondNodeId,
-                thirdNodeId
-            });
-
-        _cache
-            .Setup(cache => cache.GetAsync(
-                QueueKey,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(queue);
-
-        // Act
-        var result = await _queue.DequeueAsync();
-
-        // Assert
-        Assert.That(result, Is.EqualTo(firstNodeId));
-
-        _cache.Verify(
-            cache => cache.SetAsync(
-                QueueKey,
-                It.Is<byte[]>(value =>
-                    HasRemainingNodesInOrder(
-                        value,
-                        secondNodeId,
-                        thirdNodeId)),
-                It.IsAny<DistributedCacheEntryOptions>(),
-                It.IsAny<CancellationToken>()),
+        _database.Verify(
+            database =>
+                database.ListRightPushAsync(
+                    QueueKey,
+                    nodeId.ToString(),
+                    It.IsAny<When>(),
+                    It.IsAny<CommandFlags>()),
             Times.Once);
     }
 
@@ -220,90 +70,173 @@ public class RedisProvisioningQueueTests
         // Arrange
         var nodeId = Guid.NewGuid();
 
-        _cache
-            .Setup(cache => cache.GetAsync(
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((byte[]?)null);
+        _database
+            .Setup(database =>
+                database.ListRightPushAsync(
+                    It.IsAny<RedisKey>(),
+                    It.IsAny<RedisValue>(),
+                    It.IsAny<When>(),
+                    It.IsAny<CommandFlags>()))
+            .ReturnsAsync(1);
 
         // Act
         await _queue.EnqueueAsync(nodeId);
 
         // Assert
-        _cache.Verify(
-            cache => cache.GetAsync(
-                QueueKey,
-                It.IsAny<CancellationToken>()),
+        _database.Verify(
+            database =>
+                database.ListRightPushAsync(
+                    QueueKey,
+                    nodeId.ToString(),
+                    It.IsAny<When>(),
+                    It.IsAny<CommandFlags>()),
             Times.Once);
+    }
+
+    [Test]
+    public async Task DequeueAsync_WhenQueueIsEmpty_ShouldReturnNull()
+    {
+        // Arrange
+        _database
+            .Setup(database =>
+                database.ListLeftPopAsync(
+                    QueueKey,
+                    It.IsAny<CommandFlags>()))
+            .ReturnsAsync(RedisValue.Null);
+
+        // Act
+        var result =
+            await _queue.DequeueAsync();
+
+        // Assert
+        Assert.That(result, Is.Null);
+
+        _database.Verify(
+            database =>
+                database.ListLeftPopAsync(
+                    QueueKey,
+                    It.IsAny<CommandFlags>()),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task DequeueAsync_WhenQueueContainsNode_ShouldReturnNode()
+    {
+        // Arrange
+        var nodeId = Guid.NewGuid();
+
+        _database
+            .Setup(database =>
+                database.ListLeftPopAsync(
+                    QueueKey,
+                    It.IsAny<CommandFlags>()))
+            .ReturnsAsync(
+                new RedisValue(nodeId.ToString()));
+
+        // Act
+        var result =
+            await _queue.DequeueAsync();
+
+        // Assert
+        Assert.That(
+            result,
+            Is.EqualTo(nodeId));
     }
 
     [Test]
     public async Task DequeueAsync_ShouldUseExpectedRedisKey()
     {
         // Arrange
-        _cache
-            .Setup(cache => cache.GetAsync(
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((byte[]?)null);
+        _database
+            .Setup(database =>
+                database.ListLeftPopAsync(
+                    It.IsAny<RedisKey>(),
+                    It.IsAny<CommandFlags>()))
+            .ReturnsAsync(RedisValue.Null);
 
         // Act
         await _queue.DequeueAsync();
 
         // Assert
-        _cache.Verify(
-            cache => cache.GetAsync(
-                QueueKey,
-                It.IsAny<CancellationToken>()),
+        _database.Verify(
+            database =>
+                database.ListLeftPopAsync(
+                    QueueKey,
+                    It.IsAny<CommandFlags>()),
             Times.Once);
     }
 
-    private static bool ContainsNodeId(
-        byte[] value,
-        Guid expectedNodeId)
+    [Test]
+    public async Task DequeueAsync_WhenRedisContainsInvalidGuid_ShouldThrow()
     {
-        var nodes = Deserialize(value);
+        // Arrange
+        _database
+            .Setup(database =>
+                database.ListLeftPopAsync(
+                    QueueKey,
+                    It.IsAny<CommandFlags>()))
+            .ReturnsAsync(
+                new RedisValue("invalid-node-id"));
 
-        return nodes.Contains(expectedNodeId);
+        // Act & Assert
+        var exception =
+            Assert.ThrowsAsync<InvalidOperationException>(
+                async () =>
+                    await _queue.DequeueAsync());
+
+        Assert.That(
+            exception!.Message,
+            Does.Contain("Invalid node ID"));
     }
 
-    private static bool ContainsNodeIds(
-        byte[] value,
-        Guid firstExpectedNodeId,
-        Guid secondExpectedNodeId)
+    [Test]
+    public async Task EnqueueAsync_WhenCancellationRequested_ShouldThrow()
     {
-        var nodes = Deserialize(value);
+        // Arrange
+        var nodeId = Guid.NewGuid();
 
-        return nodes.Count == 2 &&
-               nodes[0] == firstExpectedNodeId &&
-               nodes[1] == secondExpectedNodeId;
+        using var cancellationTokenSource =
+            new CancellationTokenSource();
+
+        cancellationTokenSource.Cancel();
+
+        // Act & Assert
+        Assert.ThrowsAsync<OperationCanceledException>(
+            async () =>
+                await _queue.EnqueueAsync(
+                    nodeId,
+                    cancellationTokenSource.Token));
+
+        _database.Verify(
+            database =>
+                database.ListRightPushAsync(
+                    It.IsAny<RedisKey>(),
+                    It.IsAny<RedisValue>(),
+                    It.IsAny<When>(),
+                    It.IsAny<CommandFlags>()),
+            Times.Never);
     }
 
-    private static bool ContainsOnlyNode(
-        byte[] value,
-        Guid expectedNodeId)
+    [Test]
+    public async Task DequeueAsync_WhenCancellationRequested_ShouldThrow()
     {
-        var nodes = Deserialize(value);
+        // Arrange
+        using var cancellationTokenSource =
+            new CancellationTokenSource();
 
-        return nodes.Count == 1 &&
-               nodes[0] == expectedNodeId;
-    }
+        cancellationTokenSource.Cancel();
 
-    private static bool HasRemainingNodesInOrder(
-        byte[] value,
-        Guid firstExpectedNodeId,
-        Guid secondExpectedNodeId)
-    {
-        var nodes = Deserialize(value);
+        // Act & Assert
+        Assert.ThrowsAsync<OperationCanceledException>(
+            async () =>
+                await _queue.DequeueAsync(
+                    cancellationTokenSource.Token));
 
-        return nodes.Count == 2 &&
-               nodes[0] == firstExpectedNodeId &&
-               nodes[1] == secondExpectedNodeId;
-    }
-
-    private static List<Guid> Deserialize(byte[] value)
-    {
-        return JsonSerializer.Deserialize<List<Guid>>(value)
-               ?? [];
+        _database.Verify(
+            database =>
+                database.ListLeftPopAsync(
+                    It.IsAny<RedisKey>(),
+                    It.IsAny<CommandFlags>()),
+            Times.Never);
     }
 }

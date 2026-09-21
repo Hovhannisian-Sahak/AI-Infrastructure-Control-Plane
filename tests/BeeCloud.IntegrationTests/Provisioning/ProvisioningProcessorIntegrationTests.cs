@@ -1,13 +1,10 @@
-﻿using BeeCloud.Application.Interfaces;
-using BeeCloud.Domain.Entities;
+﻿using BeeCloud.Domain.Entities;
 using BeeCloud.Domain.Enums;
 using BeeCloud.Infrastructure.Persistence;
 using BeeCloud.Infrastructure.Persistence.Repositories;
 using BeeCloud.Infrastructure.Redis;
 using BeeCloud.Worker.Processors;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 using Testcontainers.PostgreSql;
@@ -22,7 +19,7 @@ public class ProvisioningProcessorIntegrationTests
     private RedisContainer _redis = null!;
 
     private ApplicationDbContext _dbContext = null!;
-    private IDistributedCache _cache = null!;
+    private IConnectionMultiplexer _redisConnection = null!;
     private RedisProvisioningQueue _queue = null!;
     private ProvisioningProcessor _processor = null!;
 
@@ -48,28 +45,32 @@ public class ProvisioningProcessorIntegrationTests
                 .UseNpgsql(_postgres.GetConnectionString())
                 .Options;
 
-        _dbContext = new ApplicationDbContext(dbOptions);
+        _dbContext =
+            new ApplicationDbContext(dbOptions);
 
         await _dbContext.Database.EnsureCreatedAsync();
 
-        var redisOptions = new RedisCacheOptions
-        {
-            Configuration = _redis.GetConnectionString()
-        };
+        _redisConnection =
+            await ConnectionMultiplexer.ConnectAsync(
+                _redis.GetConnectionString());
 
-        _cache = new RedisCache(redisOptions);
-
-        _queue = new RedisProvisioningQueue(_cache);
+        _queue =
+            new RedisProvisioningQueue(
+                _redisConnection);
 
         var logger =
             LoggerFactory
                 .Create(builder => builder.AddConsole())
                 .CreateLogger<ProvisioningProcessor>();
-        var repository = new ComputeNodeRepository(_dbContext);
-        _processor = new ProvisioningProcessor(
-            repository,
-            _queue,
-            logger);
+
+        var repository =
+            new ComputeNodeRepository(_dbContext);
+
+        _processor =
+            new ProvisioningProcessor(
+                repository,
+                _queue,
+                logger);
     }
 
     [SetUp]
@@ -78,15 +79,11 @@ public class ProvisioningProcessorIntegrationTests
         await _dbContext.NodeMetrics.ExecuteDeleteAsync();
         await _dbContext.ComputeNodes.ExecuteDeleteAsync();
 
-        var connection = await ConnectionMultiplexer.ConnectAsync(
-            _redis.GetConnectionString());
-
-        var database = connection.GetDatabase();
+        var database =
+            _redisConnection.GetDatabase();
 
         await database.KeyDeleteAsync(
             "beecloud:provisioning:queue");
-
-        await connection.DisposeAsync();
     }
 
     [OneTimeTearDown]
@@ -94,10 +91,7 @@ public class ProvisioningProcessorIntegrationTests
     {
         await _dbContext.DisposeAsync();
 
-        if (_cache is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
+        await _redisConnection.DisposeAsync();
 
         await _redis.DisposeAsync();
         await _postgres.DisposeAsync();
