@@ -278,48 +278,7 @@ public class NodesApiTests
         TestContext.WriteLine(
             $"Stop non-running node response: {response.Content}");
     }
-
-    [Test]
-    public async Task SimulateFault_WhenGpuFailureIsRequested_ShouldReturnGpuFailure()
-    {
-        // Arrange
-        var nodeId =
-            await CreateNodeAsync();
-
-        await _nodesClient.WaitForAvailableAsync(nodeId);
-
-        // Act
-        var response =
-            await _nodesClient.SimulateFaultAsync(
-                nodeId,
-                NodeFault.GpuFailure);
-
-        // Assert - HTTP response
-        Assert.That(
-            response.StatusCode,
-            Is.EqualTo(HttpStatusCode.OK));
-
-        Assert.That(
-            response.Content,
-            Is.Not.Null);
-
-        TestContext.WriteLine(
-            $"GPU failure simulation response: {response.Content}");
-
-        // Assert - response body
-        using var document =
-            JsonDocument.Parse(response.Content!);
-
-        var activeFault =
-            document.RootElement
-                .GetProperty("activeFault")
-                .GetString();
-
-        Assert.That(
-            activeFault,
-            Is.EqualTo(nameof(NodeFault.GpuFailure)));
-    }
-
+    
     [Test]
     public async Task SimulateFault_WhenNodeDoesNotExist_ShouldReturnNotFound()
     {
@@ -339,6 +298,62 @@ public class NodesApiTests
 
         TestContext.WriteLine(
             $"Simulation for non-existing node: {response.Content}");
+    }
+    
+    [Test]
+    [TestCase(NodeFault.GpuFailure)]
+    [TestCase(NodeFault.GpuOverheat)]
+    [TestCase(NodeFault.NetworkFailure)]
+    [TestCase(NodeFault.ServiceCrash)]
+    public async Task SimulateFault_WhenValidFaultIsRequested_ShouldReturnRequestedFault(
+        NodeFault fault)
+    {
+        // Arrange
+        var nodeId = await CreateNodeAsync();
+
+        await _nodesClient.WaitForAvailableAsync(nodeId);
+
+        // Act
+        var response =
+            await _nodesClient.SimulateFaultAsync(
+                nodeId,
+                fault);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        using var document =
+            JsonDocument.Parse(response.Content!);
+
+        var activeFault =
+            document.RootElement
+                .GetProperty("activeFault")
+                .GetString();
+
+        Assert.That(
+            activeFault,
+            Is.EqualTo(fault.ToString()));
+    }
+    [Test]
+    public async Task SimulateFault_WhenNoneIsRequested_ShouldReturnBadRequest()
+    {
+        // Arrange
+        var nodeId = await CreateNodeAsync();
+
+        await _nodesClient.WaitForAvailableAsync(nodeId);
+
+        // Act
+        var response =
+            await _nodesClient.SimulateFaultAsync(
+                nodeId,
+                NodeFault.None);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     private async Task<Guid> CreateNodeAsync()

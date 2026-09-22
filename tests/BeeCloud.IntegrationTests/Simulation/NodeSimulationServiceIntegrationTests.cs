@@ -55,9 +55,14 @@ public class NodeSimulationServiceIntegrationTests
         await _dbContext.DisposeAsync();
         await _postgres.DisposeAsync();
     }
-
+    
     [Test]
-    public async Task SimulateFaultAsync_WhenGpuFailureIsSimulated_ShouldPersistFault()
+    [TestCase(NodeFault.GpuFailure)]
+    [TestCase(NodeFault.GpuOverheat)]
+    [TestCase(NodeFault.NetworkFailure)]
+    [TestCase(NodeFault.ServiceCrash)]
+    public async Task SimulateFaultAsync_WhenValidFaultIsSimulated_ShouldPersistFault(
+        NodeFault fault)
     {
         // Arrange
         var node = new ComputeNode(
@@ -72,7 +77,7 @@ public class NodeSimulationServiceIntegrationTests
         var response =
             await _service.SimulateFaultAsync(
                 node.Id,
-                NodeFault.GpuFailure);
+                fault);
 
         // Assert - service response
         Assert.That(
@@ -81,7 +86,7 @@ public class NodeSimulationServiceIntegrationTests
 
         Assert.That(
             response.ActiveFault,
-            Is.EqualTo(nameof(NodeFault.GpuFailure)));
+            Is.EqualTo(fault.ToString()));
 
         // Assert - database
         _dbContext.ChangeTracker.Clear();
@@ -92,6 +97,30 @@ public class NodeSimulationServiceIntegrationTests
 
         Assert.That(
             persistedNode.ActiveFault,
-            Is.EqualTo(NodeFault.GpuFailure));
+            Is.EqualTo(fault));
+    }
+    [Test]
+    public async Task SimulateFaultAsync_WhenNoneIsProvided_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var node = new ComputeNode(
+            "integration-test-node",
+            "NVIDIA A100",
+            2);
+
+        await _dbContext.ComputeNodes.AddAsync(node);
+        await _dbContext.SaveChangesAsync();
+
+        // Act & Assert
+        var exception =
+            Assert.ThrowsAsync<ArgumentException>(
+                async () =>
+                    await _service.SimulateFaultAsync(
+                        node.Id,
+                        NodeFault.None));
+
+        Assert.That(
+            exception!.Message,
+            Is.EqualTo("Fault must be specified."));
     }
 }

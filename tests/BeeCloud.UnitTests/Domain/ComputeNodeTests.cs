@@ -244,7 +244,43 @@ public class ComputeNodeTests
             node.LastHealthCheck,
             Is.EqualTo(timestamp));
     }
+    
+    [Test]
+    [TestCase(NodeFault.GpuFailure)]
+    [TestCase(NodeFault.GpuOverheat)]
+    [TestCase(NodeFault.NetworkFailure)]
+    [TestCase(NodeFault.ServiceCrash)]
+    public void SimulateFault_WhenValidFaultIsProvided_ShouldSetActiveFault(
+        NodeFault fault)
+    {
+        // Arrange
+        var node = new ComputeNode(
+            "test-node",
+            "NVIDIA A100",
+            2);
 
+        // Act
+        node.SimulateFault(fault);
+
+        // Assert
+        Assert.That(
+            node.ActiveFault,
+            Is.EqualTo(fault));
+    }
+    [Test]
+    public void SimulateFault_WhenNoneIsProvided_ShouldThrow()
+    {
+        // Arrange
+        var node = new ComputeNode(
+            "test-node",
+            "NVIDIA A100",
+            2);
+
+        // Act & Assert
+        Assert.That(
+            () => node.SimulateFault(NodeFault.None),
+            Throws.ArgumentException);
+    }
     private static ComputeNode CreateNode()
     {
         return new ComputeNode(
