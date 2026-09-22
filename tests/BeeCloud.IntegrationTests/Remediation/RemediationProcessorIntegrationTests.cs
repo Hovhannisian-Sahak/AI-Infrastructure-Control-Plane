@@ -18,6 +18,8 @@ public class RemediationProcessorIntegrationTests
     private PostgreSqlTestContainer _postgres = null!;
     private ApplicationDbContext _dbContext = null!;
     private RemediationProcessor _processor = null!;
+    private NodeSimulationService _simulationService = null!;
+    private HealthMonitoringProcessor _healthProcessor = null!;
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
@@ -37,6 +39,9 @@ public class RemediationProcessorIntegrationTests
         IComputeNodeRepository nodeRepository =
             new ComputeNodeRepository(_dbContext);
 
+        IHealthCheckRepository healthCheckRepository =
+            new HealthCheckRepository(_dbContext);
+
         IIncidentRepository incidentRepository =
             new IncidentRepository(_dbContext);
 
@@ -44,6 +49,16 @@ public class RemediationProcessorIntegrationTests
             new IncidentService(
                 incidentRepository,
                 nodeRepository);
+
+        _simulationService =
+            new NodeSimulationService(
+                nodeRepository);
+
+        _healthProcessor = new HealthMonitoringProcessor(
+            nodeRepository,
+            healthCheckRepository,
+            incidentService,
+            NullLogger<HealthMonitoringProcessor>.Instance);
 
         _processor = new RemediationProcessor(
             nodeRepository,
@@ -179,6 +194,103 @@ public class RemediationProcessorIntegrationTests
         Assert.That(
             persistedNode.Status,
             Is.EqualTo(NodeStatus.Available));
+    }
+
+    [Test]
+    public async Task ServiceCrash_EndToEndWorkflow_ShouldEndWithFailedNodeAndActiveFault()
+    {
+        // Arrange
+        var node = new ComputeNode(
+            $"service-crash-workflow-{Guid.NewGuid():N}",
+            "NVIDIA A100",
+            1);
+
+        node.MarkAvailable();
+        node.Start();
+
+        await _dbContext.ComputeNodes.AddAsync(node);
+        await _dbContext.SaveChangesAsync();
+
+        // Simulate the fault through the application service.
+        await _simulationService.SimulateFaultAsync(
+            node.Id,
+            NodeFault.ServiceCrash);
+
+        // Act 1 - health monitoring.
+        await _healthProcessor.ProcessAsync();
+
+        // Assert - health monitoring should detect the fault.
+        var unhealthyNode = await _dbContext.ComputeNodes
+            .AsNoTracking()
+            .FirstAsync(n => n.Id == node.Id);
+
+        Assert.That(
+            unhealthyNode.Status,
+            Is.EqualTo(NodeStatus.Unhealthy));
+
+        // Act 2 - quarantine the unhealthy node.
+        _dbContext.ChangeTracker.Clear();
+
+        var nodeForQuarantine = await _dbContext.ComputeNodes
+            .FirstAsync(n => n.Id == node.Id);
+
+        nodeForQuarantine.Quarantine();
+
+        await _dbContext.SaveChangesAsync();
+
+        // Act 3 - remediation.
+        await _processor.ProcessAsync();
+
+        // Assert - final node state.
+        var persistedNode = await _dbContext.ComputeNodes
+            .AsNoTracking()
+            .FirstAsync(n => n.Id == node.Id);
+
+        Assert.That(
+            persistedNode.Status,
+            Is.EqualTo(NodeStatus.Failed));
+
+        Assert.That(
+            persistedNode.ActiveFault,
+            Is.EqualTo(NodeFault.ServiceCrash));
+
+        // Assert - health check.
+        var healthCheck = await _dbContext.HealthChecks
+            .AsNoTracking()
+            .Where(h => h.ComputeNodeId == node.Id)
+            .OrderByDescending(h => h.CheckedAt)
+            .FirstOrDefaultAsync();
+
+        Assert.That(
+            healthCheck,
+            Is.Not.Null);
+
+        Assert.That(
+            healthCheck!.IsHealthy,
+            Is.False);
+
+        // Assert - incident.
+        var incident = await _dbContext.Incidents
+            .AsNoTracking()
+            .Where(i => i.ComputeNodeId == node.Id)
+            .OrderByDescending(i => i.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        Assert.That(
+            incident,
+            Is.Not.Null);
+
+        Assert.That(
+            incident!.Severity,
+            Is.EqualTo(IncidentSeverity.High));
+
+        Assert.That(
+            incident.Status,
+            Is.EqualTo(IncidentStatus.Open));
+
+        Assert.That(
+            incident.Title,
+            Is.EqualTo("GPU failure detected"));
     }
 
     private async Task<ComputeNode> CreateNodeAsync(
