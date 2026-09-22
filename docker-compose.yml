@@ -26,6 +26,14 @@
       - "16686:16686"
       - "4317:4317"
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: beecloud-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
 volumes:
   beecloud-postgres-data:
   beecloud-redis-data:
