@@ -34,6 +34,15 @@
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: beecloud-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - beecloud-grafana-data:/var/lib/grafana
+
 volumes:
   beecloud-postgres-data:
   beecloud-redis-data:
+  beecloud-grafana-data:
