@@ -1,5 +1,6 @@
 using BeeCloud.Application.Interfaces;
 using BeeCloud.Application.Services;
+using BeeCloud.Infrastructure.Observability;
 using BeeCloud.Infrastructure.Persistence;
 using BeeCloud.Infrastructure.Persistence.Repositories;
 using BeeCloud.Infrastructure.Redis;
@@ -25,6 +26,9 @@ builder.Services.AddStackExchangeRedisCache(options =>
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(
     _ => ConnectionMultiplexer.Connect(redisConnection!));
+
+builder.Services.AddSingleton<IBeeCloudMetrics, BeeCloudMetrics>();
+
 builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
 builder.Services.AddScoped<IIncidentService, IncidentService>();
 

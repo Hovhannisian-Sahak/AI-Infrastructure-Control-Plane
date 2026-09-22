@@ -30,6 +30,7 @@ builder.Services
         metrics
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
+            .AddMeter("BeeCloud")
             .AddPrometheusExporter();
     });
 // Add services to the container.

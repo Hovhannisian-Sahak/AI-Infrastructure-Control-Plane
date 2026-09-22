@@ -10,25 +10,51 @@ public class MetricsProcessor : IMetricsProcessor
     private readonly IComputeNodeRepository _nodeRepository;
     private readonly INodeMetricRepository _metricRepository;
     private readonly ILogger<MetricsProcessor> _logger;
-
+    private readonly IIncidentRepository _incidentRepository;
+    private readonly IBeeCloudMetrics _beeCloudMetrics;
     public MetricsProcessor(
         IComputeNodeRepository nodeRepository,
         INodeMetricRepository metricRepository,
+        IIncidentRepository incidentRepository,
+        IBeeCloudMetrics beeCloudMetrics,
         ILogger<MetricsProcessor> logger)
     {
         _nodeRepository = nodeRepository;
         _metricRepository = metricRepository;
+        _incidentRepository = incidentRepository;
+        _beeCloudMetrics = beeCloudMetrics;
         _logger = logger;
     }
 
     public async Task ProcessAsync(
         CancellationToken cancellationToken = default)
     {
-        var nodes = await _nodeRepository.GetByStatusAsync(
-            NodeStatus.Running,
+        var nodes = await _nodeRepository.GetAllAsync(
             cancellationToken);
 
-        foreach (var node in nodes)
+        var availableNodes = nodes.Count(
+            node => node.Status == NodeStatus.Available);
+
+        var unhealthyNodes = nodes.Count(
+            node => node.Status == NodeStatus.Unhealthy);
+
+        _beeCloudMetrics.SetNodeCounts(
+            nodes.Count,
+            availableNodes,
+            unhealthyNodes);
+
+        var openIncidents = await _incidentRepository.GetAllAsync(
+            status: IncidentStatus.Open,
+            cancellationToken: cancellationToken);
+
+        _beeCloudMetrics.SetOpenIncidentCount(
+            openIncidents.Count);
+
+        var runningNodes = nodes
+            .Where(node => node.Status == NodeStatus.Running)
+            .ToList();
+
+        foreach (var node in runningNodes)
         {
             try
             {
@@ -50,7 +76,6 @@ public class MetricsProcessor : IMetricsProcessor
             }
         }
     }
-
     private async Task RecordMetricAsync(
         ComputeNode node,
         CancellationToken cancellationToken)

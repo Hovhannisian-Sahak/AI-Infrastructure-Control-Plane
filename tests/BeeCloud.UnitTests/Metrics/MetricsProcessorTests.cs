@@ -12,6 +12,8 @@ public class MetricsProcessorTests
 {
     private Mock<IComputeNodeRepository> _nodeRepository = null!;
     private Mock<INodeMetricRepository> _metricRepository = null!;
+    private Mock<IIncidentRepository> _incidentRepository = null!;
+    private Mock<IBeeCloudMetrics> _beeCloudMetrics = null!;
     private Mock<ILogger<MetricsProcessor>> _logger = null!;
     private MetricsProcessor _processor = null!;
 
@@ -20,32 +22,98 @@ public class MetricsProcessorTests
     {
         _nodeRepository = new Mock<IComputeNodeRepository>();
         _metricRepository = new Mock<INodeMetricRepository>();
+        _incidentRepository = new Mock<IIncidentRepository>();
+        _beeCloudMetrics = new Mock<IBeeCloudMetrics>();
         _logger = new Mock<ILogger<MetricsProcessor>>();
+
+        _nodeRepository
+            .Setup(repository => repository.GetAllAsync(
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ComputeNode>());
+
+        _incidentRepository
+            .Setup(repository => repository.GetAllAsync(
+                null,
+                IncidentStatus.Open,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Incident>());
 
         _processor = new MetricsProcessor(
             _nodeRepository.Object,
             _metricRepository.Object,
+            _incidentRepository.Object,
+            _beeCloudMetrics.Object,
             _logger.Object);
     }
 
     [Test]
-    public async Task ProcessAsync_ShouldRequestRunningNodes()
+    public async Task ProcessAsync_ShouldRequestAllNodes()
     {
-        // Arrange
-        _nodeRepository
-            .Setup(repository => repository.GetByStatusAsync(
-                NodeStatus.Running,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ComputeNode>());
-
         // Act
         await _processor.ProcessAsync();
 
         // Assert
         _nodeRepository.Verify(
-            repository => repository.GetByStatusAsync(
-                NodeStatus.Running,
+            repository => repository.GetAllAsync(
                 It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task ProcessAsync_ShouldUpdateNodeCounts()
+    {
+        // Arrange
+        var availableNode = CreateAvailableNode();
+        var runningNode = CreateRunningNode();
+        var unhealthyNode = CreateRunningNode();
+
+        unhealthyNode.MarkUnhealthy();
+
+        _nodeRepository
+            .Setup(repository => repository.GetAllAsync(
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ComputeNode>
+            {
+                availableNode,
+                runningNode,
+                unhealthyNode
+            });
+
+        // Act
+        await _processor.ProcessAsync();
+
+        // Assert
+        _beeCloudMetrics.Verify(
+            metrics => metrics.SetNodeCounts(
+                3,
+                1,
+                1),
+            Times.Once);
+    }
+
+    [Test]
+    public async Task ProcessAsync_ShouldUpdateOpenIncidentCount()
+    {
+        // Arrange
+        var incidents = new List<Incident>
+        {
+            CreateIncident(),
+            CreateIncident()
+        };
+
+        _incidentRepository
+            .Setup(repository => repository.GetAllAsync(
+                null,
+                IncidentStatus.Open,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(incidents);
+
+        // Act
+        await _processor.ProcessAsync();
+
+        // Assert
+        _beeCloudMetrics.Verify(
+            metrics => metrics.SetOpenIncidentCount(2),
             Times.Once);
     }
 
@@ -56,8 +124,7 @@ public class MetricsProcessorTests
         var node = CreateRunningNode();
 
         _nodeRepository
-            .Setup(repository => repository.GetByStatusAsync(
-                NodeStatus.Running,
+            .Setup(repository => repository.GetAllAsync(
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ComputeNode>
             {
@@ -96,8 +163,7 @@ public class MetricsProcessorTests
         var node3 = CreateRunningNode();
 
         _nodeRepository
-            .Setup(repository => repository.GetByStatusAsync(
-                NodeStatus.Running,
+            .Setup(repository => repository.GetAllAsync(
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ComputeNode>
             {
@@ -127,8 +193,7 @@ public class MetricsProcessorTests
     {
         // Arrange
         _nodeRepository
-            .Setup(repository => repository.GetByStatusAsync(
-                NodeStatus.Running,
+            .Setup(repository => repository.GetAllAsync(
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ComputeNode>());
 
@@ -156,8 +221,7 @@ public class MetricsProcessorTests
         var node2 = CreateRunningNode();
 
         _nodeRepository
-            .Setup(repository => repository.GetByStatusAsync(
-                NodeStatus.Running,
+            .Setup(repository => repository.GetAllAsync(
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ComputeNode>
             {
@@ -197,8 +261,7 @@ public class MetricsProcessorTests
         cancellationTokenSource.Cancel();
 
         _nodeRepository
-            .Setup(repository => repository.GetByStatusAsync(
-                NodeStatus.Running,
+            .Setup(repository => repository.GetAllAsync(
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
@@ -208,7 +271,7 @@ public class MetricsProcessorTests
                 cancellationTokenSource.Token));
     }
 
-    private static ComputeNode CreateRunningNode()
+    private static ComputeNode CreateAvailableNode()
     {
         var node = new ComputeNode(
             $"metrics-test-node-{Guid.NewGuid():N}",
@@ -216,8 +279,26 @@ public class MetricsProcessorTests
             4);
 
         node.MarkAvailable();
+
+        return node;
+    }
+
+    private static ComputeNode CreateRunningNode()
+    {
+        var node = CreateAvailableNode();
+
         node.Start();
 
         return node;
+    }
+
+    private static Incident CreateIncident()
+    {
+        var node = CreateRunningNode();
+
+        return new Incident(
+            node.Id,
+            IncidentSeverity.High,
+            "Test incident");
     }
 }

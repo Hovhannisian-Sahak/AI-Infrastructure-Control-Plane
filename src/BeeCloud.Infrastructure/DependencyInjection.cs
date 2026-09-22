@@ -1,5 +1,6 @@
 ﻿using BeeCloud.Application.Interfaces;
 using BeeCloud.Application.Services;
+using BeeCloud.Infrastructure.Observability;
 using BeeCloud.Infrastructure.Persistence;
 using BeeCloud.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IConnectionMultiplexer>(
             _ => ConnectionMultiplexer.Connect(redisConnection!));
+        services.AddSingleton<IBeeCloudMetrics, BeeCloudMetrics>();
         services.AddScoped<IComputeNodeRepository, ComputeNodeRepository>();
         services.AddScoped<IComputeNodeService, ComputeNodeService>();
         services.AddScoped<INetworkRepository, NetworkRepository>();
