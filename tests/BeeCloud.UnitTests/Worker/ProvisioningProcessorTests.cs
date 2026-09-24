@@ -13,6 +13,7 @@ public class ProvisioningProcessorTests
     private Mock<IComputeNodeRepository> _repository = null!;
     private Mock<IProvisioningQueue> _queue = null!;
     private Mock<ILogger<ProvisioningProcessor>> _logger = null!;
+    private Mock<IOperationalMetricsService> _operationalMetricsService = null!;
     private ProvisioningProcessor _processor = null!;
 
     [SetUp]
@@ -21,10 +22,11 @@ public class ProvisioningProcessorTests
         _repository = new Mock<IComputeNodeRepository>();
         _queue = new Mock<IProvisioningQueue>();
         _logger = new Mock<ILogger<ProvisioningProcessor>>();
-
+        _operationalMetricsService = new Mock<IOperationalMetricsService>();
         _processor = new ProvisioningProcessor(
             _repository.Object,
             _queue.Object,
+            _operationalMetricsService.Object,
             _logger.Object);
     }
 
@@ -241,7 +243,101 @@ public class ProvisioningProcessorTests
                 await _processor.ProcessAsync(
                     cancellationTokenSource.Token));
     }
+    [Test]
+    public async Task ProcessAsync_WithProvisioningNode_ShouldIncrementProvisioningMetric()
+    {
+        var node = CreateNode();
 
+        _repository
+            .Setup(repository =>
+                repository.GetByIdAsync(
+                    node.Id,
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+
+        _queue
+            .SetupSequence(queue =>
+                queue.DequeueAsync(
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node.Id)
+            .ReturnsAsync((Guid?)null);
+
+        await _processor.ProcessAsync();
+
+        _operationalMetricsService.Verify(
+            service =>
+                service.IncrementProvisioningAsync(
+                    It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+    [Test]
+    public async Task ProcessAsync_WhenProvisioningFails_ShouldIncrementFailureMetric()
+    {
+        var node = CreateNode();
+
+        _repository
+            .Setup(repository =>
+                repository.GetByIdAsync(
+                    node.Id,
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+
+        _repository
+            .Setup(repository =>
+                repository.SaveChangesAsync(
+                    It.IsAny<CancellationToken>()))
+            .ThrowsAsync(
+                new InvalidOperationException("Database failure"));
+
+        _queue
+            .SetupSequence(queue =>
+                queue.DequeueAsync(
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node.Id)
+            .ReturnsAsync((Guid?)null);
+
+        await _processor.ProcessAsync();
+
+        _operationalMetricsService.Verify(
+            service =>
+                service.IncrementProvisioningFailureAsync(
+                    It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+    [Test]
+    public async Task ProcessAsync_WithNonProvisioningNode_ShouldNotIncrementAnyMetric()
+    {
+        var node = CreateNode();
+        node.MarkAvailable();
+
+        _repository
+            .Setup(repository =>
+                repository.GetByIdAsync(
+                    node.Id,
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+
+        _queue
+            .SetupSequence(queue =>
+                queue.DequeueAsync(
+                    It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node.Id)
+            .ReturnsAsync((Guid?)null);
+
+        await _processor.ProcessAsync();
+
+        _operationalMetricsService.Verify(
+            service =>
+                service.IncrementProvisioningAsync(
+                    It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        _operationalMetricsService.Verify(
+            service =>
+                service.IncrementProvisioningFailureAsync(
+                    It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
     private static ComputeNode CreateNode()
     {
         return new ComputeNode(

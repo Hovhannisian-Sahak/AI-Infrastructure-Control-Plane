@@ -60,12 +60,29 @@ public class RemediationProcessorIntegrationTests
             incidentService,
             NullLogger<HealthMonitoringProcessor>.Instance);
 
+        IOperationalMetricRepository operationalMetricRepository =
+            new OperationalMetricRepository(_dbContext);
+
+        IOperationalMetricsService operationalMetricsService =
+            new OperationalMetricsService(
+                operationalMetricRepository);
+
         _processor = new RemediationProcessor(
             nodeRepository,
             incidentService,
+            operationalMetricsService,
             NullLogger<RemediationProcessor>.Instance);
     }
+    [SetUp]
+    public async Task SetUp()
+    {
+        await _dbContext.OperationalMetrics.ExecuteDeleteAsync();
+        await _dbContext.Incidents.ExecuteDeleteAsync();
+        await _dbContext.HealthChecks.ExecuteDeleteAsync();
+        await _dbContext.ComputeNodes.ExecuteDeleteAsync();
 
+        _dbContext.ChangeTracker.Clear();
+    }
     [OneTimeTearDown]
     public async Task OneTimeTearDown()
     {
@@ -330,5 +347,43 @@ public class RemediationProcessorIntegrationTests
         await _dbContext.SaveChangesAsync();
 
         return node;
+    }
+    [Test]
+    public async Task ProcessAsync_WithSuccessfulRemediation_ShouldIncrementRemediationMetric()
+    {
+        var node = await CreateNodeAsync(NodeStatus.Quarantined);
+
+        node.SimulateFault(NodeFault.GpuOverheat);
+
+        await _dbContext.SaveChangesAsync();
+
+        await _processor.ProcessAsync();
+
+        var metric = await _dbContext.OperationalMetrics
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                m => m.Name == "remediation_total");
+
+        Assert.That(metric, Is.Not.Null);
+        Assert.That(metric!.Value, Is.EqualTo(1));
+    }
+    [Test]
+    public async Task ProcessAsync_WithServiceCrash_ShouldIncrementRemediationFailureMetric()
+    {
+        var node = await CreateNodeAsync(NodeStatus.Quarantined);
+
+        node.SimulateFault(NodeFault.ServiceCrash);
+
+        await _dbContext.SaveChangesAsync();
+
+        await _processor.ProcessAsync();
+
+        var metric = await _dbContext.OperationalMetrics
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                m => m.Name == "remediation_failures_total");
+
+        Assert.That(metric, Is.Not.Null);
+        Assert.That(metric!.Value, Is.EqualTo(1));
     }
 }

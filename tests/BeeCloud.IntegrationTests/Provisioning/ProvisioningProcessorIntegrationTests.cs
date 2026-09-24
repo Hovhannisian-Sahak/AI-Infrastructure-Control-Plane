@@ -1,4 +1,5 @@
-﻿using BeeCloud.Domain.Entities;
+﻿using BeeCloud.Application.Services;
+using BeeCloud.Domain.Entities;
 using BeeCloud.Domain.Enums;
 using BeeCloud.Infrastructure.Persistence;
 using BeeCloud.Infrastructure.Persistence.Repositories;
@@ -22,7 +23,7 @@ public class ProvisioningProcessorIntegrationTests
     private IConnectionMultiplexer _redisConnection = null!;
     private RedisProvisioningQueue _queue = null!;
     private ProvisioningProcessor _processor = null!;
-
+    private OperationalMetricsService _operationalMetricsService = null!;
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
@@ -66,16 +67,25 @@ public class ProvisioningProcessorIntegrationTests
         var repository =
             new ComputeNodeRepository(_dbContext);
 
+        var operationalMetricRepository =
+            new OperationalMetricRepository(_dbContext);
+
+        _operationalMetricsService =
+            new OperationalMetricsService(
+                operationalMetricRepository);
+
         _processor =
             new ProvisioningProcessor(
                 repository,
                 _queue,
+                _operationalMetricsService,
                 logger);
     }
 
     [SetUp]
     public async Task SetUp()
     {
+        await _dbContext.OperationalMetrics.ExecuteDeleteAsync();
         await _dbContext.NodeMetrics.ExecuteDeleteAsync();
         await _dbContext.ComputeNodes.ExecuteDeleteAsync();
 
@@ -225,5 +235,29 @@ public class ProvisioningProcessorIntegrationTests
         Assert.That(
             updatedNode.Status,
             Is.EqualTo(NodeStatus.Available));
+    }
+    [Test]
+    public async Task ProcessAsync_WhenNodeIsProvisioned_ShouldIncrementProvisioningMetric()
+    {
+        var node = new ComputeNode(
+            $"integration-node-{Guid.NewGuid():N}",
+            "NVIDIA RTX 4090",
+            1);
+
+        await _dbContext.ComputeNodes.AddAsync(node);
+        await _dbContext.SaveChangesAsync();
+
+        await _queue.EnqueueAsync(node.Id);
+
+        await _processor.ProcessAsync();
+
+        var metric =
+            await _dbContext.OperationalMetrics
+                .AsNoTracking()
+                .SingleOrDefaultAsync(
+                    x => x.Name == "provisioning_total");
+
+        Assert.That(metric, Is.Not.Null);
+        Assert.That(metric!.Value, Is.EqualTo(1));
     }
 }

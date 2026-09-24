@@ -8,15 +8,18 @@ public class ProvisioningProcessor : IProvisioningProcessor
 {
     private readonly IComputeNodeRepository _nodeRepository;
     private readonly IProvisioningQueue _provisioningQueue;
+    private readonly IOperationalMetricsService _operationalMetricsService;
     private readonly ILogger<ProvisioningProcessor> _logger;
 
     public ProvisioningProcessor(
         IComputeNodeRepository nodeRepository,
         IProvisioningQueue provisioningQueue,
+        IOperationalMetricsService operationalMetricsService,
         ILogger<ProvisioningProcessor> logger)
     {
         _nodeRepository = nodeRepository;
         _provisioningQueue = provisioningQueue;
+        _operationalMetricsService = operationalMetricsService;
         _logger = logger;
     }
 
@@ -24,6 +27,7 @@ public class ProvisioningProcessor : IProvisioningProcessor
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
         while (!cancellationToken.IsCancellationRequested)
         {
             Guid? nodeId;
@@ -57,6 +61,9 @@ public class ProvisioningProcessor : IProvisioningProcessor
             }
             catch (Exception exception)
             {
+                await RecordProvisioningFailureAsync(
+                    cancellationToken);
+
                 _logger.LogError(
                     exception,
                     "Failed to provision node {NodeId}.",
@@ -105,10 +112,36 @@ public class ProvisioningProcessor : IProvisioningProcessor
         await _nodeRepository.SaveChangesAsync(
             cancellationToken);
 
+        await _operationalMetricsService
+            .IncrementProvisioningAsync(
+                cancellationToken);
+
         _logger.LogInformation(
             "Node {NodeId} ({NodeName}) successfully provisioned.",
             node.Id,
             node.Name);
+    }
+
+    private async Task RecordProvisioningFailureAsync(
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _operationalMetricsService
+                .IncrementProvisioningFailureAsync(
+                    cancellationToken);
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception metricsException)
+        {
+            _logger.LogError(
+                metricsException,
+                "Failed to record provisioning failure metric.");
+        }
     }
 
     private static async Task SimulateProvisioningAsync(
