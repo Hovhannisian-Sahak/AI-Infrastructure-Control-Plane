@@ -60,6 +60,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddInfrastructure(
     builder.Configuration);
 builder.Services.AddHostedService<BeeCloudMetricsCollector>();
+builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -91,6 +92,7 @@ app.MapGet("/weatherforecast", () =>
 .WithName("GetWeatherForecast")
 .WithOpenApi();
 app.MapControllers();
+app.MapHealthChecks("/health");
 app.MapPrometheusScrapingEndpoint();
 app.Run();
 

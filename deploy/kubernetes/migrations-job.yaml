@@ -1,0 +1,31 @@
+﻿apiVersion: batch/v1
+kind: Job
+metadata:
+  name: beecloud-migrations
+  namespace: beecloud
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+
+      containers:
+        - name: migrations
+          image: beecloud-migrations:dev
+          imagePullPolicy: IfNotPresent
+
+          env:
+            - name: ConnectionStrings__BeeCloudDatabase
+              value: "Host=postgres;Port=5432;Database=beecloud;Username=beecloud;Password=beecloud_dev_password"
+
+          command:
+            - dotnet
+            - ef
+            - database
+            - update
+
+          args:
+            - --project
+            - src/BeeCloud.Infrastructure
+            - --startup-project
+            - src/BeeCloud.Api

@@ -1,0 +1,18 @@
+﻿FROM mcr.microsoft.com/dotnet/sdk:8.0
+
+WORKDIR /src
+
+COPY ["src/BeeCloud.Api/BeeCloud.Api.csproj", "src/BeeCloud.Api/"]
+COPY ["src/BeeCloud.Application/BeeCloud.Application.csproj", "src/BeeCloud.Application/"]
+COPY ["src/BeeCloud.Domain/BeeCloud.Domain.csproj", "src/BeeCloud.Domain/"]
+COPY ["src/BeeCloud.Infrastructure/BeeCloud.Infrastructure.csproj", "src/BeeCloud.Infrastructure/"]
+
+RUN dotnet restore "src/BeeCloud.Api/BeeCloud.Api.csproj"
+
+COPY . .
+
+RUN dotnet tool install --global dotnet-ef --version 8.0.19
+
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+ENTRYPOINT ["dotnet", "ef"]

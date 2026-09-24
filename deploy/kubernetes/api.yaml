@@ -1,0 +1,54 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beecloud-api
+  namespace: beecloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: beecloud-api
+  template:
+    metadata:
+      labels:
+        app: beecloud-api
+    spec:
+      containers:
+        - name: api
+          image: beecloud-api:dev
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8080
+
+          env:
+            - name: ConnectionStrings__BeeCloudDatabase
+              value: "Host=postgres;Port=5432;Database=beecloud;Username=beecloud;Password=beecloud_dev_password"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: beecloud-api
+  namespace: beecloud
+spec:
+  selector:
+    app: beecloud-api
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP
