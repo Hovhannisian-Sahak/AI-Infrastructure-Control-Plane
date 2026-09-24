@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using BeeCloud.Api.Middleware;
+using BeeCloud.Api.Observability;
 using BeeCloud.Application.Validators;
 using BeeCloud.Infrastructure;
 using FluentValidation;
@@ -58,7 +59,7 @@ builder.Services.AddProblemDetails();
 // Infrastructure
 builder.Services.AddInfrastructure(
     builder.Configuration);
-
+builder.Services.AddHostedService<BeeCloudMetricsCollector>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
