@@ -10,49 +10,26 @@ public class MetricsProcessor : IMetricsProcessor
     private readonly IComputeNodeRepository _nodeRepository;
     private readonly INodeMetricRepository _metricRepository;
     private readonly ILogger<MetricsProcessor> _logger;
-    private readonly IIncidentRepository _incidentRepository;
-    private readonly IBeeCloudMetrics _beeCloudMetrics;
+
     public MetricsProcessor(
         IComputeNodeRepository nodeRepository,
         INodeMetricRepository metricRepository,
-        IIncidentRepository incidentRepository,
-        IBeeCloudMetrics beeCloudMetrics,
         ILogger<MetricsProcessor> logger)
     {
         _nodeRepository = nodeRepository;
         _metricRepository = metricRepository;
-        _incidentRepository = incidentRepository;
-        _beeCloudMetrics = beeCloudMetrics;
         _logger = logger;
     }
 
     public async Task ProcessAsync(
         CancellationToken cancellationToken = default)
     {
-        var nodes = await _nodeRepository.GetAllAsync(
-            cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        var availableNodes = nodes.Count(
-            node => node.Status == NodeStatus.Available);
-
-        var unhealthyNodes = nodes.Count(
-            node => node.Status == NodeStatus.Unhealthy);
-
-        _beeCloudMetrics.SetNodeCounts(
-            nodes.Count,
-            availableNodes,
-            unhealthyNodes);
-
-        var openIncidents = await _incidentRepository.GetAllAsync(
-            status: IncidentStatus.Open,
-            cancellationToken: cancellationToken);
-
-        _beeCloudMetrics.SetOpenIncidentCount(
-            openIncidents.Count);
-
-        var runningNodes = nodes
-            .Where(node => node.Status == NodeStatus.Running)
-            .ToList();
+        var runningNodes =
+            await _nodeRepository.GetByStatusAsync(
+                NodeStatus.Running,
+                cancellationToken);
 
         foreach (var node in runningNodes)
         {
@@ -76,12 +53,25 @@ public class MetricsProcessor : IMetricsProcessor
             }
         }
     }
+
     private async Task RecordMetricAsync(
         ComputeNode node,
         CancellationToken cancellationToken)
     {
-        var (cpuUsage, gpuUsage, gpuTemperature) =
-            GenerateMetrics(node);
+        var cpuUsage =
+            Math.Round(
+                Random.Shared.NextDouble() * 100,
+                2);
+
+        var gpuUsage =
+            Math.Round(
+                Random.Shared.NextDouble() * 100,
+                2);
+
+        var gpuTemperature =
+            Math.Round(
+                40 + Random.Shared.NextDouble() * 60,
+                2);
 
         var metric = new NodeMetric(
             node.Id,
@@ -95,31 +85,5 @@ public class MetricsProcessor : IMetricsProcessor
 
         await _metricRepository.SaveChangesAsync(
             cancellationToken);
-
-        _logger.LogInformation(
-            "Recorded metrics for node {NodeId}: CPU {CpuUsage}%, GPU {GpuUsage}%, temperature {GpuTemperature}°C.",
-            node.Id,
-            cpuUsage,
-            gpuUsage,
-            gpuTemperature);
-    }
-
-    private static (
-        double CpuUsage,
-        double GpuUsage,
-        double GpuTemperature)
-        GenerateMetrics(ComputeNode node)
-    {
-        var random = Random.Shared;
-
-        var cpuUsage = random.NextDouble() * 100;
-        var gpuUsage = random.NextDouble() * 100;
-
-        var gpuTemperature = 40 + random.NextDouble() * 60;
-
-        return (
-            Math.Round(cpuUsage, 2),
-            Math.Round(gpuUsage, 2),
-            Math.Round(gpuTemperature, 2));
     }
 }

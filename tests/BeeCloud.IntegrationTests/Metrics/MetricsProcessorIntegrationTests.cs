@@ -1,7 +1,4 @@
-﻿using BeeCloud.Application.Interfaces;
-using BeeCloud.Domain.Entities;
-using BeeCloud.Domain.Enums;
-using BeeCloud.Infrastructure.Observability;
+﻿using BeeCloud.Domain.Entities;
 using BeeCloud.Infrastructure.Persistence;
 using BeeCloud.Infrastructure.Persistence.Repositories;
 using BeeCloud.Worker.Processors;
@@ -44,7 +41,6 @@ public class MetricsProcessorIntegrationTests
     {
         await using var dbContext = CreateDbContext();
 
-        await dbContext.Incidents.ExecuteDeleteAsync();
         await dbContext.NodeMetrics.ExecuteDeleteAsync();
         await dbContext.ComputeNodes.ExecuteDeleteAsync();
     }
@@ -59,31 +55,42 @@ public class MetricsProcessorIntegrationTests
         await dbContext.ComputeNodes.AddAsync(node);
         await dbContext.SaveChangesAsync();
 
-        var nodeRepository = new ComputeNodeRepository(dbContext);
-        var metricRepository = new NodeMetricRepository(dbContext);
-        var incidentRepository = new IncidentRepository(dbContext);
-        var beeCloudMetrics = new BeeCloudMetrics();
+        var nodeRepository =
+            new ComputeNodeRepository(dbContext);
+
+        var metricRepository =
+            new NodeMetricRepository(dbContext);
 
         var processor = new MetricsProcessor(
             nodeRepository,
             metricRepository,
-            incidentRepository,
-            beeCloudMetrics,
             NullLogger<MetricsProcessor>.Instance);
 
         await processor.ProcessAsync();
 
         var metrics = await dbContext.NodeMetrics
-            .Where(metric => metric.ComputeNodeId == node.Id)
+            .Where(metric =>
+                metric.ComputeNodeId == node.Id)
             .ToListAsync();
 
-        Assert.That(metrics, Has.Count.EqualTo(1));
+        Assert.That(
+            metrics,
+            Has.Count.EqualTo(1));
 
         var metric = metrics.Single();
 
-        Assert.That(metric.ComputeNodeId, Is.EqualTo(node.Id));
-        Assert.That(metric.CpuUsagePercent, Is.InRange(0, 100));
-        Assert.That(metric.GpuUsagePercent, Is.InRange(0, 100));
+        Assert.That(
+            metric.ComputeNodeId,
+            Is.EqualTo(node.Id));
+
+        Assert.That(
+            metric.CpuUsagePercent,
+            Is.InRange(0, 100));
+
+        Assert.That(
+            metric.GpuUsagePercent,
+            Is.InRange(0, 100));
+
         Assert.That(
             metric.GpuTemperatureCelsius,
             Is.InRange(40, 100));
@@ -104,16 +111,15 @@ public class MetricsProcessorIntegrationTests
         await dbContext.ComputeNodes.AddRangeAsync(nodes);
         await dbContext.SaveChangesAsync();
 
-        var nodeRepository = new ComputeNodeRepository(dbContext);
-        var metricRepository = new NodeMetricRepository(dbContext);
-        var incidentRepository = new IncidentRepository(dbContext);
-        var beeCloudMetrics = new BeeCloudMetrics();
+        var nodeRepository =
+            new ComputeNodeRepository(dbContext);
+
+        var metricRepository =
+            new NodeMetricRepository(dbContext);
 
         var processor = new MetricsProcessor(
             nodeRepository,
             metricRepository,
-            incidentRepository,
-            beeCloudMetrics,
             NullLogger<MetricsProcessor>.Instance);
 
         await processor.ProcessAsync();
@@ -123,10 +129,13 @@ public class MetricsProcessorIntegrationTests
             .ToList();
 
         var metrics = await dbContext.NodeMetrics
-            .Where(metric => nodeIds.Contains(metric.ComputeNodeId))
+            .Where(metric =>
+                nodeIds.Contains(metric.ComputeNodeId))
             .ToListAsync();
 
-        Assert.That(metrics, Has.Count.EqualTo(3));
+        Assert.That(
+            metrics,
+            Has.Count.EqualTo(3));
 
         foreach (var node in nodes)
         {
@@ -152,25 +161,27 @@ public class MetricsProcessorIntegrationTests
         await dbContext.ComputeNodes.AddAsync(node);
         await dbContext.SaveChangesAsync();
 
-        var nodeRepository = new ComputeNodeRepository(dbContext);
-        var metricRepository = new NodeMetricRepository(dbContext);
-        var incidentRepository = new IncidentRepository(dbContext);
-        var beeCloudMetrics = new BeeCloudMetrics();
+        var nodeRepository =
+            new ComputeNodeRepository(dbContext);
+
+        var metricRepository =
+            new NodeMetricRepository(dbContext);
 
         var processor = new MetricsProcessor(
             nodeRepository,
             metricRepository,
-            incidentRepository,
-            beeCloudMetrics,
             NullLogger<MetricsProcessor>.Instance);
 
         await processor.ProcessAsync();
 
         var metrics = await dbContext.NodeMetrics
-            .Where(metric => metric.ComputeNodeId == node.Id)
+            .Where(metric =>
+                metric.ComputeNodeId == node.Id)
             .ToListAsync();
 
-        Assert.That(metrics, Is.Empty);
+        Assert.That(
+            metrics,
+            Is.Empty);
     }
 
     [Test]
@@ -178,71 +189,34 @@ public class MetricsProcessorIntegrationTests
     {
         await using var dbContext = CreateDbContext();
 
-        var nodeRepository = new ComputeNodeRepository(dbContext);
-        var metricRepository = new NodeMetricRepository(dbContext);
-        var incidentRepository = new IncidentRepository(dbContext);
-        var beeCloudMetrics = new BeeCloudMetrics();
+        var nodeRepository =
+            new ComputeNodeRepository(dbContext);
+
+        var metricRepository =
+            new NodeMetricRepository(dbContext);
 
         var processor = new MetricsProcessor(
             nodeRepository,
             metricRepository,
-            incidentRepository,
-            beeCloudMetrics,
             NullLogger<MetricsProcessor>.Instance);
 
         await processor.ProcessAsync();
 
-        var metricsCount = await dbContext.NodeMetrics.CountAsync();
+        var metricsCount =
+            await dbContext.NodeMetrics.CountAsync();
 
-        Assert.That(metricsCount, Is.EqualTo(0));
-    }
-
-    [Test]
-    public async Task ProcessAsync_ShouldCalculateNodeCounts()
-    {
-        await using var dbContext = CreateDbContext();
-
-        var availableNode = CreateAvailableNode();
-        var runningNode = CreateRunningNode();
-
-        var unhealthyNode = CreateRunningNode();
-        unhealthyNode.MarkUnhealthy();
-
-        await dbContext.ComputeNodes.AddRangeAsync(
-            availableNode,
-            runningNode,
-            unhealthyNode);
-
-        await dbContext.SaveChangesAsync();
-
-        var nodeRepository = new ComputeNodeRepository(dbContext);
-        var metricRepository = new NodeMetricRepository(dbContext);
-        var incidentRepository = new IncidentRepository(dbContext);
-        var beeCloudMetrics = new BeeCloudMetrics();
-
-        var processor = new MetricsProcessor(
-            nodeRepository,
-            metricRepository,
-            incidentRepository,
-            beeCloudMetrics,
-            NullLogger<MetricsProcessor>.Instance);
-
-        await processor.ProcessAsync();
-
-        // The concrete BeeCloudMetrics exposes its values
-        // through OpenTelemetry, so the processor's responsibility
-        // is verified through the resulting Prometheus metrics.
-        //
-        // This test primarily verifies that processing succeeds
-        // with nodes in different states.
-        Assert.Pass();
+        Assert.That(
+            metricsCount,
+            Is.EqualTo(0));
     }
 
     private ApplicationDbContext CreateDbContext()
     {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(_container.GetConnectionString())
-            .Options;
+        var options =
+            new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseNpgsql(
+                    _container.GetConnectionString())
+                .Options;
 
         return new ApplicationDbContext(options);
     }
