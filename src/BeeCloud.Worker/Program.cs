@@ -1,5 +1,6 @@
 using BeeCloud.Application.Interfaces;
 using BeeCloud.Application.Services;
+using BeeCloud.Infrastructure;
 using BeeCloud.Infrastructure.Observability;
 using BeeCloud.Infrastructure.Persistence;
 using BeeCloud.Infrastructure.Persistence.Repositories;
@@ -11,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddInfrastructure(
+    builder.Configuration);
 builder.Services.AddDbContext<ApplicationDbContext>(
     options =>
         options.UseNpgsql(
