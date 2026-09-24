@@ -21,7 +21,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<HealthCheck> HealthChecks => Set<HealthCheck>();
     public DbSet<Incident> Incidents => Set<Incident>();
     public DbSet<NodeMetric> NodeMetrics => Set<NodeMetric>();
-
+    public DbSet<OperationalMetric> OperationalMetrics =>
+        Set<OperationalMetric>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(
