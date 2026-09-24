@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<INodeSimulationService, NodeSimulationService>();
         services.AddScoped<INodeMetricRepository, NodeMetricRepository>();
         services.AddScoped<IOperationalMetricRepository, OperationalMetricRepository>();
+        services.AddScoped<IOperationalMetricsService, OperationalMetricsService>();
         services.AddScoped<INodeMetricService, NodeMetricService>();
         services.AddScoped<IProvisioningQueue, RedisProvisioningQueue>();
         return services;
