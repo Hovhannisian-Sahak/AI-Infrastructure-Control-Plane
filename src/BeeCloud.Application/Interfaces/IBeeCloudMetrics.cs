@@ -9,4 +9,10 @@ public interface IBeeCloudMetrics
 
     void SetOpenIncidentCount(
         int count);
+
+    void SetOperationalCounts(
+        long provisioningTotal,
+        long provisioningFailures,
+        long remediationTotal,
+        long remediationFailures);
 }

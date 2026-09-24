@@ -13,7 +13,10 @@ public class BeeCloudMetrics : IBeeCloudMetrics
     private int _nodesAvailable;
     private int _nodesUnhealthy;
     private int _openIncidents;
-
+    private long _provisioningTotal;
+    private long _provisioningFailures;
+    private long _remediationTotal;
+    private long _remediationFailures;
     public BeeCloudMetrics()
     {
         _meter = new Meter(MeterName);
@@ -37,6 +40,25 @@ public class BeeCloudMetrics : IBeeCloudMetrics
             "beecloud_incidents_open",
             () => _openIncidents,
             description: "Number of open incidents.");
+        _meter.CreateObservableGauge(
+            "beecloud_provisioning_total",
+            () => _provisioningTotal,
+            description: "Total number of provisioning operations.");
+
+        _meter.CreateObservableGauge(
+            "beecloud_provisioning_failures_total",
+            () => _provisioningFailures,
+            description: "Total number of failed provisioning operations.");
+
+        _meter.CreateObservableGauge(
+            "beecloud_remediation_total",
+            () => _remediationTotal,
+            description: "Total number of successful remediation operations.");
+
+        _meter.CreateObservableGauge(
+            "beecloud_remediation_failures_total",
+            () => _remediationFailures,
+            description: "Total number of failed remediation operations.");
     }
 
     public void SetNodeCounts(
@@ -52,5 +74,17 @@ public class BeeCloudMetrics : IBeeCloudMetrics
     public void SetOpenIncidentCount(int count)
     {
         _openIncidents = count;
+    }
+    
+    public void SetOperationalCounts(
+        long provisioningTotal,
+        long provisioningFailures,
+        long remediationTotal,
+        long remediationFailures)
+    {
+        _provisioningTotal = provisioningTotal;
+        _provisioningFailures = provisioningFailures;
+        _remediationTotal = remediationTotal;
+        _remediationFailures = remediationFailures;
     }
 }

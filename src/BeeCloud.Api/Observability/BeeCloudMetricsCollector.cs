@@ -59,7 +59,11 @@ public class BeeCloudMetricsCollector : BackgroundService
         var incidentRepository =
             scope.ServiceProvider
                 .GetRequiredService<IIncidentRepository>();
-
+        
+        var operationalMetricRepository =
+            scope.ServiceProvider
+                .GetRequiredService<IOperationalMetricRepository>();
+        
         var nodes = await nodeRepository.GetAllAsync(
             cancellationToken);
 
@@ -81,5 +85,31 @@ public class BeeCloudMetricsCollector : BackgroundService
 
         _beeCloudMetrics.SetOpenIncidentCount(
             openIncidents.Count);
+        
+        var provisioningTotal =
+            await operationalMetricRepository.GetByNameAsync(
+                "provisioning_total",
+                cancellationToken);
+
+        var provisioningFailures =
+            await operationalMetricRepository.GetByNameAsync(
+                "provisioning_failures_total",
+                cancellationToken);
+
+        var remediationTotal =
+            await operationalMetricRepository.GetByNameAsync(
+                "remediation_total",
+                cancellationToken);
+
+        var remediationFailures =
+            await operationalMetricRepository.GetByNameAsync(
+                "remediation_failures_total",
+                cancellationToken);
+        
+        _beeCloudMetrics.SetOperationalCounts(
+            provisioningTotal?.Value ?? 0,
+            provisioningFailures?.Value ?? 0,
+            remediationTotal?.Value ?? 0,
+            remediationFailures?.Value ?? 0);
     }
 }
