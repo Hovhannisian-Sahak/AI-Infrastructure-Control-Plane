@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-BeeCloud.Worker-24bcef78-bb33-4e04-9a8d-e8552546d12a</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,5 +20,10 @@
   <ItemGroup>
     <ProjectReference Include="..\BeeCloud.Application\BeeCloud.Application.csproj" />
     <ProjectReference Include="..\BeeCloud.Infrastructure\BeeCloud.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\.dockerignore">
+      <Link>.dockerignore</Link>
+    </Content>
   </ItemGroup>
 </Project>

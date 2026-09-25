@@ -1,0 +1,7 @@
+﻿apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: beecloud-app-config
+  namespace: beecloud
+data:
+  Redis: "redis:6379"

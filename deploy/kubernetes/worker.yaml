@@ -1,0 +1,32 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beecloud-worker
+  namespace: beecloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: beecloud-worker
+  template:
+    metadata:
+      labels:
+        app: beecloud-worker
+    spec:
+      containers:
+        - name: worker
+          image: beecloud-worker:dev
+          imagePullPolicy: IfNotPresent
+
+          env:
+            - name: ConnectionStrings__BeeCloudDatabase
+              valueFrom:
+                secretKeyRef:
+                  name: beecloud-app-secrets
+                  key: BeeCloudDatabase
+
+            - name: ConnectionStrings__Redis
+              valueFrom:
+                configMapKeyRef:
+                  name: beecloud-app-config
+                  key: Redis

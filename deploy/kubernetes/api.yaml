@@ -17,13 +17,15 @@ spec:
         - name: api
           image: beecloud-api:dev
           imagePullPolicy: IfNotPresent
-
           ports:
             - containerPort: 8080
 
           env:
             - name: ConnectionStrings__BeeCloudDatabase
-              value: "Host=postgres;Port=5432;Database=beecloud;Username=beecloud;Password=beecloud_dev_password"
+              valueFrom:
+                secretKeyRef:
+                  name: beecloud-app-secrets
+                  key: BeeCloudDatabase
 
           readinessProbe:
             httpGet:

@@ -5,6 +5,7 @@ metadata:
   namespace: beecloud
 spec:
   backoffLimit: 3
+
   template:
     spec:
       restartPolicy: Never
@@ -16,15 +17,18 @@ spec:
 
           env:
             - name: ConnectionStrings__BeeCloudDatabase
-              value: "Host=postgres;Port=5432;Database=beecloud;Username=beecloud;Password=beecloud_dev_password"
+              valueFrom:
+                secretKeyRef:
+                  name: beecloud-app-secrets
+                  key: BeeCloudDatabase
 
           command:
             - dotnet
             - ef
-            - database
-            - update
 
           args:
+            - database
+            - update
             - --project
             - src/BeeCloud.Infrastructure
             - --startup-project
