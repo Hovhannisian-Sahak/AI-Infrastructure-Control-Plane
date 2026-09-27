@@ -27,6 +27,18 @@ spec:
                   name: beecloud-app-secrets
                   key: BeeCloudDatabase
 
+            - name: ConnectionStrings__Redis
+              valueFrom:
+                configMapKeyRef:
+                  name: beecloud-app-config
+                  key: Redis
+
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://jaeger:4318"
+
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+
           readinessProbe:
             httpGet:
               path: /health

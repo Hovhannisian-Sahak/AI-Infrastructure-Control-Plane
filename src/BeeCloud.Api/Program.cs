@@ -10,6 +10,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddConsole();
 builder.Services
     .AddOpenTelemetry()
     .ConfigureResource(resource =>
@@ -20,11 +21,8 @@ builder.Services
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddEntityFrameworkCoreInstrumentation()
-            .AddOtlpExporter(options =>
-            {
-                options.Endpoint =
-                    new Uri("http://localhost:4317");
-            });
+            .AddConsoleExporter()
+            .AddOtlpExporter();
     })
     .WithMetrics(metrics =>
     {
