@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Text.Json;
 using BeeCloud.ApiTests.Clients;
 using BeeCloud.ApiTests.Models;
 using NUnit.Framework;
@@ -21,27 +20,46 @@ public class NetworkApiTests
     [Test]
     public async Task CreateNetwork_WithValidData_ShouldReturnCreated()
     {
+        // Arrange
         var networkName =
             $"api-test-network-{Guid.NewGuid():N}";
 
+        // Act
         var response = await _networksClient.CreateAsync(
             networkName,
             "API test network");
 
+        // Assert
         Assert.That(
             response.StatusCode,
             Is.EqualTo(HttpStatusCode.Created));
 
-        Assert.That(response.Content, Is.Not.Null.And.Not.Empty);
+        Assert.That(
+            response.Data,
+            Is.Not.Null);
+
+        Assert.That(
+            response.Data!.Name,
+            Is.EqualTo(networkName));
+
+        Assert.That(
+            response.Data.Description,
+            Is.EqualTo("API test network"));
+
+        Assert.That(
+            response.Data.Id,
+            Is.Not.EqualTo(Guid.Empty));
     }
 
     [Test]
     public async Task CreateNetwork_WithEmptyName_ShouldReturnBadRequest()
     {
+        // Act
         var response = await _networksClient.CreateAsync(
             string.Empty,
             "API test network");
 
+        // Assert
         Assert.That(
             response.StatusCode,
             Is.EqualTo(HttpStatusCode.BadRequest));
@@ -50,6 +68,7 @@ public class NetworkApiTests
     [Test]
     public async Task CreateNetwork_WithDuplicateName_ShouldReturnConflict()
     {
+        // Arrange
         var networkName =
             $"api-test-network-{Guid.NewGuid():N}";
 
@@ -61,10 +80,12 @@ public class NetworkApiTests
             firstResponse.StatusCode,
             Is.EqualTo(HttpStatusCode.Created));
 
+        // Act
         var secondResponse = await _networksClient.CreateAsync(
             networkName,
             "API test network");
 
+        // Assert
         Assert.That(
             secondResponse.StatusCode,
             Is.EqualTo(HttpStatusCode.Conflict));
@@ -73,21 +94,34 @@ public class NetworkApiTests
     [Test]
     public async Task GetAllNetworks_ShouldReturnOk()
     {
+        // Act
         var response = await _networksClient.GetAllAsync();
 
+        // Assert
         Assert.That(
             response.StatusCode,
             Is.EqualTo(HttpStatusCode.OK));
+
+        Assert.That(
+            response.Data,
+            Is.Not.Null);
+
+        Assert.That(
+            response.Data,
+            Is.InstanceOf<List<NetworkResponseModel>>());
     }
 
     [Test]
     public async Task GetNetworkById_WhenNetworkDoesNotExist_ShouldReturnNotFound()
     {
+        // Arrange
         var networkId = Guid.NewGuid();
 
+        // Act
         var response = await _networksClient.GetByIdAsync(
             networkId);
 
+        // Assert
         Assert.That(
             response.StatusCode,
             Is.EqualTo(HttpStatusCode.NotFound));
@@ -96,6 +130,7 @@ public class NetworkApiTests
     [Test]
     public async Task GetNetworkById_WhenNetworkExists_ShouldReturnNetwork()
     {
+        // Arrange
         var networkName =
             $"api-test-network-{Guid.NewGuid():N}";
 
@@ -108,62 +143,39 @@ public class NetworkApiTests
             Is.EqualTo(HttpStatusCode.Created));
 
         Assert.That(
-            createResponse.Content,
-            Is.Not.Null.And.Not.Empty);
-
-        var createdJson =
-            JsonSerializer.Deserialize<JsonElement>(
-                createResponse.Content!);
+            createResponse.Data,
+            Is.Not.Null);
 
         var createdNetworkId =
-            createdJson
-                .GetProperty("id")
-                .GetGuid();
+            createResponse.Data!.Id;
 
         Assert.That(
             createdNetworkId,
             Is.Not.EqualTo(Guid.Empty));
 
+        // Act
         var response = await _networksClient.GetByIdAsync(
             createdNetworkId);
 
+        // Assert
         Assert.That(
             response.StatusCode,
             Is.EqualTo(HttpStatusCode.OK));
 
         Assert.That(
-            response.Content,
-            Is.Not.Null.And.Not.Empty);
-
-        var networkJson =
-            JsonSerializer.Deserialize<JsonElement>(
-                response.Content!);
-
-        var returnedNetworkId =
-            networkJson
-                .GetProperty("id")
-                .GetGuid();
-
-        var returnedName =
-            networkJson
-                .GetProperty("name")
-                .GetString();
-
-        var returnedDescription =
-            networkJson
-                .GetProperty("description")
-                .GetString();
+            response.Data,
+            Is.Not.Null);
 
         Assert.That(
-            returnedNetworkId,
+            response.Data!.Id,
             Is.EqualTo(createdNetworkId));
 
         Assert.That(
-            returnedName,
+            response.Data.Name,
             Is.EqualTo(networkName));
 
         Assert.That(
-            returnedDescription,
+            response.Data.Description,
             Is.EqualTo("API test network"));
     }
 }

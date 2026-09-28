@@ -1,6 +1,7 @@
 ﻿using System.Net;
-using System.Text.Json;
 using BeeCloud.ApiTests.Clients;
+using BeeCloud.ApiTests.Models.Requests;
+using BeeCloud.ApiTests.TestData;
 using NUnit.Framework;
 
 namespace BeeCloud.ApiTests;
@@ -23,29 +24,49 @@ public class NetworkAttachmentApiTests
     [Test]
     public async Task AttachNetworkToNode_WhenValid_ShouldReturnCreated()
     {
-        var nodeId = await CreateNodeAsync();
+        // Arrange
+        var nodeId = await CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
+        // Act
         var response = await _networksClient.AttachToNodeAsync(
             nodeId,
             networkId);
 
+        // Assert
         Assert.That(
-            (int)response.StatusCode,
-            Is.EqualTo(201));
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.Created));
 
         Assert.That(
-            response.Content,
-            Is.Not.Null.And.Not.Empty);
+            response.Data,
+            Is.Not.Null);
+
+        Assert.That(
+            response.Data!.Id,
+            Is.Not.EqualTo(Guid.Empty));
+
+        Assert.That(
+            response.Data.ComputeNodeId,
+            Is.EqualTo(nodeId));
+
+        Assert.That(
+            response.Data.NetworkId,
+            Is.EqualTo(networkId));
+
+        Assert.That(
+            response.Data.AttachedAt,
+            Is.Not.EqualTo(default(DateTime)));
 
         TestContext.WriteLine(
-            $"Attachment response: {response.Content}");
+            $"Attachment Id: {response.Data.Id}");
     }
 
     [Test]
     public async Task AttachNetworkToNode_WhenAlreadyAttached_ShouldReturnConflict()
     {
-        var nodeId = await CreateNodeAsync();
+        // Arrange
+        var nodeId = await CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         var firstResponse = await _networksClient.AttachToNodeAsync(
@@ -53,16 +74,18 @@ public class NetworkAttachmentApiTests
             networkId);
 
         Assert.That(
-            (int)firstResponse.StatusCode,
-            Is.EqualTo(201));
+            firstResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.Created));
 
+        // Act
         var secondResponse = await _networksClient.AttachToNodeAsync(
             nodeId,
             networkId);
 
+        // Assert
         Assert.That(
-            (int)secondResponse.StatusCode,
-            Is.EqualTo(409));
+            secondResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.Conflict));
 
         TestContext.WriteLine(
             $"Duplicate attachment response: {secondResponse.Content}");
@@ -71,7 +94,8 @@ public class NetworkAttachmentApiTests
     [Test]
     public async Task GetNodeNetworks_AfterAttachment_ShouldReturnAttachment()
     {
-        var nodeId = await CreateNodeAsync();
+        // Arrange
+        var nodeId = await CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         var attachResponse = await _networksClient.AttachToNodeAsync(
@@ -79,89 +103,61 @@ public class NetworkAttachmentApiTests
             networkId);
 
         Assert.That(
-            (int)attachResponse.StatusCode,
-            Is.EqualTo(201));
+            attachResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.Created));
 
+        // Act
         var response = await _networksClient.GetByNodeIdAsync(
             nodeId);
 
+        // Assert
         Assert.That(
-            (int)response.StatusCode,
-            Is.EqualTo(200));
-
-        Assert.That(
-            response.Content,
-            Is.Not.Null.And.Not.Empty);
-
-        var json = JsonSerializer.Deserialize<JsonElement>(
-            response.Content!);
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
 
         Assert.That(
-            json.ValueKind,
-            Is.EqualTo(JsonValueKind.Array));
+            response.Data,
+            Is.Not.Null);
 
         Assert.That(
-            json.GetArrayLength(),
-            Is.GreaterThan(0));
+            response.Data!,
+            Is.Not.Empty);
 
-        var found = false;
-
-        foreach (var item in json.EnumerateArray())
-        {
-            var returnedNodeId = item
-                .GetProperty("computeNodeId")
-                .GetGuid();
-
-            var returnedNetworkId = item
-                .GetProperty("networkId")
-                .GetGuid();
-
-            TestContext.WriteLine(
-                $"Attachment Id: {item.GetProperty("id").GetGuid()}");
-
-            TestContext.WriteLine(
-                $"Attachment NodeId: {returnedNodeId}");
-
-            TestContext.WriteLine(
-                $"Attachment NetworkId: {returnedNetworkId}");
-
-            if (returnedNodeId == nodeId &&
-                returnedNetworkId == networkId)
-            {
-                found = true;
-
-                var attachmentId = item
-                    .GetProperty("id")
-                    .GetGuid();
-
-                Assert.That(
-                    attachmentId,
-                    Is.Not.EqualTo(Guid.Empty));
-
-                var attachedAt = item
-                    .GetProperty("attachedAt")
-                    .GetDateTime();
-
-                Assert.That(
-                    attachedAt,
-                    Is.Not.EqualTo(default(DateTime)));
-
-                break;
-            }
-        }
+        var attachment = response.Data!
+            .SingleOrDefault(x =>
+                x.ComputeNodeId == nodeId &&
+                x.NetworkId == networkId);
 
         Assert.That(
-            found,
-            Is.True,
+            attachment,
+            Is.Not.Null,
             $"Expected attachment was not found. " +
             $"NodeId: {nodeId}, " +
             $"NetworkId: {networkId}");
+
+        Assert.That(
+            attachment!.Id,
+            Is.Not.EqualTo(Guid.Empty));
+
+        Assert.That(
+            attachment.AttachedAt,
+            Is.Not.EqualTo(default(DateTime)));
+
+        TestContext.WriteLine(
+            $"Attachment Id: {attachment.Id}");
+
+        TestContext.WriteLine(
+            $"Attachment NodeId: {attachment.ComputeNodeId}");
+
+        TestContext.WriteLine(
+            $"Attachment NetworkId: {attachment.NetworkId}");
     }
 
     [Test]
     public async Task GetNetworkNodes_AfterAttachment_ShouldReturnAttachment()
     {
-        var nodeId = await CreateNodeAsync();
+        // Arrange
+        var nodeId = await CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         var attachResponse = await _networksClient.AttachToNodeAsync(
@@ -169,89 +165,61 @@ public class NetworkAttachmentApiTests
             networkId);
 
         Assert.That(
-            (int)attachResponse.StatusCode,
-            Is.EqualTo(201));
+            attachResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.Created));
 
+        // Act
         var response = await _networksClient.GetByNetworkIdAsync(
             networkId);
 
+        // Assert
         Assert.That(
-            (int)response.StatusCode,
-            Is.EqualTo(200));
-
-        Assert.That(
-            response.Content,
-            Is.Not.Null.And.Not.Empty);
-
-        var json = JsonSerializer.Deserialize<JsonElement>(
-            response.Content!);
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
 
         Assert.That(
-            json.ValueKind,
-            Is.EqualTo(JsonValueKind.Array));
+            response.Data,
+            Is.Not.Null);
 
         Assert.That(
-            json.GetArrayLength(),
-            Is.GreaterThan(0));
+            response.Data!,
+            Is.Not.Empty);
 
-        var found = false;
-
-        foreach (var item in json.EnumerateArray())
-        {
-            var returnedNodeId = item
-                .GetProperty("computeNodeId")
-                .GetGuid();
-
-            var returnedNetworkId = item
-                .GetProperty("networkId")
-                .GetGuid();
-
-            TestContext.WriteLine(
-                $"Attachment Id: {item.GetProperty("id").GetGuid()}");
-
-            TestContext.WriteLine(
-                $"Attachment NodeId: {returnedNodeId}");
-
-            TestContext.WriteLine(
-                $"Attachment NetworkId: {returnedNetworkId}");
-
-            if (returnedNodeId == nodeId &&
-                returnedNetworkId == networkId)
-            {
-                found = true;
-
-                var attachmentId = item
-                    .GetProperty("id")
-                    .GetGuid();
-
-                Assert.That(
-                    attachmentId,
-                    Is.Not.EqualTo(Guid.Empty));
-
-                var attachedAt = item
-                    .GetProperty("attachedAt")
-                    .GetDateTime();
-
-                Assert.That(
-                    attachedAt,
-                    Is.Not.EqualTo(default(DateTime)));
-
-                break;
-            }
-        }
+        var attachment = response.Data!
+            .SingleOrDefault(x =>
+                x.ComputeNodeId == nodeId &&
+                x.NetworkId == networkId);
 
         Assert.That(
-            found,
-            Is.True,
+            attachment,
+            Is.Not.Null,
             $"Expected attachment was not found. " +
             $"NodeId: {nodeId}, " +
             $"NetworkId: {networkId}");
+
+        Assert.That(
+            attachment!.Id,
+            Is.Not.EqualTo(Guid.Empty));
+
+        Assert.That(
+            attachment.AttachedAt,
+            Is.Not.EqualTo(default(DateTime)));
+
+        TestContext.WriteLine(
+            $"Attachment Id: {attachment.Id}");
+
+        TestContext.WriteLine(
+            $"Attachment NodeId: {attachment.ComputeNodeId}");
+
+        TestContext.WriteLine(
+            $"Attachment NetworkId: {attachment.NetworkId}");
     }
 
     [Test]
     public async Task DetachNetworkFromNode_WhenAttached_ShouldReturnNoContent()
     {
-        var nodeId = await CreateNodeAsync();
+        // Arrange
+        var nodeId = await CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         var attachResponse = await _networksClient.AttachToNodeAsync(
@@ -259,36 +227,41 @@ public class NetworkAttachmentApiTests
             networkId);
 
         Assert.That(
-            (int)attachResponse.StatusCode,
-            Is.EqualTo(201));
+            attachResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.Created));
 
+        // Act
         var detachResponse = await _networksClient.DetachFromNodeAsync(
             nodeId,
             networkId);
 
+        // Assert
         Assert.That(
-            (int)detachResponse.StatusCode,
-            Is.EqualTo(204));
+            detachResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.NoContent));
     }
 
     [Test]
     public async Task DetachNetworkFromNode_WhenNotAttached_ShouldReturnNotFound()
     {
-        var nodeId = await CreateNodeAsync();
+        // Arrange
+        var nodeId = await CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
+        // Act
         var response = await _networksClient.DetachFromNodeAsync(
             nodeId,
             networkId);
 
+        // Assert
         Assert.That(
-            (int)response.StatusCode,
-            Is.EqualTo(404));
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.NotFound));
 
         TestContext.WriteLine(
             $"Detach missing attachment response: {response.Content}");
     }
-  
+
     [Test]
     public async Task AttachNetworkToNode_WhenNetworkIsInactive_ShouldReturnConflict()
     {
@@ -297,8 +270,7 @@ public class NetworkAttachmentApiTests
         var networkId = await CreateNetworkAsync();
 
         var deactivateResponse =
-            await _networksClient.DeactivateAsync(
-                networkId);
+            await _networksClient.DeactivateAsync(networkId);
 
         Assert.That(
             deactivateResponse.StatusCode,
@@ -318,30 +290,25 @@ public class NetworkAttachmentApiTests
         TestContext.WriteLine(
             $"Attach to inactive network response: {response.Content}");
     }
+
     private async Task<Guid> CreateNodeAsync()
     {
-        var nodeName = $"api-test-node-{Guid.NewGuid():N}";
+        var request =
+            TestDataFactory.CreateNodeRequest();
 
-        var response = await _nodesClient.CreateAsync(
-            nodeName,
-            "NVIDIA A100",
-            2);
+        var response =
+            await _nodesClient.CreateAsync(request);
 
         Assert.That(
-            (int)response.StatusCode,
-            Is.EqualTo(202),
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.Accepted),
             $"Node creation failed. Response: {response.Content}");
 
         Assert.That(
-            response.Content,
-            Is.Not.Null.And.Not.Empty);
+            response.Data,
+            Is.Not.Null);
 
-        var json = JsonSerializer.Deserialize<JsonElement>(
-            response.Content!);
-
-        var nodeId = json
-            .GetProperty("id")
-            .GetGuid();
+        var nodeId = response.Data!.Id;
 
         Assert.That(
             nodeId,
@@ -353,29 +320,35 @@ public class NetworkAttachmentApiTests
         return nodeId;
     }
 
+    private async Task<Guid> CreateAvailableNodeAsync()
+    {
+        var nodeId = await CreateNodeAsync();
+
+        await _nodesClient.WaitForAvailableAsync(nodeId);
+
+        return nodeId;
+    }
+
     private async Task<Guid> CreateNetworkAsync()
     {
-        var networkName = $"api-test-network-{Guid.NewGuid():N}";
+        var networkName =
+            $"api-test-network-{Guid.NewGuid():N}";
 
-        var response = await _networksClient.CreateAsync(
-            networkName,
-            "API test network");
+        var response =
+            await _networksClient.CreateAsync(
+                networkName,
+                "API test network");
 
         Assert.That(
-            (int)response.StatusCode,
-            Is.EqualTo(201),
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.Created),
             $"Network creation failed. Response: {response.Content}");
 
         Assert.That(
-            response.Content,
-            Is.Not.Null.And.Not.Empty);
+            response.Data,
+            Is.Not.Null);
 
-        var json = JsonSerializer.Deserialize<JsonElement>(
-            response.Content!);
-
-        var networkId = json
-            .GetProperty("id")
-            .GetGuid();
+        var networkId = response.Data!.Id;
 
         Assert.That(
             networkId,
@@ -385,14 +358,5 @@ public class NetworkAttachmentApiTests
             $"Created network: {networkId}");
 
         return networkId;
-    }
-    
-    private async Task<Guid> CreateAvailableNodeAsync()
-    {
-        var nodeId = await CreateNodeAsync();
-
-        await _nodesClient.WaitForAvailableAsync(nodeId);
-
-        return nodeId;
     }
 }

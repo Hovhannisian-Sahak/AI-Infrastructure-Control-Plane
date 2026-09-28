@@ -1,4 +1,5 @@
 ﻿using BeeCloud.ApiTests.Models;
+using BeeCloud.ApiTests.Models.Requests;
 using BeeCloud.Domain.Enums;
 using RestSharp;
 
@@ -14,20 +15,13 @@ public class NodesClient
     }
 
     public async Task<RestResponse<ComputeNodeResponseModel>> CreateAsync(
-        string name,
-        string gpuModel,
-        int gpuCount)
+        CreateNodeRequestModel requestModel)
     {
         var request = new RestRequest(
             "/api/v1/nodes",
             Method.Post);
 
-        request.AddJsonBody(new
-        {
-            name,
-            gpuModel,
-            gpuCount
-        });
+        request.AddJsonBody(requestModel);
 
         return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
     }

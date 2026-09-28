@@ -1,6 +1,7 @@
 ﻿using System.Net;
-using System.Text.Json;
 using BeeCloud.ApiTests.Clients;
+using BeeCloud.ApiTests.Models.Requests;
+using BeeCloud.ApiTests.TestData;
 using BeeCloud.Domain.Enums;
 
 namespace BeeCloud.ApiTests;
@@ -21,14 +22,12 @@ public class NodesApiTests
     public async Task CreateNode_WithValidData_ShouldReturnAccepted()
     {
         // Arrange
-        var name = $"api-test-node-{Guid.NewGuid():N}";
+        var request =
+            TestDataFactory.CreateNodeRequest();
 
         // Act
         var response =
-            await _nodesClient.CreateAsync(
-                name,
-                "NVIDIA A100",
-                2);
+            await _nodesClient.CreateAsync(request);
 
         // Assert
         Assert.That(
@@ -50,12 +49,17 @@ public class NodesApiTests
     [Test]
     public async Task CreateNode_WithInvalidData_ShouldReturnBadRequest()
     {
+        // Arrange
+        var request = new CreateNodeRequestModel
+        {
+            Name = "",
+            GpuModel = "",
+            GpuCount = 0
+        };
+
         // Act
         var response =
-            await _nodesClient.CreateAsync(
-                "",
-                "",
-                0);
+            await _nodesClient.CreateAsync(request);
 
         // Assert
         Assert.That(
@@ -322,11 +326,11 @@ public class NodesApiTests
 
     private async Task<Guid> CreateNodeAsync()
     {
+        var request =
+            TestDataFactory.CreateNodeRequest();
+
         var response =
-            await _nodesClient.CreateAsync(
-                $"api-test-node-{Guid.NewGuid():N}",
-                "NVIDIA A100",
-                2);
+            await _nodesClient.CreateAsync(request);
 
         Assert.That(
             response.StatusCode,
