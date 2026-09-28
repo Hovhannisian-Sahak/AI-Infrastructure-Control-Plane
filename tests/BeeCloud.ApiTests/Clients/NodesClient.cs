@@ -25,6 +25,15 @@ public class NodesClient
 
         return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
     }
+    
+    public async Task<RestResponse<List<ComputeNodeResponseModel>>> GetAllAsync()
+    {
+        var request = new RestRequest(
+            "/api/v1/nodes",
+            Method.Get);
+
+        return await _client.ExecuteAsync<List<ComputeNodeResponseModel>>(request);
+    }
 
     public async Task<RestResponse<ComputeNodeResponseModel>> GetByIdAsync(
         Guid nodeId)
@@ -68,6 +77,16 @@ public class NodesClient
         {
             fault = fault.ToString()
         });
+
+        return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
+    }
+    
+    public async Task<RestResponse<ComputeNodeResponseModel>> ClearFaultAsync(
+        Guid nodeId)
+    {
+        var request = new RestRequest(
+            $"/api/v1/nodes/{nodeId}/simulate/fault",
+            Method.Delete);
 
         return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
     }

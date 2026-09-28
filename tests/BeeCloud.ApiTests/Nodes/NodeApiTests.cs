@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using BeeCloud.ApiTests.Clients;
+using BeeCloud.ApiTests.Models;
 using BeeCloud.ApiTests.Models.Requests;
 using BeeCloud.ApiTests.TestData;
 using BeeCloud.Domain.Enums;
@@ -73,7 +74,26 @@ public class NodesApiTests
         TestContext.WriteLine(
             $"Invalid create node response: {response.Content}");
     }
+    [Test]
+    public async Task GetAllNodes_ShouldReturnOk()
+    {
+        // Act
+        var response =
+            await _nodesClient.GetAllAsync();
 
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        Assert.That(
+            response.Data,
+            Is.Not.Null);
+
+        Assert.That(
+            response.Data,
+            Is.InstanceOf<List<ComputeNodeResponseModel>>());
+    }
     [Test]
     public async Task GetNodeById_WhenNodeExists_ShouldReturnNode()
     {
@@ -322,6 +342,132 @@ public class NodesApiTests
         Assert.That(
             response.StatusCode,
             Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+    
+    [Test]
+    public async Task ClearFault_WhenNodeHasActiveFault_ShouldReturnOkAndClearFault()
+    {
+        var nodeId =
+            await CreateNodeAsync();
+
+        await _nodesClient.WaitForAvailableAsync(nodeId);
+
+        var simulateResponse =
+            await _nodesClient.SimulateFaultAsync(
+                nodeId,
+                NodeFault.GpuFailure);
+
+        Assert.That(
+            simulateResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        Assert.That(
+            simulateResponse.Data,
+            Is.Not.Null);
+
+        Assert.That(
+            simulateResponse.Data!.ActiveFault,
+            Is.EqualTo(NodeFault.GpuFailure.ToString()));
+
+        var clearResponse =
+            await _nodesClient.ClearFaultAsync(nodeId);
+
+        Assert.That(
+            clearResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        Assert.That(
+            clearResponse.Data,
+            Is.Not.Null);
+
+        TestContext.WriteLine(
+            $"Clear fault response: {clearResponse.Content}");
+
+        Assert.That(
+            clearResponse.Data!.ActiveFault,
+            Is.Empty);
+    }
+    
+    [Test]
+    public async Task ClearFault_WhenNodeDoesNotExist_ShouldReturnNotFound()
+    {
+        var nodeId = Guid.NewGuid();
+
+        var response =
+            await _nodesClient.ClearFaultAsync(nodeId);
+
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.NotFound));
+
+        TestContext.WriteLine(
+            $"Clear fault for non-existing node: {response.Content}");
+    }
+    
+    [Test]
+    public async Task NodeLifecycle_CreateStartAndStop_ShouldFollowExpectedStates()
+    {
+        var request =
+            TestDataFactory.CreateNodeRequest();
+
+        var createResponse =
+            await _nodesClient.CreateAsync(request);
+
+        Assert.That(
+            createResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.Accepted));
+
+        Assert.That(
+            createResponse.Data,
+            Is.Not.Null);
+
+        var nodeId =
+            createResponse.Data!.Id;
+
+        Assert.That(
+            nodeId,
+            Is.Not.EqualTo(Guid.Empty));
+
+        Assert.That(
+            createResponse.Data.Status,
+            Is.EqualTo(nameof(NodeStatus.Provisioning)));
+
+        var availableNode =
+            await _nodesClient.WaitForAvailableAsync(nodeId);
+
+        Assert.That(
+            availableNode.Status,
+            Is.EqualTo(nameof(NodeStatus.Available)));
+
+        var startResponse =
+            await _nodesClient.StartAsync(nodeId);
+
+        Assert.That(
+            startResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        Assert.That(
+            startResponse.Data,
+            Is.Not.Null);
+
+        Assert.That(
+            startResponse.Data!.Status,
+            Is.EqualTo(nameof(NodeStatus.Running)));
+
+        var stopResponse =
+            await _nodesClient.StopAsync(nodeId);
+
+        Assert.That(
+            stopResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        Assert.That(
+            stopResponse.Data,
+            Is.Not.Null);
+
+        Assert.That(
+            stopResponse.Data!.Status,
+            Is.EqualTo(nameof(NodeStatus.Stopping)));
     }
 
     private async Task<Guid> CreateNodeAsync()
