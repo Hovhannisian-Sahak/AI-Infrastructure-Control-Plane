@@ -11,4 +11,6 @@ public class ComputeNodeResponseModel
     public int GpuCount { get; set; }
 
     public string Status { get; set; } = string.Empty;
+
+    public string ActiveFault { get; set; } = string.Empty;
 }

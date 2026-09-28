@@ -22,7 +22,7 @@ public class NodesApiTests
     {
         // Arrange
         var name = $"api-test-node-{Guid.NewGuid():N}";
-        
+
         // Act
         var response =
             await _nodesClient.CreateAsync(
@@ -36,22 +36,14 @@ public class NodesApiTests
             Is.EqualTo(HttpStatusCode.Accepted));
 
         Assert.That(
-            response.Content,
+            response.Data,
             Is.Not.Null);
 
         TestContext.WriteLine(
             $"Create node response: {response.Content}");
 
-        using var document =
-            JsonDocument.Parse(response.Content!);
-
-        var status =
-            document.RootElement
-                .GetProperty("status")
-                .GetString();
-
         Assert.That(
-            status,
+            response.Data!.Status,
             Is.EqualTo(nameof(NodeStatus.Provisioning)));
     }
 
@@ -85,7 +77,6 @@ public class NodesApiTests
         var nodeId =
             await CreateNodeAsync();
 
-        // Wait until provisioning is completed.
         await _nodesClient.WaitForAvailableAsync(nodeId);
 
         // Act
@@ -98,31 +89,18 @@ public class NodesApiTests
             Is.EqualTo(HttpStatusCode.OK));
 
         Assert.That(
-            response.Content,
+            response.Data,
             Is.Not.Null);
 
         TestContext.WriteLine(
             $"Get node response: {response.Content}");
 
-        using var document =
-            JsonDocument.Parse(response.Content!);
-
-        var returnedId =
-            document.RootElement
-                .GetProperty("id")
-                .GetGuid();
-
-        var status =
-            document.RootElement
-                .GetProperty("status")
-                .GetString();
-
         Assert.That(
-            returnedId,
+            response.Data!.Id,
             Is.EqualTo(nodeId));
 
         Assert.That(
-            status,
+            response.Data.Status,
             Is.EqualTo(nameof(NodeStatus.Available)));
     }
 
@@ -164,22 +142,14 @@ public class NodesApiTests
             Is.EqualTo(HttpStatusCode.OK));
 
         Assert.That(
-            response.Content,
+            response.Data,
             Is.Not.Null);
 
         TestContext.WriteLine(
             $"Start node response: {response.Content}");
 
-        using var document =
-            JsonDocument.Parse(response.Content!);
-
-        var status =
-            document.RootElement
-                .GetProperty("status")
-                .GetString();
-
         Assert.That(
-            status,
+            response.Data!.Status,
             Is.EqualTo(nameof(NodeStatus.Running)));
     }
 
@@ -238,22 +208,14 @@ public class NodesApiTests
             Is.EqualTo(HttpStatusCode.OK));
 
         Assert.That(
-            response.Content,
+            response.Data,
             Is.Not.Null);
 
         TestContext.WriteLine(
             $"Stop node response: {response.Content}");
 
-        using var document =
-            JsonDocument.Parse(response.Content!);
-
-        var status =
-            document.RootElement
-                .GetProperty("status")
-                .GetString();
-
         Assert.That(
-            status,
+            response.Data!.Status,
             Is.EqualTo(nameof(NodeStatus.Stopping)));
     }
 
@@ -278,7 +240,7 @@ public class NodesApiTests
         TestContext.WriteLine(
             $"Stop non-running node response: {response.Content}");
     }
-    
+
     [Test]
     public async Task SimulateFault_WhenNodeDoesNotExist_ShouldReturnNotFound()
     {
@@ -299,7 +261,7 @@ public class NodesApiTests
         TestContext.WriteLine(
             $"Simulation for non-existing node: {response.Content}");
     }
-    
+
     [Test]
     [TestCase(NodeFault.GpuFailure)]
     [TestCase(NodeFault.GpuOverheat)]
@@ -309,7 +271,8 @@ public class NodesApiTests
         NodeFault fault)
     {
         // Arrange
-        var nodeId = await CreateNodeAsync();
+        var nodeId =
+            await CreateNodeAsync();
 
         await _nodesClient.WaitForAvailableAsync(nodeId);
 
@@ -324,23 +287,24 @@ public class NodesApiTests
             response.StatusCode,
             Is.EqualTo(HttpStatusCode.OK));
 
-        using var document =
-            JsonDocument.Parse(response.Content!);
+        Assert.That(
+            response.Data,
+            Is.Not.Null);
 
-        var activeFault =
-            document.RootElement
-                .GetProperty("activeFault")
-                .GetString();
+        TestContext.WriteLine(
+            $"Simulation response: {response.Content}");
 
         Assert.That(
-            activeFault,
+            response.Data!.ActiveFault,
             Is.EqualTo(fault.ToString()));
     }
+
     [Test]
     public async Task SimulateFault_WhenNoneIsRequested_ShouldReturnBadRequest()
     {
         // Arrange
-        var nodeId = await CreateNodeAsync();
+        var nodeId =
+            await CreateNodeAsync();
 
         await _nodesClient.WaitForAvailableAsync(nodeId);
 
@@ -369,16 +333,10 @@ public class NodesApiTests
             Is.EqualTo(HttpStatusCode.Accepted));
 
         Assert.That(
-            response.Content,
+            response.Data,
             Is.Not.Null);
 
-        using var document =
-            JsonDocument.Parse(response.Content!);
-
-        var nodeId =
-            document.RootElement
-                .GetProperty("id")
-                .GetGuid();
+        var nodeId = response.Data!.Id;
 
         Assert.That(
             nodeId,

@@ -1,6 +1,5 @@
-﻿using System.Text.Json;
+﻿using BeeCloud.ApiTests.Models;
 using BeeCloud.Domain.Enums;
-using NUnit.Framework;
 using RestSharp;
 
 namespace BeeCloud.ApiTests.Clients;
@@ -14,7 +13,7 @@ public class NodesClient
         _client = new RestClient(baseUrl);
     }
 
-    public async Task<RestResponse> CreateAsync(
+    public async Task<RestResponse<ComputeNodeResponseModel>> CreateAsync(
         string name,
         string gpuModel,
         int gpuCount)
@@ -30,91 +29,40 @@ public class NodesClient
             gpuCount
         });
 
-        return await _client.ExecuteAsync(request);
+        return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
     }
 
-    public async Task<RestResponse> GetByIdAsync(
+    public async Task<RestResponse<ComputeNodeResponseModel>> GetByIdAsync(
         Guid nodeId)
     {
         var request = new RestRequest(
             $"/api/v1/nodes/{nodeId}",
             Method.Get);
 
-        return await _client.ExecuteAsync(request);
+        return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
     }
 
-    public async Task<RestResponse> StartAsync(
+    public async Task<RestResponse<ComputeNodeResponseModel>> StartAsync(
         Guid nodeId)
     {
         var request = new RestRequest(
             $"/api/v1/nodes/{nodeId}/start",
             Method.Post);
 
-        return await _client.ExecuteAsync(request);
+        return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
     }
 
-    public async Task<RestResponse> StopAsync(
+    public async Task<RestResponse<ComputeNodeResponseModel>> StopAsync(
         Guid nodeId)
     {
         var request = new RestRequest(
             $"/api/v1/nodes/{nodeId}/stop",
             Method.Post);
 
-        return await _client.ExecuteAsync(request);
+        return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
     }
 
-    public async Task WaitForAvailableAsync(
-        Guid nodeId,
-        TimeSpan? timeout = null)
-    {
-        var maxWait =
-            timeout ?? TimeSpan.FromSeconds(15);
-
-        var deadline =
-            DateTime.UtcNow.Add(maxWait);
-
-        string? lastStatus = null;
-
-        while (DateTime.UtcNow < deadline)
-        {
-            var response =
-                await GetByIdAsync(nodeId);
-
-            if (!response.IsSuccessful)
-            {
-                throw new AssertionException(
-                    $"Failed to get node '{nodeId}'. " +
-                    $"Status: {response.StatusCode}. " +
-                    $"Response: {response.Content}");
-            }
-
-            using var document =
-                JsonDocument.Parse(response.Content!);
-
-            lastStatus =
-                document.RootElement
-                    .GetProperty("status")
-                    .GetString();
-
-            if (string.Equals(
-                    lastStatus,
-                    nameof(NodeStatus.Available),
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-
-            await Task.Delay(
-                TimeSpan.FromMilliseconds(500));
-        }
-
-        throw new AssertionException(
-            $"Node '{nodeId}' did not become Available " +
-            $"within {maxWait.TotalSeconds} seconds. " +
-            $"Last observed status: {lastStatus}.");
-    }
-
-    public async Task<RestResponse> SimulateFaultAsync(
+    public async Task<RestResponse<ComputeNodeResponseModel>> SimulateFaultAsync(
         Guid nodeId,
         NodeFault fault)
     {
@@ -127,6 +75,52 @@ public class NodesClient
             fault = fault.ToString()
         });
 
-        return await _client.ExecuteAsync(request);
+        return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
+    }
+
+    public async Task<ComputeNodeResponseModel> WaitForAvailableAsync(
+        Guid nodeId,
+        TimeSpan? timeout = null)
+    {
+        var maxWait =
+            timeout ?? TimeSpan.FromSeconds(15);
+
+        var deadline =
+            DateTime.UtcNow.Add(maxWait);
+
+        ComputeNodeResponseModel? lastNode = null;
+
+        while (DateTime.UtcNow < deadline)
+        {
+            var response =
+                await GetByIdAsync(nodeId);
+
+            if (!response.IsSuccessful)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to get node '{nodeId}'. " +
+                    $"Status: {response.StatusCode}. " +
+                    $"Response: {response.Content}");
+            }
+
+            lastNode = response.Data;
+
+            if (lastNode is not null &&
+                string.Equals(
+                    lastNode.Status,
+                    nameof(NodeStatus.Available),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return lastNode;
+            }
+
+            await Task.Delay(
+                TimeSpan.FromMilliseconds(500));
+        }
+
+        throw new TimeoutException(
+            $"Node '{nodeId}' did not become Available " +
+            $"within {maxWait.TotalSeconds} seconds. " +
+            $"Last observed status: {lastNode?.Status}.");
     }
 }
