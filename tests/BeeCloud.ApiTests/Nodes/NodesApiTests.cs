@@ -385,7 +385,7 @@ public class NodesApiTests
 
         Assert.That(
             clearResponse.Data!.ActiveFault,
-            Is.Empty);
+            Is.EqualTo(nameof(NodeFault.None)));
     }
     
     [Test]

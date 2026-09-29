@@ -136,4 +136,43 @@ public class NodesClient
             $"within {maxWait.TotalSeconds} seconds. " +
             $"Last observed status: {lastNode?.Status}.");
     }
+    public async Task<ComputeNodeResponseModel> WaitForRunningAsync(
+        Guid nodeId,
+        TimeSpan? timeout = null)
+    {
+        var maxWait = timeout ?? TimeSpan.FromSeconds(15);
+        var deadline = DateTime.UtcNow.Add(maxWait);
+        ComputeNodeResponseModel? lastNode = null;
+
+        while (DateTime.UtcNow < deadline)
+        {
+            var response = await GetByIdAsync(nodeId);
+
+            if (!response.IsSuccessful)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to get node '{nodeId}'. " +
+                    $"Status: {response.StatusCode}. " +
+                    $"Response: {response.Content}");
+            }
+
+            lastNode = response.Data;
+
+            if (lastNode is not null &&
+                string.Equals(
+                    lastNode.Status,
+                    nameof(NodeStatus.Running),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return lastNode;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(500));
+        }
+
+        throw new TimeoutException(
+            $"Node '{nodeId}' did not become Running " +
+            $"within {maxWait.TotalSeconds} seconds. " +
+            $"Last observed status: {lastNode?.Status}.");
+    }
 }
