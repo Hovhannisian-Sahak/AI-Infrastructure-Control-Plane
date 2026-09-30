@@ -27,15 +27,13 @@ public class ProvisioningProcessorIntegrationTests
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        _postgres = new PostgreSqlBuilder()
-            .WithImage("postgres:16")
+        _postgres = new PostgreSqlBuilder("postgres:16")
             .WithDatabase("beecloud_test")
             .WithUsername("beecloud_test")
             .WithPassword("beecloud_test_password")
             .Build();
 
-        _redis = new RedisBuilder()
-            .WithImage("redis:7")
+        _redis = new RedisBuilder("redis:7")
             .Build();
 
         await _postgres.StartAsync();

@@ -1,7 +1,5 @@
 ﻿using BeeCloud.Domain.Enums;
 using BeeCloud.Domain.Exceptions;
-using BeeCloud.Domain.Enums;
-using BeeCloud.Domain.Exceptions;
 
 namespace BeeCloud.Domain.Entities;
 
@@ -9,9 +7,9 @@ public class ComputeNode
 {
     public Guid Id { get; private set; }
 
-    public string Name { get; private set; }
+    public string Name { get; private set; } = string.Empty;
 
-    public string GpuModel { get; private set; }
+    public string GpuModel { get; private set; } = string.Empty;
 
     public int GpuCount { get; private set; }
 

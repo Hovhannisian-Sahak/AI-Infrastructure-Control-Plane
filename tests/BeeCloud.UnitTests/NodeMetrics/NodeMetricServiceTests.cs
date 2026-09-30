@@ -147,7 +147,7 @@ public class NodeMetricServiceTests
     }
 
     [Test]
-    public async Task GetByNodeIdAsync_WhenNodeDoesNotExist_ShouldThrowKeyNotFoundException()
+    public void GetByNodeIdAsync_WhenNodeDoesNotExist_ShouldThrowKeyNotFoundException()
     {
         // Arrange
         var nodeId = Guid.NewGuid();

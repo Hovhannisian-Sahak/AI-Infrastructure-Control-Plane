@@ -3,7 +3,7 @@
 public class OperationalMetric
 {
     public Guid Id { get; private set; }
-    public string Name { get; private set; }
+    public string Name { get; private set; } = string.Empty;
     public long Value { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 

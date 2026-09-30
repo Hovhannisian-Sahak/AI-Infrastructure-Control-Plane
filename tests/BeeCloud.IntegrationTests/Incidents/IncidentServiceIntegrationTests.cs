@@ -6,7 +6,6 @@ using BeeCloud.Infrastructure.Persistence;
 using BeeCloud.Infrastructure.Persistence.Repositories;
 using BeeCloud.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using NUnit.Framework;
 
 namespace BeeCloud.IntegrationTests.Incidents;
 
@@ -86,7 +85,7 @@ public class IncidentServiceIntegrationTests
     }
 
     [Test]
-    public async Task CreateAsync_WithNonExistingNode_ShouldThrow()
+    public void CreateAsync_WithNonExistingNode_ShouldThrow()
     {
         // Arrange
         var request = new CreateIncidentRequest

@@ -1,5 +1,4 @@
-﻿using BeeCloud.Application.DTOs.Networks;
-using BeeCloud.Application.Interfaces;
+﻿using BeeCloud.Application.Interfaces;
 using BeeCloud.Application.Services;
 using BeeCloud.Domain.Entities;
 using Moq;
@@ -451,7 +450,7 @@ public class NetworkAttachmentServiceTests
         });
     }
     [Test]
-    public async Task AttachAsync_WhenNetworkIsInactive_ShouldThrowConflict()
+    public void AttachAsync_WhenNetworkIsInactive_ShouldThrowConflict()
     {
         // Arrange
         var node = new ComputeNode(
@@ -502,7 +501,7 @@ public class NetworkAttachmentServiceTests
             Times.Never);
     }
     [Test]
-    public async Task AttachAsync_WhenNetworkCapacityIsReached_ShouldThrowConflict()
+    public void AttachAsync_WhenNetworkCapacityIsReached_ShouldThrowConflict()
 {
     // Arrange
     var node = new ComputeNode(

@@ -13,8 +13,7 @@ public class RedisTestContainer : IAsyncDisposable
     public RedisTestContainer()
     {
         _container =
-            new ContainerBuilder()
-                .WithImage("redis:7")
+            new ContainerBuilder("redis:7")
                 .WithPortBinding(6379, true)
                 .WithWaitStrategy(
                     Wait.ForUnixContainer()

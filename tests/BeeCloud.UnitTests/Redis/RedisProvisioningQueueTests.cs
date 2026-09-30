@@ -167,7 +167,7 @@ public class RedisProvisioningQueueTests
     }
 
     [Test]
-    public async Task DequeueAsync_WhenRedisContainsInvalidGuid_ShouldThrow()
+    public void DequeueAsync_WhenRedisContainsInvalidGuid_ShouldThrow()
     {
         // Arrange
         _database
@@ -190,7 +190,7 @@ public class RedisProvisioningQueueTests
     }
 
     [Test]
-    public async Task EnqueueAsync_WhenCancellationRequested_ShouldThrow()
+    public void EnqueueAsync_WhenCancellationRequested_ShouldThrow()
     {
         // Arrange
         var nodeId = Guid.NewGuid();
@@ -218,7 +218,7 @@ public class RedisProvisioningQueueTests
     }
 
     [Test]
-    public async Task DequeueAsync_WhenCancellationRequested_ShouldThrow()
+    public void DequeueAsync_WhenCancellationRequested_ShouldThrow()
     {
         // Arrange
         using var cancellationTokenSource =

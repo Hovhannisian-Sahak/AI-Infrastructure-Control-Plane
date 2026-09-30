@@ -224,7 +224,7 @@ public class ProvisioningProcessorTests
     }
 
     [Test]
-    public async Task ProcessAsync_WhenCancellationIsRequested_ShouldPropagateCancellation()
+    public void ProcessAsync_WhenCancellationIsRequested_ShouldPropagateCancellation()
     {
         using var cancellationTokenSource =
             new CancellationTokenSource();

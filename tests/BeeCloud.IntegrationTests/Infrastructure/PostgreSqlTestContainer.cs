@@ -1,14 +1,11 @@
-﻿using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Containers;
-using Testcontainers.PostgreSql;
+﻿using Testcontainers.PostgreSql;
 
 namespace BeeCloud.IntegrationTests.Infrastructure;
 
 public sealed class PostgreSqlTestContainer : IAsyncDisposable
 {
     private readonly PostgreSqlContainer _container =
-        new PostgreSqlBuilder()
-            .WithImage("postgres:16")
+        new PostgreSqlBuilder("postgres:16")
             .WithDatabase("beecloud_test")
             .WithUsername("beecloud_test")
             .WithPassword("beecloud_test_password")

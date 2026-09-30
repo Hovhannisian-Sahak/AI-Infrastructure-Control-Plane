@@ -14,8 +14,7 @@ public class OperationalMetricRepositoryIntegrationTests
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        _container = new PostgreSqlBuilder()
-            .WithImage("postgres:16")
+        _container = new PostgreSqlBuilder("postgres:16")
             .WithDatabase("beecloud_test")
             .WithUsername("beecloud_test")
             .WithPassword("beecloud_test_password")

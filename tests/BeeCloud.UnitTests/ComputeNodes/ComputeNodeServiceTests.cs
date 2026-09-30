@@ -99,7 +99,7 @@ public class ComputeNodeServiceTests
     }
 
     [Test]
-    public async Task CreateAsync_WithDuplicateName_ShouldThrow()
+    public void CreateAsync_WithDuplicateName_ShouldThrow()
     {
         // Arrange
         var request = new CreateComputeNodeRequest
