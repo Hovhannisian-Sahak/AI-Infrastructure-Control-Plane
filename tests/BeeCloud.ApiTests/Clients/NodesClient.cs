@@ -95,53 +95,30 @@ public class NodesClient
         Guid nodeId,
         TimeSpan? timeout = null)
     {
-        var maxWait =
-            timeout ?? TimeSpan.FromSeconds(15);
-
-        var deadline =
-            DateTime.UtcNow.Add(maxWait);
-
-        ComputeNodeResponseModel? lastNode = null;
-
-        while (DateTime.UtcNow < deadline)
-        {
-            var response =
-                await GetByIdAsync(nodeId);
-
-            if (!response.IsSuccessful)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to get node '{nodeId}'. " +
-                    $"Status: {response.StatusCode}. " +
-                    $"Response: {response.Content}");
-            }
-
-            lastNode = response.Data;
-
-            if (lastNode is not null &&
-                string.Equals(
-                    lastNode.Status,
-                    nameof(NodeStatus.Available),
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return lastNode;
-            }
-
-            await Task.Delay(
-                TimeSpan.FromMilliseconds(500));
-        }
-
-        throw new TimeoutException(
-            $"Node '{nodeId}' did not become Available " +
-            $"within {maxWait.TotalSeconds} seconds. " +
-            $"Last observed status: {lastNode?.Status}.");
+        return await WaitForStatusAsync(
+            nodeId,
+            NodeStatus.Available,
+            timeout);
     }
+
     public async Task<ComputeNodeResponseModel> WaitForRunningAsync(
         Guid nodeId,
         TimeSpan? timeout = null)
     {
+        return await WaitForStatusAsync(
+            nodeId,
+            NodeStatus.Running,
+            timeout);
+    }
+
+    private async Task<ComputeNodeResponseModel> WaitForStatusAsync(
+        Guid nodeId,
+        NodeStatus expectedStatus,
+        TimeSpan? timeout)
+    {
         var maxWait = timeout ?? TimeSpan.FromSeconds(15);
         var deadline = DateTime.UtcNow.Add(maxWait);
+
         ComputeNodeResponseModel? lastNode = null;
 
         while (DateTime.UtcNow < deadline)
@@ -161,7 +138,7 @@ public class NodesClient
             if (lastNode is not null &&
                 string.Equals(
                     lastNode.Status,
-                    nameof(NodeStatus.Running),
+                    expectedStatus.ToString(),
                     StringComparison.OrdinalIgnoreCase))
             {
                 return lastNode;
@@ -171,7 +148,7 @@ public class NodesClient
         }
 
         throw new TimeoutException(
-            $"Node '{nodeId}' did not become Running " +
+            $"Node '{nodeId}' did not become {expectedStatus} " +
             $"within {maxWait.TotalSeconds} seconds. " +
             $"Last observed status: {lastNode?.Status}.");
     }
