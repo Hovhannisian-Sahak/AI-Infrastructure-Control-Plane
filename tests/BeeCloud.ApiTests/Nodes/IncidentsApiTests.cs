@@ -12,6 +12,7 @@ public class IncidentApiTests
 {
     private NodesClient _nodesClient = null!;
     private IncidentsClient _incidentsClient = null!;
+    private ApiTestDataHelper _testData = null!;
 
     [SetUp]
     public void SetUp()
@@ -20,6 +21,7 @@ public class IncidentApiTests
 
         _nodesClient = new NodesClient(baseUrl);
         _incidentsClient = new IncidentsClient(baseUrl);
+        _testData = new ApiTestDataHelper(_nodesClient);
     }
 
     [Test]
@@ -37,24 +39,66 @@ public class IncidentApiTests
 
         foreach (var incident in response.Data!)
         {
-            Assert.That(
-                Enum.TryParse<IncidentSeverity>(
-                    incident.Severity,
-                    ignoreCase: true,
-                    out _),
-                Is.True,
-                $"API returned invalid incident severity: '{incident.Severity}'");
-
-            Assert.That(
-                Enum.TryParse<IncidentStatus>(
-                    incident.Status,
-                    ignoreCase: true,
-                    out _),
-                Is.True,
-                $"API returned invalid incident status: '{incident.Status}'");
+            AssertValidIncidentEnums(incident);
         }
     }
+    [Test]
+    public async Task GetIncidentById_WhenIncidentExists_ShouldReturnOk()
+    {
+        // Arrange
+        var nodeId = await _testData.CreateAvailableNodeAsync();
 
+        var startResponse =
+            await _nodesClient.StartAsync(nodeId);
+
+        Assert.That(
+            startResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK),
+            $"Node start failed. Response: {startResponse.Content}");
+
+        await _nodesClient.WaitForRunningAsync(nodeId);
+
+        var simulateResponse =
+            await _nodesClient.SimulateFaultAsync(
+                nodeId,
+                NodeFault.GpuFailure);
+
+        Assert.That(
+            simulateResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        var incident =
+            await _incidentsClient.WaitForIncidentAsync(nodeId);
+
+        // Act
+        var response =
+            await _incidentsClient.GetByIdAsync(incident.Id);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        Assert.That(
+            response.Data,
+            Is.Not.Null);
+
+        Assert.That(
+            response.Data!.Id,
+            Is.EqualTo(incident.Id));
+
+        Assert.That(
+            response.Data.ComputeNodeId,
+            Is.EqualTo(nodeId));
+
+        Assert.That(
+            response.Data.Severity,
+            Is.EqualTo(incident.Severity));
+
+        Assert.That(
+            response.Data.Status,
+            Is.EqualTo(incident.Status));
+    }
     [Test]
     public async Task GetIncidentById_WhenIncidentDoesNotExist_ShouldReturnNotFound()
     {
@@ -71,7 +115,7 @@ public class IncidentApiTests
     [Test]
     public async Task SimulateGpuFailure_ShouldCreateOpenIncident()
     {
-        var nodeId = await CreateAvailableNodeAsync();
+        var nodeId = await _testData.CreateAvailableNodeAsync();
 
         var startResponse =
             await _nodesClient.StartAsync(nodeId);
@@ -124,21 +168,7 @@ public class IncidentApiTests
             incident.Severity,
             Is.EqualTo(nameof(IncidentSeverity.High)));
 
-        Assert.That(
-            Enum.TryParse<IncidentSeverity>(
-                incident.Severity,
-                ignoreCase: true,
-                out _),
-            Is.True,
-            $"API returned invalid incident severity: '{incident.Severity}'");
-
-        Assert.That(
-            Enum.TryParse<IncidentStatus>(
-                incident.Status,
-                ignoreCase: true,
-                out _),
-            Is.True,
-            $"API returned invalid incident status: '{incident.Status}'");
+        AssertValidIncidentEnums(incident);
 
         Assert.That(
             incident.CreatedAt,
@@ -157,7 +187,7 @@ public class IncidentApiTests
     [Test]
     public async Task SimulateGpuFailure_ShouldCreateIncidentAndRecoverNode()
     {
-        var nodeId = await CreateAvailableNodeAsync();
+        var nodeId = await _testData.CreateAvailableNodeAsync();
 
         var startResponse =
             await _nodesClient.StartAsync(nodeId);
@@ -206,21 +236,7 @@ public class IncidentApiTests
             incident.Severity,
             Is.EqualTo(nameof(IncidentSeverity.High)));
 
-        Assert.That(
-            Enum.TryParse<IncidentSeverity>(
-                incident.Severity,
-                ignoreCase: true,
-                out _),
-            Is.True,
-            $"API returned invalid incident severity: '{incident.Severity}'");
-
-        Assert.That(
-            Enum.TryParse<IncidentStatus>(
-                incident.Status,
-                ignoreCase: true,
-                out _),
-            Is.True,
-            $"API returned invalid incident status: '{incident.Status}'");
+        AssertValidIncidentEnums(incident);
 
         var recoveredNode =
             await _nodesClient.WaitForAvailableAsync(
@@ -251,13 +267,7 @@ public class IncidentApiTests
             resolvedIncident.Status,
             Is.EqualTo(nameof(IncidentStatus.Resolved)));
 
-        Assert.That(
-            Enum.TryParse<IncidentStatus>(
-                resolvedIncident.Status,
-                ignoreCase: true,
-                out _),
-            Is.True,
-            $"API returned invalid incident status: '{resolvedIncident.Status}'");
+        AssertValidIncidentEnums(resolvedIncident);
 
         Assert.That(
             resolvedIncident.ResolvedAt,
@@ -269,47 +279,73 @@ public class IncidentApiTests
         TestContext.WriteLine(
             $"Node {nodeId} recovered to Available.");
     }
-
-    private async Task<Guid> CreateNodeAsync()
+    [TestCaseSource(nameof(AllIncidentSeverities))]
+    public async Task GetIncidentsBySeverity_ShouldReturnOnlyMatchingIncidents(
+        IncidentSeverity severity)
     {
-        var request =
-            TestDataFactory.CreateNodeRequest();
-
+        // Act
         var response =
-            await _nodesClient.CreateAsync(request);
+            await _incidentsClient.GetAllAsync(
+                severity: severity);
 
+        // Assert
         Assert.That(
             response.StatusCode,
-            Is.EqualTo(HttpStatusCode.Accepted),
-            $"Node creation failed. Response: {response.Content}");
+            Is.EqualTo(HttpStatusCode.OK));
 
         Assert.That(
             response.Data,
             Is.Not.Null);
 
-        var nodeId = response.Data!.Id;
-
         Assert.That(
-            nodeId,
-            Is.Not.EqualTo(Guid.Empty));
-
-        TestContext.WriteLine(
-            $"Created node: {nodeId}");
-
-        return nodeId;
+            response.Data!,
+            Has.All.Matches<IncidentResponseModel>(
+                x => x.Severity == severity.ToString()));
     }
-
-    private async Task<Guid> CreateAvailableNodeAsync()
+    [TestCaseSource(nameof(AllIncidentStatuses))]
+    public async Task GetIncidentsByStatus_ShouldReturnOnlyMatchingIncidents(
+        IncidentStatus status)
     {
-        var nodeId = await CreateNodeAsync();
+        // Act
+        var response =
+            await _incidentsClient.GetAllAsync(
+                status: status);
 
-        var node =
-            await _nodesClient.WaitForAvailableAsync(nodeId);
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
 
         Assert.That(
-            node.Status,
-            Is.EqualTo(nameof(NodeStatus.Available)));
+            response.Data,
+            Is.Not.Null);
 
-        return nodeId;
+        Assert.That(
+            response.Data!,
+            Has.All.Matches<IncidentResponseModel>(
+                x => x.Status == status.ToString()));
+    }
+    private static IEnumerable<IncidentSeverity> AllIncidentSeverities =>
+        Enum.GetValues<IncidentSeverity>();
+    private static IEnumerable<IncidentStatus> AllIncidentStatuses =>
+        Enum.GetValues<IncidentStatus>();
+    private static void AssertValidIncidentEnums(
+        IncidentResponseModel incident)
+    {
+        Assert.That(
+            Enum.TryParse<IncidentSeverity>(
+                incident.Severity,
+                ignoreCase: true,
+                out _),
+            Is.True,
+            $"API returned invalid incident severity: '{incident.Severity}'");
+
+        Assert.That(
+            Enum.TryParse<IncidentStatus>(
+                incident.Status,
+                ignoreCase: true,
+                out _),
+            Is.True,
+            $"API returned invalid incident status: '{incident.Status}'");
     }
 }

@@ -11,7 +11,7 @@ public class NetworkAttachmentApiTests
 {
     private NodesClient _nodesClient = null!;
     private NetworksClient _networksClient = null!;
-
+    private ApiTestDataHelper _testData = null!;
     [SetUp]
     public void SetUp()
     {
@@ -19,13 +19,14 @@ public class NetworkAttachmentApiTests
 
         _nodesClient = new NodesClient(baseUrl);
         _networksClient = new NetworksClient(baseUrl);
+        _testData = new ApiTestDataHelper(_nodesClient);
     }
 
     [Test]
     public async Task AttachNetworkToNode_WhenValid_ShouldReturnCreated()
     {
         // Arrange
-        var nodeId = await CreateAvailableNodeAsync();
+        var nodeId = await _testData.CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         // Act
@@ -66,7 +67,7 @@ public class NetworkAttachmentApiTests
     public async Task AttachNetworkToNode_WhenAlreadyAttached_ShouldReturnConflict()
     {
         // Arrange
-        var nodeId = await CreateAvailableNodeAsync();
+        var nodeId = await _testData.CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         var firstResponse = await _networksClient.AttachToNodeAsync(
@@ -95,7 +96,7 @@ public class NetworkAttachmentApiTests
     public async Task GetNodeNetworks_AfterAttachment_ShouldReturnAttachment()
     {
         // Arrange
-        var nodeId = await CreateAvailableNodeAsync();
+        var nodeId = await _testData.CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         var attachResponse = await _networksClient.AttachToNodeAsync(
@@ -157,7 +158,7 @@ public class NetworkAttachmentApiTests
     public async Task GetNetworkNodes_AfterAttachment_ShouldReturnAttachment()
     {
         // Arrange
-        var nodeId = await CreateAvailableNodeAsync();
+        var nodeId = await _testData.CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         var attachResponse = await _networksClient.AttachToNodeAsync(
@@ -219,7 +220,7 @@ public class NetworkAttachmentApiTests
     public async Task DetachNetworkFromNode_WhenAttached_ShouldReturnNoContent()
     {
         // Arrange
-        var nodeId = await CreateAvailableNodeAsync();
+        var nodeId = await _testData.CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         var attachResponse = await _networksClient.AttachToNodeAsync(
@@ -245,7 +246,7 @@ public class NetworkAttachmentApiTests
     public async Task DetachNetworkFromNode_WhenNotAttached_ShouldReturnNotFound()
     {
         // Arrange
-        var nodeId = await CreateAvailableNodeAsync();
+        var nodeId = await _testData.CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         // Act
@@ -266,7 +267,7 @@ public class NetworkAttachmentApiTests
     public async Task AttachNetworkToNode_WhenNetworkIsInactive_ShouldReturnConflict()
     {
         // Arrange
-        var nodeId = await CreateAvailableNodeAsync();
+        var nodeId = await _testData.CreateAvailableNodeAsync();
         var networkId = await CreateNetworkAsync();
 
         var deactivateResponse =
@@ -290,45 +291,71 @@ public class NetworkAttachmentApiTests
         TestContext.WriteLine(
             $"Attach to inactive network response: {response.Content}");
     }
-
-    private async Task<Guid> CreateNodeAsync()
+    [Test]
+    public async Task AttachNetworkToNode_WhenNodeDoesNotExist_ShouldReturnNotFound()
     {
-        var request =
-            TestDataFactory.CreateNodeRequest();
+        // Arrange
+        var nodeId = Guid.NewGuid();
+        var networkId = await CreateNetworkAsync();
 
+        // Act
         var response =
-            await _nodesClient.CreateAsync(request);
+            await _networksClient.AttachToNodeAsync(
+                nodeId,
+                networkId);
 
+        // Assert
         Assert.That(
             response.StatusCode,
-            Is.EqualTo(HttpStatusCode.Accepted),
-            $"Node creation failed. Response: {response.Content}");
-
-        Assert.That(
-            response.Data,
-            Is.Not.Null);
-
-        var nodeId = response.Data!.Id;
-
-        Assert.That(
-            nodeId,
-            Is.Not.EqualTo(Guid.Empty));
+            Is.EqualTo(HttpStatusCode.NotFound));
 
         TestContext.WriteLine(
-            $"Created node: {nodeId}");
-
-        return nodeId;
+            $"Attach to non-existing node response: {response.Content}");
     }
-
-    private async Task<Guid> CreateAvailableNodeAsync()
+    [Test]
+    public async Task AttachNetworkToNode_WhenNetworkDoesNotExist_ShouldReturnNotFound()
     {
-        var nodeId = await CreateNodeAsync();
+        // Arrange
+        var nodeId = await _testData.CreateAvailableNodeAsync();
+        var networkId = Guid.NewGuid();
 
-        await _nodesClient.WaitForAvailableAsync(nodeId);
+        // Act
+        var response =
+            await _networksClient.AttachToNodeAsync(
+                nodeId,
+                networkId);
 
-        return nodeId;
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.NotFound));
+
+        TestContext.WriteLine(
+            $"Attach to non-existing network response: {response.Content}");
     }
+    [Test]
+    public async Task AttachNetworkToNode_WhenNetworkReachesMaxAttachments_ShouldReturnConflict()
+    {
+        // Arrange
+        var networkId = await CreateFullNetworkAsync();
 
+        var fifthNodeId = await _testData.CreateAvailableNodeAsync();
+
+        // Act
+        var response =
+            await _networksClient.AttachToNodeAsync(
+                fifthNodeId,
+                networkId);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.Conflict));
+
+        TestContext.WriteLine(
+            $"Attach beyond network capacity response: {response.Content}");
+    }
+    
     private async Task<Guid> CreateNetworkAsync()
     {
         var networkName =
@@ -356,6 +383,29 @@ public class NetworkAttachmentApiTests
 
         TestContext.WriteLine(
             $"Created network: {networkId}");
+
+        return networkId;
+    }
+    
+    private async Task<Guid> CreateFullNetworkAsync()
+    {
+        var networkId = await CreateNetworkAsync();
+
+        for (var i = 0; i < 4; i++)
+        {
+            var nodeId = await _testData.CreateAvailableNodeAsync();
+
+            var response =
+                await _networksClient.AttachToNodeAsync(
+                    nodeId,
+                    networkId);
+
+            Assert.That(
+                response.StatusCode,
+                Is.EqualTo(HttpStatusCode.Created),
+                $"Attachment {i + 1} failed. " +
+                $"Response: {response.Content}");
+        }
 
         return networkId;
     }
