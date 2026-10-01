@@ -1,0 +1,31 @@
+﻿.card {
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 5%);
+}
+
+.title {
+    margin: 0 0 16px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.info {
+    margin: 8px 0;
+    color: #4b5563;
+    font-size: 14px;
+}
+
+.status {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 13px;
+    font-weight: 500;
+}

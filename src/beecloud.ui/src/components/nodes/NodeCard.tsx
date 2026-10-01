@@ -1,4 +1,5 @@
 ﻿import type { ComputeNode } from "@/lib/api/models/computeNode";
+import styles from "./NodeCard.module.css";
 
 type NodeCardProps = {
     node: ComputeNode;
@@ -6,16 +7,20 @@ type NodeCardProps = {
 
 export default function NodeCard({ node }: NodeCardProps) {
     return (
-        <article>
-            <h2>{node.name}</h2>
+        <article className={styles.card}>
+            <h2 className={styles.title}>{node.name}</h2>
 
-            <p>
+            <p className={styles.info}>
                 GPU: {node.gpuModel} × {node.gpuCount}
             </p>
 
-            <p>Status: {node.status}</p>
+            <p className={styles.status}>
+                Status: {node.status}
+            </p>
 
-            <p>Fault: {node.activeFault}</p>
+            <p className={styles.info}>
+                Fault: {node.activeFault}
+            </p>
         </article>
     );
 }
