@@ -14,7 +14,33 @@ describe("nodesApi", () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
+    it("creates a node", async () => {
+        const request = {
+            name: "GPU Node 2",
+            gpuModel: "NVIDIA H100",
+            gpuCount: 8,
+        };
 
+        const createdNode = {
+            id: "node-2",
+            name: "GPU Node 2",
+            gpuModel: "NVIDIA H100",
+            gpuCount: 8,
+            status: "Provisioning" as const,
+            activeFault: "None" as const,
+        };
+
+        mockedApiClient.post.mockResolvedValue(createdNode);
+
+        const result = await nodesApi.create(request);
+
+        expect(result).toEqual(createdNode);
+
+        expect(mockedApiClient.post).toHaveBeenCalledWith(
+            "/api/v1/nodes",
+            request,
+        );
+    });
     it("gets all nodes", async () => {
         const nodes = [
             {

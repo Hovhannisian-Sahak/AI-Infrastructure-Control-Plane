@@ -1,6 +1,7 @@
 ﻿import { configureStore } from "@reduxjs/toolkit";
 import nodesReducer, {
     fetchNodes,
+    createNode,
     startNode,
     stopNode,
 } from "../nodesSlice";
@@ -57,6 +58,64 @@ describe("nodesSlice", () => {
 
         expect(state.loading).toBe(false);
         expect(state.error).toBe("API unavailable");
+        expect(state.nodes).toEqual([]);
+    });
+    it("adds a node when createNode succeeds", async () => {
+        const request = {
+            name: "GPU Node 2",
+            gpuModel: "NVIDIA H100",
+            gpuCount: 8,
+        };
+
+        const createdNode = {
+            id: "node-2",
+            name: "GPU Node 2",
+            gpuModel: "NVIDIA H100",
+            gpuCount: 8,
+            status: "Provisioning" as const,
+            activeFault: "None" as const,
+        };
+
+        mockedNodesApi.create.mockResolvedValue(createdNode);
+
+        const store = configureStore({
+            reducer: {
+                nodes: nodesReducer,
+            },
+        });
+
+        await store.dispatch(createNode(request));
+
+        const state = store.getState().nodes;
+
+        expect(state.loading).toBe(false);
+        expect(state.error).toBeNull();
+        expect(state.nodes).toEqual([createdNode]);
+    });
+
+    it("stores an error when createNode fails", async () => {
+        mockedNodesApi.create.mockRejectedValue(
+            new Error("Node name already exists"),
+        );
+
+        const store = configureStore({
+            reducer: {
+                nodes: nodesReducer,
+            },
+        });
+
+        await store.dispatch(
+            createNode({
+                name: "GPU Node 2",
+                gpuModel: "NVIDIA H100",
+                gpuCount: 8,
+            }),
+        );
+
+        const state = store.getState().nodes;
+
+        expect(state.loading).toBe(false);
+        expect(state.error).toBe("Node name already exists");
         expect(state.nodes).toEqual([]);
     });
     it("tracks action loading state when starting a node", async () => {

@@ -1,7 +1,7 @@
 ﻿import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { nodesApi } from "@/lib/api/nodesApi";
 import type { ComputeNode } from "@/lib/api/models/computeNode";
-
+import type { CreateComputeNodeRequest } from "@/lib/api/models/createComputeNodeRequest";
 type NodesState = {
     nodes: ComputeNode[];
     loading: boolean;
@@ -22,7 +22,12 @@ export const fetchNodes = createAsyncThunk(
         return nodesApi.getAll();
     },
 );
-
+export const createNode = createAsyncThunk(
+    "nodes/createNode",
+    async (request: CreateComputeNodeRequest) => {
+        return nodesApi.create(request);
+    },
+);
 export const startNode = createAsyncThunk(
     "nodes/startNode",
     async (id: string) => {
@@ -55,6 +60,19 @@ const nodesSlice = createSlice({
                 state.loading = false;
                 state.error =
                     action.error.message ?? "Failed to load nodes";
+            })
+            .addCase(createNode.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(createNode.fulfilled, (state, action) => {
+                state.loading = false;
+                state.nodes.push(action.payload);
+            })
+            .addCase(createNode.rejected, (state, action) => {
+                state.loading = false;
+                state.error =
+                    action.error.message ?? "Failed to create node";
             })
             .addCase(startNode.pending, (state, action) => {
                 state.actionLoadingByNodeId[action.meta.arg] = true;
