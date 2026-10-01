@@ -117,3 +117,8 @@
 .actions button:hover {
     background: #f3f4f6;
 }
+
+.actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}

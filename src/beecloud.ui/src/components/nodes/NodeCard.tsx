@@ -4,7 +4,10 @@ import type {
     ComputeNode,
     NodeStatus,
 } from "@/lib/api/models/computeNode";
-import { useAppDispatch } from "@/store/hooks";
+import {
+    useAppDispatch,
+    useAppSelector,
+} from "@/store/hooks";
 import {
     startNode,
     stopNode,
@@ -29,6 +32,10 @@ const statusClassMap: Record<NodeStatus, string> = {
 
 export default function NodeCard({ node }: NodeCardProps) {
     const dispatch = useAppDispatch();
+
+    const actionLoading = useAppSelector(
+        (state) => state.nodes.actionLoadingByNodeId[node.id] ?? false,
+    );
 
     const canStart =
         node.status === "Available" ||
@@ -70,8 +77,9 @@ export default function NodeCard({ node }: NodeCardProps) {
                     <button
                         type="button"
                         onClick={() => dispatch(startNode(node.id))}
+                        disabled={actionLoading}
                     >
-                        Start
+                        {actionLoading ? "Starting..." : "Start"}
                     </button>
                 )}
 
@@ -79,8 +87,9 @@ export default function NodeCard({ node }: NodeCardProps) {
                     <button
                         type="button"
                         onClick={() => dispatch(stopNode(node.id))}
+                        disabled={actionLoading}
                     >
-                        Stop
+                        {actionLoading ? "Stopping..." : "Stop"}
                     </button>
                 )}
             </div>

@@ -220,4 +220,89 @@ describe("NodeCard", () => {
             runningNode,
         ]);
     });
+    it("shows Starting while a node is being started", async () => {
+        const user = userEvent.setup();
+
+        let resolveStart: (
+            value: ComputeNode,
+        ) => void;
+
+        const startPromise = new Promise<ComputeNode>((resolve) => {
+            resolveStart = resolve;
+        });
+
+        mockedNodesApi.start.mockReturnValue(startPromise);
+
+        store.dispatch({
+            type: "nodes/fetchNodes/fulfilled",
+            payload: [node],
+        });
+
+        renderWithProviders(<NodeCard node={node} />);
+
+        const startButton = screen.getByRole("button", {
+            name: "Start",
+        });
+
+        await user.click(startButton);
+
+        expect(
+            screen.getByRole("button", {
+                name: "Starting...",
+            }),
+        ).toBeDisabled();
+
+        resolveStart!({
+            ...node,
+            status: "Running",
+        });
+
+        await startPromise;
+    });
+    it("shows Stopping while a node is being stopped", async () => {
+        const user = userEvent.setup();
+
+        const runningNode: ComputeNode = {
+            ...node,
+            status: "Running",
+        };
+
+        let resolveStop: (
+            value: ComputeNode,
+        ) => void;
+
+        const stopPromise = new Promise<ComputeNode>((resolve) => {
+            resolveStop = resolve;
+        });
+
+        mockedNodesApi.stop.mockReturnValue(stopPromise);
+
+        store.dispatch({
+            type: "nodes/fetchNodes/fulfilled",
+            payload: [runningNode],
+        });
+
+        renderWithProviders(
+            <NodeCard node={runningNode} />,
+        );
+
+        const stopButton = screen.getByRole("button", {
+            name: "Stop",
+        });
+
+        await user.click(stopButton);
+
+        expect(
+            screen.getByRole("button", {
+                name: "Stopping...",
+            }),
+        ).toBeDisabled();
+
+        resolveStop!({
+            ...runningNode,
+            status: "Stopped",
+        });
+
+        await stopPromise;
+    });
 });
