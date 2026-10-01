@@ -8,19 +8,30 @@ type NodeCardProps = {
 export default function NodeCard({ node }: NodeCardProps) {
     return (
         <article className={styles.card}>
-            <h2 className={styles.title}>{node.name}</h2>
+            <div className={styles.header}>
+                <h2 className={styles.title}>{node.name}</h2>
 
-            <p className={styles.info}>
-                GPU: {node.gpuModel} × {node.gpuCount}
-            </p>
+                <span className={styles.status}>
+                   {node.status}
+                </span>
+            </div>
 
-            <p className={styles.status}>
-                Status: {node.status}
-            </p>
+            <dl className={styles.details}>
+                <div className={styles.detail}>
+                    <dt className={styles.label}>GPU Model</dt>
+                    <dd className={styles.value}>{node.gpuModel}</dd>
+                </div>
 
-            <p className={styles.info}>
-                Fault: {node.activeFault}
-            </p>
+                <div className={styles.detail}>
+                    <dt className={styles.label}>GPU Count</dt>
+                    <dd className={styles.value}>{node.gpuCount}</dd>
+                </div>
+
+                <div className={styles.detail}>
+                    <dt className={styles.label}>Active Fault</dt>
+                    <dd className={styles.value}>{node.activeFault}</dd>
+                </div>
+            </dl>
         </article>
     );
 }

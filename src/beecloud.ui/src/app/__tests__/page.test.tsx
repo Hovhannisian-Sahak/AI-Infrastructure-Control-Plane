@@ -45,11 +45,23 @@ describe("Home page", () => {
         })).toBeInTheDocument();
 
         expect(
-            screen.getByText("GPU: NVIDIA A100 × 4"),
+            screen.getByText("GPU Model"),
         ).toBeInTheDocument();
 
         expect(
-            screen.getByText("Status: Available"),
+            screen.getByText("NVIDIA A100"),
+        ).toBeInTheDocument();
+
+        expect(
+            screen.getByText("GPU Count"),
+        ).toBeInTheDocument();
+
+        expect(
+            screen.getByText("4"),
+        ).toBeInTheDocument();
+
+        expect(
+            screen.getByText("Available"),
         ).toBeInTheDocument();
     });
 

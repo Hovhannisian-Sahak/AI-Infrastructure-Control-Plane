@@ -19,12 +19,17 @@ describe("NodeCard", () => {
             screen.getByRole("heading", { name: "GPU Node 1" }),
         ).toBeInTheDocument();
 
+        const gpuModel = screen.getByText("GPU Model").parentElement;
+        expect(gpuModel).toHaveTextContent("NVIDIA A100");
+
+        const gpuCount = screen.getByText("GPU Count").parentElement;
+        expect(gpuCount).toHaveTextContent("4");
+
+        const activeFault = screen.getByText("Active Fault").parentElement;
+        expect(activeFault).toHaveTextContent("None");
+
         expect(
-            screen.getByText("GPU: NVIDIA A100 × 4"),
+            screen.getByText("Available"),
         ).toBeInTheDocument();
-
-        expect(screen.getByText("Status: Available")).toBeInTheDocument();
-
-        expect(screen.getByText("Fault: None")).toBeInTheDocument();
     });
 });
