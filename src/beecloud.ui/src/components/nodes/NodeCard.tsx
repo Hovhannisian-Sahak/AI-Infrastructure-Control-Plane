@@ -1,8 +1,23 @@
-﻿import type { ComputeNode } from "@/lib/api/models/computeNode";
+﻿import type {
+    ComputeNode,
+    NodeStatus,
+} from "@/lib/api/models/computeNode";
 import styles from "./NodeCard.module.css";
 
 type NodeCardProps = {
     node: ComputeNode;
+};
+
+const statusClassMap: Record<NodeStatus, string> = {
+    Provisioning: styles.provisioning,
+    Available: styles.available,
+    Running: styles.running,
+    Stopping: styles.stopping,
+    Stopped: styles.stopped,
+    Unhealthy: styles.unhealthy,
+    Quarantined: styles.quarantined,
+    Remediating: styles.remediating,
+    Failed: styles.failed,
 };
 
 export default function NodeCard({ node }: NodeCardProps) {
@@ -11,9 +26,11 @@ export default function NodeCard({ node }: NodeCardProps) {
             <div className={styles.header}>
                 <h2 className={styles.title}>{node.name}</h2>
 
-                <span className={styles.status}>
-                   {node.status}
-                </span>
+                <span
+                    className={`${styles.status} ${statusClassMap[node.status]}`}
+                >
+          {node.status}
+        </span>
             </div>
 
             <dl className={styles.details}>

@@ -24,11 +24,46 @@
 .status {
     padding: 4px 10px;
     border-radius: 999px;
-    background: #dcfce7;
-    color: #166534;
     font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
+}
+
+.available {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.running {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.provisioning,
+.stopping {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.stopped {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.unhealthy,
+.quarantined {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.remediating {
+    background: #f3e8ff;
+    color: #7e22ce;
+}
+
+.failed {
+    background: #fee2e2;
+    color: #b91c1c;
 }
 
 .details {

@@ -32,4 +32,20 @@ describe("NodeCard", () => {
             screen.getByText("Available"),
         ).toBeInTheDocument();
     });
+    it("applies the correct status style", () => {
+        const { rerender } = render(<NodeCard node={node} />);
+
+        expect(screen.getByText("Available")).toBeInTheDocument();
+
+        rerender(
+            <NodeCard
+                node={{
+                    ...node,
+                    status: "Failed",
+                }}
+            />,
+        );
+        
+        expect(screen.getByText("Failed")).toBeInTheDocument();
+    });
 });
