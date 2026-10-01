@@ -1,4 +1,5 @@
-﻿import { render, screen } from "@testing-library/react";
+﻿import { screen } from "@testing-library/react";
+import { renderWithProviders } from "@/test-utils";
 import NodeCard from "../NodeCard";
 import type { ComputeNode } from "@/lib/api/models/computeNode";
 
@@ -13,7 +14,7 @@ const node: ComputeNode = {
 
 describe("NodeCard", () => {
     it("renders node information", () => {
-        render(<NodeCard node={node} />);
+        renderWithProviders(<NodeCard node={node} />);
 
         expect(
             screen.getByRole("heading", { name: "GPU Node 1" }),
@@ -33,7 +34,7 @@ describe("NodeCard", () => {
         ).toBeInTheDocument();
     });
     it("applies the correct status style", () => {
-        const { rerender } = render(<NodeCard node={node} />);
+        const { rerender } = renderWithProviders(<NodeCard node={node} />);
 
         expect(screen.getByText("Available")).toBeInTheDocument();
 

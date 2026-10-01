@@ -1,7 +1,14 @@
-﻿import type {
+﻿"use client";
+
+import type {
     ComputeNode,
     NodeStatus,
 } from "@/lib/api/models/computeNode";
+import { useAppDispatch } from "@/store/hooks";
+import {
+    startNode,
+    stopNode,
+} from "@/store/slices/nodesSlice";
 import styles from "./NodeCard.module.css";
 
 type NodeCardProps = {
@@ -21,6 +28,14 @@ const statusClassMap: Record<NodeStatus, string> = {
 };
 
 export default function NodeCard({ node }: NodeCardProps) {
+    const dispatch = useAppDispatch();
+
+    const canStart =
+        node.status === "Available" ||
+        node.status === "Stopped";
+
+    const canStop = node.status === "Running";
+
     return (
         <article className={styles.card}>
             <div className={styles.header}>
@@ -49,6 +64,26 @@ export default function NodeCard({ node }: NodeCardProps) {
                     <dd className={styles.value}>{node.activeFault}</dd>
                 </div>
             </dl>
+
+            <div className={styles.actions}>
+                {canStart && (
+                    <button
+                        type="button"
+                        onClick={() => dispatch(startNode(node.id))}
+                    >
+                        Start
+                    </button>
+                )}
+
+                {canStop && (
+                    <button
+                        type="button"
+                        onClick={() => dispatch(stopNode(node.id))}
+                    >
+                        Stop
+                    </button>
+                )}
+            </div>
         </article>
     );
 }
