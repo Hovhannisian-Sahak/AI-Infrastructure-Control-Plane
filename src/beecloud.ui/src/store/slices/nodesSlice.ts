@@ -5,12 +5,14 @@ import type { ComputeNode } from "@/lib/api/models/computeNode";
 type NodesState = {
     nodes: ComputeNode[];
     loading: boolean;
+    actionLoadingByNodeId: Record<string, boolean>;
     error: string | null;
 };
 
 const initialState: NodesState = {
     nodes: [],
     loading: false,
+    actionLoadingByNodeId: {},
     error: null,
 };
 
@@ -51,14 +53,15 @@ const nodesSlice = createSlice({
             })
             .addCase(fetchNodes.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.error.message ?? "Failed to load nodes";
+                state.error =
+                    action.error.message ?? "Failed to load nodes";
             })
-            .addCase(startNode.pending, (state) => {
-                state.loading = true;
+            .addCase(startNode.pending, (state, action) => {
+                state.actionLoadingByNodeId[action.meta.arg] = true;
                 state.error = null;
             })
             .addCase(startNode.fulfilled, (state, action) => {
-                state.loading = false;
+                state.actionLoadingByNodeId[action.meta.arg] = false;
 
                 const index = state.nodes.findIndex(
                     (node) => node.id === action.payload.id,
@@ -69,16 +72,16 @@ const nodesSlice = createSlice({
                 }
             })
             .addCase(startNode.rejected, (state, action) => {
-                state.loading = false;
+                state.actionLoadingByNodeId[action.meta.arg] = false;
                 state.error =
                     action.error.message ?? "Failed to start node";
             })
-            .addCase(stopNode.pending, (state) => {
-                state.loading = true;
+            .addCase(stopNode.pending, (state, action) => {
+                state.actionLoadingByNodeId[action.meta.arg] = true;
                 state.error = null;
             })
             .addCase(stopNode.fulfilled, (state, action) => {
-                state.loading = false;
+                state.actionLoadingByNodeId[action.meta.arg] = false;
 
                 const index = state.nodes.findIndex(
                     (node) => node.id === action.payload.id,
@@ -89,10 +92,10 @@ const nodesSlice = createSlice({
                 }
             })
             .addCase(stopNode.rejected, (state, action) => {
-                state.loading = false;
+                state.actionLoadingByNodeId[action.meta.arg] = false;
                 state.error =
                     action.error.message ?? "Failed to stop node";
-            })
+            });
     },
 });
 

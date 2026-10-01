@@ -1,5 +1,9 @@
 ﻿import { configureStore } from "@reduxjs/toolkit";
-import nodesReducer, { fetchNodes } from "../nodesSlice";
+import nodesReducer, {
+    fetchNodes,
+    startNode,
+    stopNode,
+} from "../nodesSlice";
 import { nodesApi } from "@/lib/api/nodesApi";
 
 jest.mock("@/lib/api/nodesApi");
@@ -54,5 +58,99 @@ describe("nodesSlice", () => {
         expect(state.loading).toBe(false);
         expect(state.error).toBe("API unavailable");
         expect(state.nodes).toEqual([]);
+    });
+    it("tracks action loading state when starting a node", async () => {
+        const node = {
+            id: "node-1",
+            name: "GPU Node 1",
+            gpuModel: "NVIDIA A100",
+            gpuCount: 4,
+            status: "Available" as const,
+            activeFault: "None" as const,
+        };
+
+        mockedNodesApi.start.mockResolvedValue({
+            ...node,
+            status: "Running",
+        });
+
+        const store = configureStore({
+            reducer: {
+                nodes: nodesReducer,
+            },
+        });
+
+        store.dispatch({
+            type: "nodes/fetchNodes/fulfilled",
+            payload: [node],
+        });
+        
+        const promise = store.dispatch(startNode(node.id));
+
+        expect(
+            store.getState().nodes.actionLoadingByNodeId["node-1"],
+        ).toBe(true);
+
+        await promise;
+
+        const state = store.getState().nodes;
+
+        expect(
+            state.actionLoadingByNodeId["node-1"],
+        ).toBe(false);
+
+        expect(state.nodes).toEqual([
+            {
+                ...node,
+                status: "Running",
+            },
+        ]);
+    });
+    it("tracks action loading state when stopping a node", async () => {
+        const node = {
+            id: "node-1",
+            name: "GPU Node 1",
+            gpuModel: "NVIDIA A100",
+            gpuCount: 4,
+            status: "Running" as const,
+            activeFault: "None" as const,
+        };
+
+        mockedNodesApi.stop.mockResolvedValue({
+            ...node,
+            status: "Stopped",
+        });
+
+        const store = configureStore({
+            reducer: {
+                nodes: nodesReducer,
+            },
+        });
+
+        store.dispatch({
+            type: "nodes/fetchNodes/fulfilled",
+            payload: [node],
+        });
+        
+        const promise = store.dispatch(stopNode(node.id));
+
+        expect(
+            store.getState().nodes.actionLoadingByNodeId["node-1"],
+        ).toBe(true);
+
+        await promise;
+
+        const state = store.getState().nodes;
+
+        expect(
+            state.actionLoadingByNodeId["node-1"],
+        ).toBe(false);
+
+        expect(state.nodes).toEqual([
+            {
+                ...node,
+                status: "Stopped",
+            },
+        ]);
     });
 });
