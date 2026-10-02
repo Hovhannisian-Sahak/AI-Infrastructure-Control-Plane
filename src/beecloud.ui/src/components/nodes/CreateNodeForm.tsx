@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState } from "react";
-
+import styles from "./CreateNodeForm.module.css";
 type CreateNodeFormProps = {
     onSubmit: (request: {
         name: string;
@@ -49,10 +49,17 @@ export default function CreateNodeForm({onSubmit, isSubmitting}: CreateNodeFormP
     };
 
     return (
-        <form onSubmit={handleSubmit}>
-            <div>
-                <label htmlFor="node-name">Node Name</label>
+        <form className={styles.form} onSubmit={handleSubmit}>
+            <div className={styles.field}>
+                <label
+                    className={styles.label}
+                    htmlFor="node-name"
+                >
+                    Node Name
+                </label>
+
                 <input
+                    className={styles.input}
                     id="node-name"
                     value={name}
                     onChange={(event) => {
@@ -63,18 +70,32 @@ export default function CreateNodeForm({onSubmit, isSubmitting}: CreateNodeFormP
                         }
                     }}
                     aria-invalid={Boolean(nameError)}
-                    aria-describedby={nameError ? "node-name-error" : undefined}
+                    aria-describedby={
+                        nameError ? "node-name-error" : undefined
+                    }
                 />
+
                 {nameError && (
-                    <p id="node-name-error" role="alert">
+                    <p
+                        className={styles.error}
+                        id="node-name-error"
+                        role="alert"
+                    >
                         {nameError}
                     </p>
                 )}
             </div>
 
-            <div>
-                <label htmlFor="gpu-model">GPU Model</label>
+            <div className={styles.field}>
+                <label
+                    className={styles.label}
+                    htmlFor="gpu-model"
+                >
+                    GPU Model
+                </label>
+
                 <input
+                    className={styles.input}
                     id="gpu-model"
                     value={gpuModel}
                     onChange={(event) => {
@@ -86,41 +107,66 @@ export default function CreateNodeForm({onSubmit, isSubmitting}: CreateNodeFormP
                     }}
                     aria-invalid={Boolean(gpuModelError)}
                     aria-describedby={
-                        gpuModelError ? "gpu-model-error" : undefined
+                        gpuModelError
+                            ? "gpu-model-error"
+                            : undefined
                     }
                 />
+
                 {gpuModelError && (
-                    <p id="gpu-model-error" role="alert">
+                    <p
+                        className={styles.error}
+                        id="gpu-model-error"
+                        role="alert"
+                    >
                         {gpuModelError}
                     </p>
                 )}
             </div>
 
-            <div>
-                <label htmlFor="gpu-count">GPU Count</label>
+            <div className={styles.field}>
+                <label
+                    className={styles.label}
+                    htmlFor="gpu-count"
+                >
+                    GPU Count
+                </label>
+
                 <input
+                    className={styles.input}
                     id="gpu-count"
                     type="number"
                     value={gpuCount}
                     onChange={(event) => {
                         setGpuCount(event.target.value);
 
-                        if (event.target.value.trim()) {
+                        if (Number(event.target.value) > 0) {
                             setGpuCountError("");
                         }
                     }}
                     aria-invalid={Boolean(gpuCountError)}
                     aria-describedby={
-                        gpuCountError ? "gpu-count-error" : undefined
+                        gpuCountError
+                            ? "gpu-count-error"
+                            : undefined
                     }
                 />
+
                 {gpuCountError && (
-                    <p id="gpu-count-error" role="alert">
+                    <p
+                        className={styles.error}
+                        id="gpu-count-error"
+                        role="alert"
+                    >
                         {gpuCountError}
                     </p>
                 )}
             </div>
-            <button type="submit" disabled={isSubmitting}>
+            <button
+                className={styles.button}
+                type="submit"
+                disabled={isSubmitting}
+            >
                 {isSubmitting ? "Creating node..." : "Create Node"}
             </button>
         </form>
