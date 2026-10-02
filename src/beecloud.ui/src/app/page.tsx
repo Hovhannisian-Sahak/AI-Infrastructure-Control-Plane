@@ -59,7 +59,16 @@ export default function Home() {
                 />
 
                 {loading && (
-                    <p className={styles.message}>Loading nodes...</p>
+                    <div className={styles.loadingState}>
+                        <span
+                            className={styles.spinner}
+                            aria-hidden="true"
+                        />
+
+                        <p className={styles.loadingMessage}>
+                            Loading nodes...
+                        </p>
+                    </div>
                 )}
 
                 {error && (

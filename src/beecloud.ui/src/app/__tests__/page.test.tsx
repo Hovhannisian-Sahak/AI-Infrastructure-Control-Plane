@@ -4,7 +4,7 @@ import { renderWithProviders } from "@/test-utils";
 import CreateNodeForm from "@/components/nodes/CreateNodeForm";
 import Home from "../page";
 import { nodesApi } from "@/lib/api/nodesApi";
-
+import type { ComputeNode } from "@/lib/api/models/computeNode";
 jest.mock("@/lib/api/nodesApi");
 
 const mockedNodesApi = jest.mocked(nodesApi);
@@ -310,5 +310,33 @@ describe("Home page", () => {
         expect(
             await screen.findByText("2 nodes"),
         ).toBeInTheDocument();
+    });
+    it("shows a loading state while nodes are being fetched", async () => {
+        let resolveNodes: (value: ComputeNode[]) => void;
+
+        const nodesPromise = new Promise<ComputeNode[]>((resolve) => {
+            resolveNodes = resolve;
+        });
+
+        mockedNodesApi.getAll.mockReturnValue(nodesPromise);
+
+        renderWithProviders(<Home />);
+
+        expect(
+            screen.getByText("Loading nodes..."),
+        ).toBeInTheDocument();
+
+        expect(
+            document.querySelector('[aria-hidden="true"]'),
+        ).toBeInTheDocument();
+
+        expect(
+            screen.getByRole("button", {
+                name: "Refreshing...",
+            }),
+        ).toBeDisabled();
+        resolveNodes!([]);
+
+        await nodesPromise;
     });
 });
