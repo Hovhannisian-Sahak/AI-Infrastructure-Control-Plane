@@ -241,6 +241,13 @@ public class NodesApiTests
         Assert.That(
             response.Data!.Status,
             Is.EqualTo(nameof(NodeStatus.Stopping)));
+        
+        var stoppingNode =
+            await _nodesClient.WaitForStoppingAsync(nodeId);
+
+        Assert.That(
+            stoppingNode.Status,
+            Is.EqualTo(nameof(NodeStatus.Stopping)));
     }
 
     [Test]
@@ -264,7 +271,155 @@ public class NodesApiTests
         TestContext.WriteLine(
             $"Stop non-running node response: {response.Content}");
     }
+    [Test]
+    public async Task StopNode_WhenNodeIsStopped_ShouldReturnConflict()
+    {
+        // Arrange
+        var nodeId =
+            await CreateNodeAsync();
 
+        await _nodesClient.WaitForAvailableAsync(nodeId);
+
+        var startResponse =
+            await _nodesClient.StartAsync(nodeId);
+
+        Assert.That(
+            startResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        var stopResponse =
+            await _nodesClient.StopAsync(nodeId);
+
+        Assert.That(
+            stopResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        await _nodesClient.WaitForStoppingAsync(nodeId);
+
+        // Act
+        var response =
+            await _nodesClient.StopAsync(nodeId);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.Conflict));
+
+        TestContext.WriteLine(
+            $"Stop stopped node response: {response.Content}");
+    }
+    [Test]
+    public async Task RestartNode_WhenNodeIsRunning_ShouldReturnStoppingAndEventuallyRunning()
+    {
+        // Arrange
+        var nodeId =
+            await CreateNodeAsync();
+
+        await _nodesClient.WaitForAvailableAsync(nodeId);
+
+        var startResponse =
+            await _nodesClient.StartAsync(nodeId);
+
+        Assert.That(
+            startResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        await _nodesClient.WaitForRunningAsync(nodeId);
+
+        // Act
+        var response =
+            await _nodesClient.RestartAsync(nodeId);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        Assert.That(
+            response.Data,
+            Is.Not.Null);
+
+        TestContext.WriteLine(
+            $"Restart node response: {response.Content}");
+
+        Assert.That(
+            response.Data!.Status,
+            Is.EqualTo(nameof(NodeStatus.Stopping)));
+        
+        var stoppingNode =
+            await _nodesClient.WaitForStoppingAsync(nodeId);
+
+        Assert.That(
+            stoppingNode.Status,
+            Is.EqualTo(nameof(NodeStatus.Stopping)));
+
+        var finalNode =
+            await _nodesClient.WaitForRunningAsync(nodeId);
+
+        Assert.That(
+            finalNode.Status,
+            Is.EqualTo(nameof(NodeStatus.Running)));
+    }
+    [Test]
+    public async Task RestartNode_WhenNodeIsNotRunning_ShouldReturnConflict()
+    {
+        // Arrange
+        var nodeId =
+            await CreateNodeAsync();
+
+        await _nodesClient.WaitForAvailableAsync(nodeId);
+
+        // Act
+        var response =
+            await _nodesClient.RestartAsync(nodeId);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.Conflict));
+
+        TestContext.WriteLine(
+            $"Restart non-running node response: {response.Content}");
+    }
+    [Test]
+    public async Task RestartNode_WhenNodeIsStopped_ShouldReturnConflict()
+    {
+        // Arrange
+        var nodeId =
+            await CreateNodeAsync();
+
+        await _nodesClient.WaitForAvailableAsync(nodeId);
+
+        var startResponse =
+            await _nodesClient.StartAsync(nodeId);
+
+        Assert.That(
+            startResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        await _nodesClient.WaitForRunningAsync(nodeId);
+
+        var stopResponse =
+            await _nodesClient.StopAsync(nodeId);
+
+        Assert.That(
+            stopResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        await _nodesClient.WaitForStoppingAsync(nodeId);
+
+        // Act
+        var response =
+            await _nodesClient.RestartAsync(nodeId);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.Conflict));
+
+        TestContext.WriteLine(
+            $"Restart stopped node response: {response.Content}");
+    }
     [Test]
     public async Task SimulateFault_WhenNodeDoesNotExist_ShouldReturnNotFound()
     {

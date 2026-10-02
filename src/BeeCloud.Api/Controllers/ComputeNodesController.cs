@@ -73,4 +73,15 @@ public class ComputeNodesController : ControllerBase
 
         return Ok(response);
     }
+    [HttpPost("{id:guid}/restart")]
+    public async Task<ActionResult<ComputeNodeResponse>> Restart(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var response = await _service.RestartAsync(
+            id,
+            cancellationToken);
+
+        return Ok(response);
+    }
 }

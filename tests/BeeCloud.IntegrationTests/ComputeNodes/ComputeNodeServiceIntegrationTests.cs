@@ -17,8 +17,10 @@ public class ComputeNodeServiceIntegrationTests
     private PostgreSqlTestContainer _postgres = null!;
     private ApplicationDbContext _dbContext = null!;
     private ComputeNodeService _service = null!;
-    private StoppingProcessor _processor = null!;
+    private StoppingProcessor _stoppingProcessor = null!;
+    private RestartProcessor _restartProcessor = null!;
     private FakeStoppingQueue _stoppingQueue = null!;
+    private FakeRestartQueue _restartQueue = null!;
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
@@ -32,10 +34,15 @@ public class ComputeNodeServiceIntegrationTests
                 .UseNpgsql(_postgres.ConnectionString)
                 .Options;
 
-        var logger =
+        var stoppingLogger =
             LoggerFactory
                 .Create(builder => builder.AddConsole())
                 .CreateLogger<StoppingProcessor>();
+
+        var restartLogger =
+            LoggerFactory
+                .Create(builder => builder.AddConsole())
+                .CreateLogger<RestartProcessor>();
 
         _dbContext =
             new ApplicationDbContext(options);
@@ -51,17 +58,27 @@ public class ComputeNodeServiceIntegrationTests
         _stoppingQueue =
             new FakeStoppingQueue();
 
+        _restartQueue =
+            new FakeRestartQueue();
+
         _service =
             new ComputeNodeService(
                 repository,
                 provisioningQueue,
-                _stoppingQueue);
+                _stoppingQueue,
+                _restartQueue);
 
-        _processor =
+        _stoppingProcessor =
             new StoppingProcessor(
                 repository,
                 _stoppingQueue,
-                logger);
+                stoppingLogger);
+        
+        _restartProcessor =
+            new RestartProcessor(
+                repository,
+                _restartQueue,
+                restartLogger);
     }
 
     [SetUp]
@@ -163,7 +180,7 @@ public class ComputeNodeServiceIntegrationTests
         await _stoppingQueue.EnqueueAsync(node.Id);
 
         // Act
-        await _processor.ProcessAsync();
+        await _stoppingProcessor.ProcessAsync();
 
         // Assert
         _dbContext.ChangeTracker.Clear();
@@ -175,5 +192,78 @@ public class ComputeNodeServiceIntegrationTests
         Assert.That(
             persistedNode.Status,
             Is.EqualTo(NodeStatus.Stopped));
+    }
+    [Test]
+    public async Task RestartAsync_WhenRunningNode_ShouldPersistStoppingAndEnqueueNode()
+    {
+        // Arrange
+        var node = new ComputeNode(
+            "restart-integration-test-node",
+            "NVIDIA A100",
+            2);
+
+        node.MarkAvailable();
+        node.Start();
+
+        await _dbContext.ComputeNodes.AddAsync(node);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.RestartAsync(node.Id);
+
+        // Assert
+        Assert.That(
+            result.Status,
+            Is.EqualTo(NodeStatus.Stopping.ToString()));
+
+        _dbContext.ChangeTracker.Clear();
+
+        var persistedNode =
+            await _dbContext.ComputeNodes
+                .SingleAsync(x => x.Id == node.Id);
+
+        Assert.That(
+            persistedNode.Status,
+            Is.EqualTo(NodeStatus.Stopping));
+
+        var queuedNodeId =
+            await _restartQueue.DequeueAsync();
+
+        Assert.That(
+            queuedNodeId,
+            Is.EqualTo(node.Id));
+    }
+    [Test]
+    public async Task RestartProcessor_WhenNodeIsStopping_ShouldPersistRunning()
+    {
+        // Arrange
+        var node = new ComputeNode(
+            "restart-processor-integration-test-node",
+            "NVIDIA A100",
+            2);
+
+        node.MarkAvailable();
+        node.Start();
+
+        await _dbContext.ComputeNodes.AddAsync(node);
+        await _dbContext.SaveChangesAsync();
+
+        await _service.RestartAsync(node.Id);
+
+        _dbContext.ChangeTracker.Clear();
+
+        // Act
+        await _restartProcessor.ProcessAsync();
+
+        // Assert
+        _dbContext.ChangeTracker.Clear();
+
+        var persistedNode =
+            await _dbContext.ComputeNodes
+                .SingleAsync(x => x.Id == node.Id);
+
+        Assert.That(
+            persistedNode.Status,
+            Is.EqualTo(NodeStatus.Running));
     }
 }

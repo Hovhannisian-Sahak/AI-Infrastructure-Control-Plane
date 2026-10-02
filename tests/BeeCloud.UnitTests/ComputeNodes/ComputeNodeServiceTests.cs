@@ -12,7 +12,8 @@ public class ComputeNodeServiceTests
 {
     private Mock<IComputeNodeRepository> _repository = null!;
     private Mock<IProvisioningQueue> _provisioningQueue = null!;
-    Mock<IStoppingQueue> _stoppingQueue = null!;
+    private Mock<IStoppingQueue> _stoppingQueue = null!;
+    private Mock<IRestartQueue> _restartQueue = null!;
     private ComputeNodeService _service = null!;
 
     [SetUp]
@@ -21,11 +22,13 @@ public class ComputeNodeServiceTests
         _repository = new Mock<IComputeNodeRepository>();
         _provisioningQueue = new Mock<IProvisioningQueue>();
         _stoppingQueue = new Mock<IStoppingQueue>();
-        
+        _restartQueue = new Mock<IRestartQueue>();
+
         _service = new ComputeNodeService(
             _repository.Object,
             _provisioningQueue.Object,
-            _stoppingQueue.Object);
+            _stoppingQueue.Object,
+            _restartQueue.Object);
     }
 
     [Test]
@@ -376,6 +379,57 @@ public class ComputeNodeServiceTests
             repository => repository.SaveChangesAsync(
                 It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+    [Test]
+    public async Task RestartAsync_WhenNodeExists_ShouldStopAndEnqueueNodeForRestart()
+    {
+        // Arrange
+        var node = CreateRunningNode();
+
+        _repository
+            .Setup(repository => repository.GetByIdAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+
+        // Act
+        var result = await _service.RestartAsync(node.Id);
+
+        // Assert
+        Assert.That(
+            result.Status,
+            Is.EqualTo(NodeStatus.Stopping.ToString()));
+
+        Assert.That(
+            node.Status,
+            Is.EqualTo(NodeStatus.Stopping));
+
+        _restartQueue.Verify(
+            queue => queue.EnqueueAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _repository.Verify(
+            repository => repository.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+    [Test]
+    public void RestartAsync_WhenNodeDoesNotExist_ShouldThrow()
+    {
+        // Arrange
+        var nodeId = Guid.NewGuid();
+
+        _repository
+            .Setup(repository => repository.GetByIdAsync(
+                nodeId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ComputeNode?)null);
+
+        // Act & Assert
+        Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _service.RestartAsync(nodeId));
     }
     [Test]
     public async Task SimulateFaultAsync_WhenNodeExists_ShouldSetFault()

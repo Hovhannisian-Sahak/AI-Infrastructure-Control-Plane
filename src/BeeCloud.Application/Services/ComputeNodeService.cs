@@ -10,11 +10,13 @@ public class ComputeNodeService : IComputeNodeService
     private readonly IComputeNodeRepository _repository;
     private readonly IProvisioningQueue _provisioningQueue;
     private readonly IStoppingQueue _stoppingQueue;
-    public ComputeNodeService(IComputeNodeRepository repository, IProvisioningQueue provisioningQueue, IStoppingQueue stoppingQueue)
+    private readonly IRestartQueue _restartQueue;
+    public ComputeNodeService(IComputeNodeRepository repository, IProvisioningQueue provisioningQueue, IStoppingQueue stoppingQueue, IRestartQueue restartQueue)
     {
         _repository = repository;
         _provisioningQueue = provisioningQueue;
         _stoppingQueue = stoppingQueue;
+        _restartQueue = restartQueue;
     }
 
     public async Task<ComputeNodeResponse> CreateAsync(
@@ -179,6 +181,42 @@ public class ComputeNodeService : IComputeNodeService
             node.Id,
             cancellationToken);
         
+        return new ComputeNodeResponse
+        {
+            Id = node.Id,
+            Name = node.Name,
+            GpuModel = node.GpuModel,
+            GpuCount = node.GpuCount,
+            Status = node.Status.ToString(),
+            ActiveFault = node.ActiveFault.ToString(),
+            CreatedAt = node.CreatedAt,
+            UpdatedAt = node.UpdatedAt,
+            LastHealthCheck = node.LastHealthCheck
+        };
+    }
+    public async Task<ComputeNodeResponse> RestartAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var node = await _repository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (node is null)
+        {
+            throw new KeyNotFoundException(
+                $"Compute node with id '{id}' was not found.");
+        }
+
+        node.Stop();
+
+        await _repository.SaveChangesAsync(
+            cancellationToken);
+
+        await _restartQueue.EnqueueAsync(
+            node.Id,
+            cancellationToken);
+
         return new ComputeNodeResponse
         {
             Id = node.Id,

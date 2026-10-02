@@ -24,6 +24,10 @@ public interface IComputeNodeService
         Guid id,
         CancellationToken cancellationToken = default);
     
+    Task<ComputeNodeResponse> RestartAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+    
     Task SimulateFaultAsync(
         Guid nodeId,
         NodeFault fault,

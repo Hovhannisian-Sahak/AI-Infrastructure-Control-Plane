@@ -134,6 +134,9 @@ public class ComputeNode
 
             (NodeStatus.Available, NodeStatus.Running)
                 => true,
+            
+            (NodeStatus.Stopped, NodeStatus.Running)
+                => true,
 
             (NodeStatus.Running, NodeStatus.Stopping)
                 => true,

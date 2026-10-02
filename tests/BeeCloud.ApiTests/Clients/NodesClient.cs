@@ -64,7 +64,15 @@ public class NodesClient
 
         return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
     }
+    public async Task<RestResponse<ComputeNodeResponseModel>> RestartAsync(
+        Guid nodeId)
+    {
+        var request = new RestRequest(
+            $"/api/v1/nodes/{nodeId}/restart",
+            Method.Post);
 
+        return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
+    }
     public async Task<RestResponse<ComputeNodeResponseModel>> SimulateFaultAsync(
         Guid nodeId,
         NodeFault fault)
@@ -98,6 +106,16 @@ public class NodesClient
         return await WaitForStatusAsync(
             nodeId,
             NodeStatus.Available,
+            timeout);
+    }
+    
+    public async Task<ComputeNodeResponseModel> WaitForStoppingAsync(
+        Guid nodeId,
+        TimeSpan? timeout = null)
+    {
+        return await WaitForStatusAsync(
+            nodeId,
+            NodeStatus.Stopping,
             timeout);
     }
 

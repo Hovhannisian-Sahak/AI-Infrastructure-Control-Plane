@@ -205,7 +205,7 @@ public class ComputeNodeTests
     }
 
     [Test]
-    public void Start_WhenStopped_ShouldThrow()
+    public void Start_WhenStopped_ShouldBecomeRunning()
     {
         // Arrange
         var node = CreateRunningNode();
@@ -213,9 +213,13 @@ public class ComputeNodeTests
         node.Stop();
         node.CompleteStopping();
 
-        // Act & Assert
-        Assert.Throws<InvalidNodeStateTransitionException>(
-            () => node.Start());
+        // Act
+        node.Start();
+
+        // Assert
+        Assert.That(
+            node.Status,
+            Is.EqualTo(NodeStatus.Running));
     }
 
     [Test]

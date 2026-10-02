@@ -46,12 +46,14 @@ builder.Services.AddScoped<IRemediationProcessor, RemediationProcessor>();
 builder.Services.AddScoped<IProvisioningProcessor, ProvisioningProcessor>();
 builder.Services.AddScoped<IMetricsProcessor, MetricsProcessor>();
 builder.Services.AddScoped<IStoppingProcessor, StoppingProcessor>();
+builder.Services.AddScoped<IRestartProcessor, RestartProcessor>();
 
 builder.Services.AddHostedService<StoppingWorker>();
 builder.Services.AddHostedService<ProvisioningWorker>();
 builder.Services.AddHostedService<HealthMonitoringWorker>();
 builder.Services.AddHostedService<RemediationWorker>();
 builder.Services.AddHostedService<MetricsWorker>();
+builder.Services.AddHostedService<RestartWorker>();
 
 var host = builder.Build();
 host.Run();
