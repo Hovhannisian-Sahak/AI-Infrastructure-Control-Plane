@@ -10,9 +10,13 @@ import { createNode } from "@/store/slices/nodesSlice";
 export default function Home() {
     const dispatch = useAppDispatch();
 
-    const { nodes, loading, creating, error } = useAppSelector(
-        (state) => state.nodes,
-    );
+    const {
+        nodes,
+        loading,
+        creating,
+        createSuccess,
+        error,
+    } = useAppSelector((state) => state.nodes);
 
     useEffect(() => {
         dispatch(fetchNodes());
@@ -57,7 +61,11 @@ export default function Home() {
                     onSubmit={handleCreateNode}
                     isSubmitting={creating}
                 />
-
+                {createSuccess && (
+                    <p className={styles.success} role="status">
+                        {createSuccess}
+                    </p>
+                )}
                 {loading && (
                     <div className={styles.loadingState}>
                         <span

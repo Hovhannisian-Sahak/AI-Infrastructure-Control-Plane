@@ -50,6 +50,9 @@ export default function CreateNodeForm({onSubmit, isSubmitting}: CreateNodeFormP
 
     return (
         <form className={styles.form} onSubmit={handleSubmit}>
+            <h2 className={styles.title}>
+                Create Compute Node
+            </h2>
             <div className={styles.field}>
                 <label
                     className={styles.label}

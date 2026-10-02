@@ -87,7 +87,10 @@ describe("nodesSlice", () => {
         await store.dispatch(createNode(request));
 
         const state = store.getState().nodes;
-
+        
+        expect(store.getState().nodes.createSuccess).toBe(
+            "Node created successfully.",
+        );
         expect(state.loading).toBe(false);
         expect(state.error).toBeNull();
         expect(state.nodes).toEqual([createdNode]);
@@ -116,6 +119,7 @@ describe("nodesSlice", () => {
 
         expect(state.loading).toBe(false);
         expect(state.error).toBe("Node name already exists");
+        expect(state.createSuccess).toBeNull();
         expect(state.nodes).toEqual([]);
     });
     it("tracks action loading state when starting a node", async () => {

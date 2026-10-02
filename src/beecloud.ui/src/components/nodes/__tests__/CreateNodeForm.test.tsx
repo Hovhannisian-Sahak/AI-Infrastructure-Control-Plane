@@ -201,4 +201,18 @@ describe("CreateNodeForm", () => {
             screen.queryByRole("alert"),
         ).not.toBeInTheDocument();
     });
+    it("renders the create node heading", () => {
+        render(
+            <CreateNodeForm
+                onSubmit={jest.fn()}
+                isSubmitting={false}
+            />,
+        );
+
+        expect(
+            screen.getByRole("heading", {
+                name: "Create Compute Node",
+            }),
+        ).toBeInTheDocument();
+    });
 });

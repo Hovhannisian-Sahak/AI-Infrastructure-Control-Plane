@@ -6,6 +6,7 @@ type NodesState = {
     nodes: ComputeNode[];
     loading: boolean;
     creating: boolean;
+    createSuccess: string | null;
     actionLoadingByNodeId: Record<string, boolean>;
     error: string | null;
 };
@@ -14,6 +15,7 @@ const initialState: NodesState = {
     nodes: [],
     loading: false,
     creating: false,
+    createSuccess: null,
     actionLoadingByNodeId: {},
     error: null,
 };
@@ -65,14 +67,17 @@ const nodesSlice = createSlice({
             })
             .addCase(createNode.pending, (state) => {
                 state.creating = true;
+                state.createSuccess = null;
                 state.error = null;
             })
             .addCase(createNode.fulfilled, (state, action) => {
                 state.creating = false;
+                state.createSuccess = "Node created successfully.";
                 state.nodes.push(action.payload);
             })
             .addCase(createNode.rejected, (state, action) => {
                 state.creating = false;
+                state.createSuccess = null;
                 state.error =
                     action.error.message ?? "Failed to create node";
             })

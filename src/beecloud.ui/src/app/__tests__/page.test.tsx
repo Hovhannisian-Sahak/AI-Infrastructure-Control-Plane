@@ -150,8 +150,86 @@ describe("Home page", () => {
         expect(
             screen.getByText("Provisioning"),
         ).toBeInTheDocument();
-    });
 
+        expect(
+            screen.getByRole("status"),
+        ).toHaveTextContent(
+            "Node created successfully.",
+        );
+    });
+    it("clears the creation success message when a later creation fails", async () => {
+        const user = userEvent.setup();
+
+        mockedNodesApi.getAll.mockResolvedValue([]);
+
+        mockedNodesApi.create
+            .mockResolvedValueOnce({
+                id: "node-2",
+                name: "GPU Node 2",
+                gpuModel: "NVIDIA H100",
+                gpuCount: 8,
+                status: "Provisioning",
+                activeFault: "None",
+            })
+            .mockRejectedValueOnce(
+                new Error("Node name already exists"),
+            );
+
+        renderWithProviders(<Home />);
+
+        await waitFor(() => {
+            expect(mockedNodesApi.getAll).toHaveBeenCalledTimes(1);
+        });
+
+        const nameInput = screen.getByRole("textbox", {
+            name: "Node Name",
+        });
+
+        const gpuModelInput = screen.getByRole("textbox", {
+            name: "GPU Model",
+        });
+
+        const gpuCountInput = screen.getByRole("spinbutton", {
+            name: "GPU Count",
+        });
+
+        await user.type(nameInput, "GPU Node 2");
+        await user.type(gpuModelInput, "NVIDIA H100");
+
+        await user.clear(gpuCountInput);
+        await user.type(gpuCountInput, "8");
+
+        await user.click(
+            screen.getByRole("button", {
+                name: "Create Node",
+            }),
+        );
+
+        expect(
+            await screen.findByRole("status"),
+        ).toHaveTextContent(
+            "Node created successfully.",
+        );
+
+        await user.clear(nameInput);
+        await user.type(nameInput, "GPU Node 2");
+
+        await user.click(
+            screen.getByRole("button", {
+                name: "Create Node",
+            }),
+        );
+
+        expect(
+            await screen.findByRole("alert"),
+        ).toHaveTextContent(
+            "Node name already exists",
+        );
+
+        expect(
+            screen.queryByRole("status"),
+        ).not.toBeInTheDocument();
+    });
     it("renders an error when creating a node fails", async () => {
         const user = userEvent.setup();
 
