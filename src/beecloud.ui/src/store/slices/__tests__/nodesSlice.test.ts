@@ -212,4 +212,58 @@ describe("nodesSlice", () => {
             },
         ]);
     });
+    it("tracks loading state when creating a node", async () => {
+        let resolveCreate: (
+            value: {
+                id: string;
+                name: string;
+                gpuModel: string;
+                gpuCount: number;
+                status: "Provisioning";
+                activeFault: "None";
+            },
+        ) => void;
+
+        const createPromise = new Promise<{
+            id: string;
+            name: string;
+            gpuModel: string;
+            gpuCount: number;
+            status: "Provisioning";
+            activeFault: "None";
+        }>((resolve) => {
+            resolveCreate = resolve;
+        });
+
+        mockedNodesApi.create.mockReturnValue(createPromise);
+
+        const store = configureStore({
+            reducer: {
+                nodes: nodesReducer,
+            },
+        });
+
+        const promise = store.dispatch(
+            createNode({
+                name: "GPU Node 2",
+                gpuModel: "NVIDIA H100",
+                gpuCount: 8,
+            }),
+        );
+
+        expect(store.getState().nodes.creating).toBe(true);
+
+        resolveCreate!({
+            id: "node-2",
+            name: "GPU Node 2",
+            gpuModel: "NVIDIA H100",
+            gpuCount: 8,
+            status: "Provisioning",
+            activeFault: "None",
+        });
+
+        await promise;
+
+        expect(store.getState().nodes.creating).toBe(false);
+    });
 });

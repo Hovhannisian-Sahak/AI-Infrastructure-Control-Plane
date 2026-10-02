@@ -5,6 +5,7 @@ import type { CreateComputeNodeRequest } from "@/lib/api/models/createComputeNod
 type NodesState = {
     nodes: ComputeNode[];
     loading: boolean;
+    creating: boolean;
     actionLoadingByNodeId: Record<string, boolean>;
     error: string | null;
 };
@@ -12,6 +13,7 @@ type NodesState = {
 const initialState: NodesState = {
     nodes: [],
     loading: false,
+    creating: false,
     actionLoadingByNodeId: {},
     error: null,
 };
@@ -62,15 +64,15 @@ const nodesSlice = createSlice({
                     action.error.message ?? "Failed to load nodes";
             })
             .addCase(createNode.pending, (state) => {
-                state.loading = true;
+                state.creating = true;
                 state.error = null;
             })
             .addCase(createNode.fulfilled, (state, action) => {
-                state.loading = false;
+                state.creating = false;
                 state.nodes.push(action.payload);
             })
             .addCase(createNode.rejected, (state, action) => {
-                state.loading = false;
+                state.creating = false;
                 state.error =
                     action.error.message ?? "Failed to create node";
             })

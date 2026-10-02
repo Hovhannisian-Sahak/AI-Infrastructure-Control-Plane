@@ -5,7 +5,8 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchNodes } from "@/store/slices/nodesSlice";
 import NodeCard from "@/components/nodes/NodeCard";
 import styles from "./page.module.css";
-
+import CreateNodeForm from "@/components/nodes/CreateNodeForm";
+import { createNode } from "@/store/slices/nodesSlice";
 export default function Home() {
     const dispatch = useAppDispatch();
 
@@ -16,7 +17,15 @@ export default function Home() {
     useEffect(() => {
         dispatch(fetchNodes());
     }, [dispatch]);
-
+    
+    const handleCreateNode = async (request: {
+        name: string;
+        gpuModel: string;
+        gpuCount: number;
+    }) => {
+        await dispatch(createNode(request));
+    };
+    
     return (
         <div className={styles.page}>
             <main className={styles.main}>
@@ -32,6 +41,8 @@ export default function Home() {
                         {nodes.length} nodes
                     </div>
                 </header>
+
+                <CreateNodeForm onSubmit={handleCreateNode} />
 
                 {loading && (
                     <p className={styles.message}>Loading nodes...</p>

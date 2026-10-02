@@ -1,4 +1,5 @@
 ﻿import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test-utils";
 import Home from "../page";
 import { nodesApi } from "@/lib/api/nodesApi";
@@ -45,16 +46,16 @@ describe("Home page", () => {
         })).toBeInTheDocument();
 
         expect(
-            screen.getByText("GPU Model"),
-        ).toBeInTheDocument();
+            screen.getAllByText("GPU Model"),
+        ).toHaveLength(2);
 
         expect(
             screen.getByText("NVIDIA A100"),
         ).toBeInTheDocument();
 
         expect(
-            screen.getByText("GPU Count"),
-        ).toBeInTheDocument();
+            screen.getAllByText("GPU Count"),
+        ).toHaveLength(2);
 
         expect(
             screen.getByText("4"),
@@ -75,5 +76,74 @@ describe("Home page", () => {
         expect(
             await screen.findByRole("alert"),
         ).toHaveTextContent("API unavailable");
+    });
+
+    it("creates a node from the form", async () => {
+        const user = userEvent.setup();
+
+        mockedNodesApi.getAll.mockResolvedValue([]);
+        mockedNodesApi.create.mockResolvedValue({
+            id: "node-2",
+            name: "GPU Node 2",
+            gpuModel: "NVIDIA H100",
+            gpuCount: 8,
+            status: "Provisioning",
+            activeFault: "None",
+        });
+
+        renderWithProviders(<Home />);
+
+        await waitFor(() => {
+            expect(mockedNodesApi.getAll).toHaveBeenCalledTimes(1);
+        });
+
+        await user.type(
+            screen.getByRole("textbox", {
+                name: "Node Name",
+            }),
+            "GPU Node 2",
+        );
+
+        await user.type(
+            screen.getByRole("textbox", {
+                name: "GPU Model",
+            }),
+            "NVIDIA H100",
+        );
+
+        const gpuCount = screen.getByRole("spinbutton", {
+            name: "GPU Count",
+        });
+
+        await user.clear(gpuCount);
+        await user.type(gpuCount, "8");
+
+        await user.click(
+            screen.getByRole("button", {
+                name: "Create Node",
+            }),
+        );
+
+        await waitFor(() => {
+            expect(mockedNodesApi.create).toHaveBeenCalledWith({
+                name: "GPU Node 2",
+                gpuModel: "NVIDIA H100",
+                gpuCount: 8,
+            });
+        });
+
+        expect(
+            await screen.findByRole("heading", {
+                name: "GPU Node 2",
+            }),
+        ).toBeInTheDocument();
+
+        expect(
+            screen.getByText("NVIDIA H100"),
+        ).toBeInTheDocument();
+
+        expect(
+            screen.getByText("Provisioning"),
+        ).toBeInTheDocument();
     });
 });
