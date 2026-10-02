@@ -207,4 +207,42 @@ describe("Home page", () => {
 
         expect(onSubmit).not.toHaveBeenCalled();
     });
+    it("refreshes nodes when the refresh button is clicked", async () => {
+        const user = userEvent.setup();
+
+        mockedNodesApi.getAll
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([
+                {
+                    id: "node-1",
+                    name: "GPU Node 1",
+                    gpuModel: "NVIDIA A100",
+                    gpuCount: 4,
+                    status: "Available",
+                    activeFault: "None",
+                },
+            ]);
+
+        renderWithProviders(<Home />);
+
+        await waitFor(() => {
+            expect(mockedNodesApi.getAll).toHaveBeenCalledTimes(1);
+        });
+
+        await user.click(
+            screen.getByRole("button", {
+                name: "Refresh",
+            }),
+        );
+
+        await waitFor(() => {
+            expect(mockedNodesApi.getAll).toHaveBeenCalledTimes(2);
+        });
+
+        expect(
+            await screen.findByRole("heading", {
+                name: "GPU Node 1",
+            }),
+        ).toBeInTheDocument();
+    });
 });

@@ -37,8 +37,19 @@ export default function Home() {
                         </p>
                     </div>
 
-                    <div className={styles.nodeCount}>
-                        {nodes.length} nodes
+                    <div className={styles.headerActions}>
+                        <button
+                            className={styles.refreshButton}
+                            type="button"
+                            onClick={() => dispatch(fetchNodes())}
+                            disabled={loading}
+                        >
+                            {loading ? "Refreshing..." : "Refresh"}
+                        </button>
+
+                        <div className={styles.nodeCount}>
+                            {nodes.length} nodes
+                        </div>
                     </div>
                 </header>
 

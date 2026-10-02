@@ -75,6 +75,7 @@ export default function NodeCard({ node }: NodeCardProps) {
             <div className={styles.actions}>
                 {canStart && (
                     <button
+                        className={styles.actionButton}
                         type="button"
                         onClick={() => dispatch(startNode(node.id))}
                         disabled={actionLoading}
@@ -85,6 +86,7 @@ export default function NodeCard({ node }: NodeCardProps) {
 
                 {canStop && (
                     <button
+                        className={styles.actionButton}
                         type="button"
                         onClick={() => dispatch(stopNode(node.id))}
                         disabled={actionLoading}
