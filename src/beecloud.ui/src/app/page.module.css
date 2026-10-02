@@ -25,9 +25,36 @@
 .message {
   color: #6b7280;
 }
+.emptyState {
+  padding: 48px 24px;
+  border: 1px solid #dbe3ea;
+  border-radius: 12px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.emptyMessage {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
 
 .error {
-  color: #dc2626;
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .headerActions {

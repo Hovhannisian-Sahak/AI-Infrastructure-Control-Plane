@@ -305,4 +305,48 @@ describe("NodeCard", () => {
 
         await stopPromise;
     });
+    it("applies the correct status style", () => {
+        const { rerender } = renderWithProviders(<NodeCard node={node} />);
+
+        expect(screen.getByText("Available")).toBeInTheDocument();
+
+        rerender(
+            <NodeCard
+                node={{
+                    ...node,
+                    status: "Failed",
+                }}
+            />,
+        );
+
+        expect(screen.getByText("Failed")).toBeInTheDocument();
+    });
+
+    it("shows a provisioning message and hides actions for a provisioning node", () => {
+        const provisioningNode: ComputeNode = {
+            ...node,
+            status: "Provisioning",
+        };
+
+        renderWithProviders(
+            <NodeCard node={provisioningNode} />,
+        );
+
+        const provisioningMessage = screen.getByText(
+            "Node is being provisioned...",
+        );
+
+        expect(provisioningMessage).toBeInTheDocument();
+        expect(provisioningMessage).toHaveClass(
+            "info",
+        );
+
+        expect(
+            screen.queryByRole("button", { name: "Start" }),
+        ).not.toBeInTheDocument();
+
+        expect(
+            screen.queryByRole("button", { name: "Stop" }),
+        ).not.toBeInTheDocument();
+    });
 });

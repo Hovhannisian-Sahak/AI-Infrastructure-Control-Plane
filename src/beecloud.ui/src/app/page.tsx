@@ -48,7 +48,7 @@ export default function Home() {
                         </button>
 
                         <div className={styles.nodeCount}>
-                            {nodes.length} nodes
+                            {nodes.length} {nodes.length === 1 ? "node" : "nodes"}
                         </div>
                     </div>
                 </header>
@@ -69,9 +69,15 @@ export default function Home() {
                 )}
 
                 {!loading && !error && nodes.length === 0 && (
-                    <p className={styles.message}>
-                        No compute nodes found.
-                    </p>
+                    <div className={styles.emptyState}>
+                        <h2 className={styles.emptyTitle}>
+                            No compute nodes
+                        </h2>
+
+                        <p className={styles.emptyMessage}>
+                            Create a node to start managing your GPU fleet.
+                        </p>
+                    </div>
                 )}
 
                 {!loading && !error && nodes.length > 0 && (

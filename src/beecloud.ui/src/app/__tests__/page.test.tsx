@@ -74,9 +74,13 @@ describe("Home page", () => {
 
         renderWithProviders(<Home />);
 
-        expect(
-            await screen.findByRole("alert"),
-        ).toHaveTextContent("API unavailable");
+        const errorMessage = await screen.findByRole("alert");
+
+        expect(errorMessage).toHaveTextContent(
+            "API unavailable",
+        );
+
+        expect(errorMessage).toHaveClass("error");
     });
 
     it("creates a node from the form", async () => {
@@ -243,6 +247,68 @@ describe("Home page", () => {
             await screen.findByRole("heading", {
                 name: "GPU Node 1",
             }),
+        ).toBeInTheDocument();
+    });
+    it("shows an empty state when no nodes exist", async () => {
+        mockedNodesApi.getAll.mockResolvedValue([]);
+
+        renderWithProviders(<Home />);
+
+        expect(
+            await screen.findByRole("heading", {
+                name: "No compute nodes",
+            }),
+        ).toBeInTheDocument();
+
+        expect(
+            screen.getByText(
+                "Create a node to start managing your GPU fleet.",
+            ),
+        ).toBeInTheDocument();
+    });
+    it("displays singular node count", async () => {
+        mockedNodesApi.getAll.mockResolvedValue([
+            {
+                id: "node-1",
+                name: "GPU Node 1",
+                gpuModel: "NVIDIA A100",
+                gpuCount: 4,
+                status: "Available",
+                activeFault: "None",
+            },
+        ]);
+
+        renderWithProviders(<Home />);
+
+        expect(
+            await screen.findByText("1 node"),
+        ).toBeInTheDocument();
+    });
+
+    it("displays plural node count", async () => {
+        mockedNodesApi.getAll.mockResolvedValue([
+            {
+                id: "node-1",
+                name: "GPU Node 1",
+                gpuModel: "NVIDIA A100",
+                gpuCount: 4,
+                status: "Available",
+                activeFault: "None",
+            },
+            {
+                id: "node-2",
+                name: "GPU Node 2",
+                gpuModel: "NVIDIA H100",
+                gpuCount: 8,
+                status: "Available",
+                activeFault: "None",
+            },
+        ]);
+
+        renderWithProviders(<Home />);
+
+        expect(
+            await screen.findByText("2 nodes"),
         ).toBeInTheDocument();
     });
 });

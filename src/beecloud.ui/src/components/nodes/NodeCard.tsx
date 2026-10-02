@@ -71,7 +71,13 @@ export default function NodeCard({ node }: NodeCardProps) {
                     <dd className={styles.value}>{node.activeFault}</dd>
                 </div>
             </dl>
-
+            
+            {node.status === "Provisioning" && (
+                <p className={styles.info}>
+                    Node is being provisioned...
+                </p>
+            )}
+            
             <div className={styles.actions}>
                 {canStart && (
                     <button
