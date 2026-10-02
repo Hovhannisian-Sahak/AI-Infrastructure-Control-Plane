@@ -10,14 +10,14 @@ import { createNode } from "@/store/slices/nodesSlice";
 export default function Home() {
     const dispatch = useAppDispatch();
 
-    const { nodes, loading, error } = useAppSelector(
+    const { nodes, loading, creating, error } = useAppSelector(
         (state) => state.nodes,
     );
 
     useEffect(() => {
         dispatch(fetchNodes());
     }, [dispatch]);
-    
+
     const handleCreateNode = async (request: {
         name: string;
         gpuModel: string;
@@ -42,7 +42,10 @@ export default function Home() {
                     </div>
                 </header>
 
-                <CreateNodeForm onSubmit={handleCreateNode} />
+                <CreateNodeForm
+                    onSubmit={handleCreateNode}
+                    isSubmitting={creating}
+                />
 
                 {loading && (
                     <p className={styles.message}>Loading nodes...</p>

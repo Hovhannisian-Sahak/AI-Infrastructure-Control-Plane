@@ -1,6 +1,7 @@
-﻿import { screen, waitFor } from "@testing-library/react";
+﻿import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test-utils";
+import CreateNodeForm from "@/components/nodes/CreateNodeForm";
 import Home from "../page";
 import { nodesApi } from "@/lib/api/nodesApi";
 
@@ -145,5 +146,65 @@ describe("Home page", () => {
         expect(
             screen.getByText("Provisioning"),
         ).toBeInTheDocument();
+    });
+
+    it("renders an error when creating a node fails", async () => {
+        const user = userEvent.setup();
+
+        mockedNodesApi.getAll.mockResolvedValue([]);
+        mockedNodesApi.create.mockRejectedValue(
+            new Error("A compute node with this name already exists."),
+        );
+
+        renderWithProviders(<Home />);
+
+        await user.type(
+            screen.getByRole("textbox", {
+                name: "Node Name",
+            }),
+            "GPU Node 1",
+        );
+
+        await user.type(
+            screen.getByRole("textbox", {
+                name: "GPU Model",
+            }),
+            "NVIDIA A100",
+        );
+
+        await user.click(
+            screen.getByRole("button", {
+                name: "Create Node",
+            }),
+        );
+
+        expect(
+            await screen.findByRole("alert"),
+        ).toHaveTextContent(
+            "A compute node with this name already exists.",
+        );
+    });
+    it("shows an error when the node name is empty", async () => {
+        const user = userEvent.setup();
+        const onSubmit = jest.fn();
+
+        render(
+            <CreateNodeForm
+                onSubmit={onSubmit}
+                isSubmitting={false}
+            />,
+        );
+
+        await user.click(
+            screen.getByRole("button", {
+                name: "Create Node",
+            }),
+        );
+
+        expect(
+            screen.getByRole("alert"),
+        ).toHaveTextContent("Node name is required.");
+
+        expect(onSubmit).not.toHaveBeenCalled();
     });
 });
