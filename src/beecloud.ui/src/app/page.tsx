@@ -22,6 +22,24 @@ export default function Home() {
         dispatch(fetchNodes());
     }, [dispatch]);
 
+    useEffect(() => {
+        const hasProvisioningNodes = nodes.some(
+            (node) => node.status === "Provisioning",
+        );
+
+        if (!hasProvisioningNodes) {
+            return;
+        }
+
+        const intervalId = setInterval(() => {
+            dispatch(fetchNodes());
+        }, 5000);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, [dispatch, nodes]);
+
     const handleCreateNode = async (request: {
         name: string;
         gpuModel: string;

@@ -6,6 +6,7 @@ type NodesState = {
     nodes: ComputeNode[];
     loading: boolean;
     creating: boolean;
+    refreshing: boolean;
     createSuccess: string | null;
     actionLoadingByNodeId: Record<string, boolean>;
     error: string | null;
@@ -15,6 +16,7 @@ const initialState: NodesState = {
     nodes: [],
     loading: false,
     creating: false,
+    refreshing: false,
     createSuccess: null,
     actionLoadingByNodeId: {},
     error: null,
@@ -53,15 +55,22 @@ const nodesSlice = createSlice({
     extraReducers: (builder) => {
         builder
             .addCase(fetchNodes.pending, (state) => {
-                state.loading = true;
+                if (state.nodes.length === 0) {
+                    state.loading = true;
+                } else {
+                    state.refreshing = true;
+                }
+
                 state.error = null;
             })
             .addCase(fetchNodes.fulfilled, (state, action) => {
                 state.loading = false;
+                state.refreshing = false;
                 state.nodes = action.payload;
             })
             .addCase(fetchNodes.rejected, (state, action) => {
                 state.loading = false;
+                state.refreshing = false;
                 state.error =
                     action.error.message ?? "Failed to load nodes";
             })

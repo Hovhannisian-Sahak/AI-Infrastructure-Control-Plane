@@ -59,8 +59,18 @@ builder.Services.AddInfrastructure(
     builder.Configuration);
 builder.Services.AddHostedService<BeeCloudMetricsCollector>();
 builder.Services.AddHealthChecks();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("BeeCloudUi", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:3001")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 var app = builder.Build();
-
+app.UseCors("BeeCloudUi");
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
