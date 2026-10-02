@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IOperationalMetricsService, OperationalMetricsService>();
         services.AddScoped<INodeMetricService, NodeMetricService>();
         services.AddScoped<IProvisioningQueue, RedisProvisioningQueue>();
+        services.AddScoped<IStoppingQueue, RedisStoppingQueue>();
         return services;
     }
 }

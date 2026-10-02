@@ -45,7 +45,9 @@ builder.Services.AddScoped<IHealthMonitoringProcessor, HealthMonitoringProcessor
 builder.Services.AddScoped<IRemediationProcessor, RemediationProcessor>();
 builder.Services.AddScoped<IProvisioningProcessor, ProvisioningProcessor>();
 builder.Services.AddScoped<IMetricsProcessor, MetricsProcessor>();
+builder.Services.AddScoped<IStoppingProcessor, StoppingProcessor>();
 
+builder.Services.AddHostedService<StoppingWorker>();
 builder.Services.AddHostedService<ProvisioningWorker>();
 builder.Services.AddHostedService<HealthMonitoringWorker>();
 builder.Services.AddHostedService<RemediationWorker>();

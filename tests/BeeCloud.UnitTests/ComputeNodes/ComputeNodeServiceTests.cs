@@ -12,6 +12,7 @@ public class ComputeNodeServiceTests
 {
     private Mock<IComputeNodeRepository> _repository = null!;
     private Mock<IProvisioningQueue> _provisioningQueue = null!;
+    Mock<IStoppingQueue> _stoppingQueue = null!;
     private ComputeNodeService _service = null!;
 
     [SetUp]
@@ -19,10 +20,12 @@ public class ComputeNodeServiceTests
     {
         _repository = new Mock<IComputeNodeRepository>();
         _provisioningQueue = new Mock<IProvisioningQueue>();
-
+        _stoppingQueue = new Mock<IStoppingQueue>();
+        
         _service = new ComputeNodeService(
             _repository.Object,
-            _provisioningQueue.Object);
+            _provisioningQueue.Object,
+            _stoppingQueue.Object);
     }
 
     [Test]
@@ -331,7 +334,28 @@ public class ComputeNodeServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
+    [Test]
+    public async Task StopAsync_WhenNodeExists_ShouldEnqueueNodeForStopping()
+    {
+        // Arrange
+        var node = CreateRunningNode();
 
+        _repository
+            .Setup(repository => repository.GetByIdAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+
+        // Act
+        await _service.StopAsync(node.Id);
+
+        // Assert
+        _stoppingQueue.Verify(
+            queue => queue.EnqueueAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
     [Test]
     public void StopAsync_WhenNodeDoesNotExist_ShouldThrow()
     {

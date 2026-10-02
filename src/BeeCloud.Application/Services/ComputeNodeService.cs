@@ -9,11 +9,12 @@ public class ComputeNodeService : IComputeNodeService
 {
     private readonly IComputeNodeRepository _repository;
     private readonly IProvisioningQueue _provisioningQueue;
-
-    public ComputeNodeService(IComputeNodeRepository repository, IProvisioningQueue provisioningQueue)
+    private readonly IStoppingQueue _stoppingQueue;
+    public ComputeNodeService(IComputeNodeRepository repository, IProvisioningQueue provisioningQueue, IStoppingQueue stoppingQueue)
     {
         _repository = repository;
         _provisioningQueue = provisioningQueue;
+        _stoppingQueue = stoppingQueue;
     }
 
     public async Task<ComputeNodeResponse> CreateAsync(
@@ -173,7 +174,11 @@ public class ComputeNodeService : IComputeNodeService
 
         await _repository.SaveChangesAsync(
             cancellationToken);
-
+        
+        await _stoppingQueue.EnqueueAsync(
+            node.Id,
+            cancellationToken);
+        
         return new ComputeNodeResponse
         {
             Id = node.Id,
