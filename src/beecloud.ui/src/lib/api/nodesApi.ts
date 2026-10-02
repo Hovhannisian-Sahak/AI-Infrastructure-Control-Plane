@@ -26,7 +26,14 @@ export const nodesApi = {
             undefined,
         );
     },
-
+    
+    restart(id: string): Promise<ComputeNode> {
+        return apiClient.post<ComputeNode, undefined>(
+            `/api/v1/nodes/${id}/restart`,
+            undefined,
+        );
+    },
+    
     create(
         request: CreateComputeNodeRequest,
     ): Promise<ComputeNode> {

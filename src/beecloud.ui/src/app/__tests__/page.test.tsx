@@ -11,7 +11,7 @@ const mockedNodesApi = jest.mocked(nodesApi);
 
 describe("Home page", () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        jest.resetAllMocks();
     });
 
     it("renders the page heading", async () => {

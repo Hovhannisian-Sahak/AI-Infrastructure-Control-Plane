@@ -9,6 +9,7 @@ import {
     useAppSelector,
 } from "@/store/hooks";
 import {
+    restartNode,
     startNode,
     stopNode,
 } from "@/store/slices/nodesSlice";
@@ -42,7 +43,7 @@ export default function NodeCard({ node }: NodeCardProps) {
         node.status === "Stopped";
 
     const canStop = node.status === "Running";
-
+    const canRestart = node.status === "Running";
     return (
         <article className={styles.card}>
             <div className={styles.header}>
@@ -98,6 +99,17 @@ export default function NodeCard({ node }: NodeCardProps) {
                         disabled={actionLoading}
                     >
                         {actionLoading ? "Stopping..." : "Stop"}
+                    </button>
+                )}
+
+                {canRestart && (
+                    <button
+                        className={styles.actionButton}
+                        type="button"
+                        onClick={() => dispatch(restartNode(node.id))}
+                        disabled={actionLoading}
+                    >
+                        {actionLoading ? "Restarting..." : "Restart"}
                     </button>
                 )}
             </div>

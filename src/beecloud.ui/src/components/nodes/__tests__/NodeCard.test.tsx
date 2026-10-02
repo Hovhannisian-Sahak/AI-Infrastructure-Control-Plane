@@ -1,4 +1,4 @@
-﻿import { screen } from "@testing-library/react";
+﻿import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test-utils";
 import NodeCard from "../NodeCard";
@@ -304,6 +304,190 @@ describe("NodeCard", () => {
         });
 
         await stopPromise;
+    });
+    it("shows Restart button when node is running", () => {
+        const node: ComputeNode = {
+            id: "node-1",
+            name: "GPU Node",
+            gpuModel: "NVIDIA H100",
+            gpuCount: 8,
+            status: "Running",
+            activeFault: "None",
+        };
+
+        renderWithProviders(<NodeCard node={node} />);
+
+        expect(
+            screen.getByRole("button", {
+                name: "Restart",
+            }),
+        ).toBeInTheDocument();
+    });
+    it("does not show Restart button when node is not running", () => {
+        const node: ComputeNode = {
+            id: "node-1",
+            name: "GPU Node",
+            gpuModel: "NVIDIA H100",
+            gpuCount: 8,
+            status: "Available",
+            activeFault: "None",
+        };
+
+        renderWithProviders(<NodeCard node={node} />);
+
+        expect(
+            screen.queryByRole("button", {
+                name: "Restart",
+            }),
+        ).not.toBeInTheDocument();
+    });
+    it("restarts a running node when Restart is clicked", async () => {
+        const user = userEvent.setup();
+
+        const runningNode: ComputeNode = {
+            ...node,
+            status: "Running",
+        };
+
+        mockedNodesApi.restart.mockResolvedValue({
+            ...runningNode,
+            status: "Running",
+        });
+
+        store.dispatch({
+            type: "nodes/fetchNodes/fulfilled",
+            payload: [runningNode],
+        });
+
+        renderWithProviders(<NodeCard node={runningNode} />);
+
+        const restartButton = screen.getByRole("button", {
+            name: "Restart",
+        });
+
+        expect(restartButton).toBeInTheDocument();
+        expect(
+            screen.getByRole("button", { name: "Stop" }),
+        ).toBeInTheDocument();
+        expect(
+            screen.queryByRole("button", { name: "Start" }),
+        ).not.toBeInTheDocument();
+
+        await user.click(restartButton);
+
+        expect(mockedNodesApi.restart).toHaveBeenCalledWith("node-1");
+
+        expect(store.getState().nodes.nodes).toEqual([
+            {
+                ...runningNode,
+                status: "Running",
+            },
+        ]);
+    });
+    it("shows an error when restarting a node fails", async () => {
+        const user = userEvent.setup();
+
+        const runningNode: ComputeNode = {
+            ...node,
+            status: "Running",
+        };
+
+        mockedNodesApi.restart.mockRejectedValue(
+            new Error("Failed to restart node"),
+        );
+
+        store.dispatch({
+            type: "nodes/fetchNodes/fulfilled",
+            payload: [runningNode],
+        });
+
+        renderWithProviders(<NodeCard node={runningNode} />);
+
+        const restartButton = screen.getByRole("button", {
+            name: "Restart",
+        });
+
+        await user.click(restartButton);
+
+        await waitFor(() => {
+            expect(
+                store.getState().nodes.error,
+            ).toBe("Failed to restart node");
+        });
+
+        expect(
+            store.getState().nodes.actionLoadingByNodeId["node-1"],
+        ).toBe(false);
+    });
+    it("shows a loading state while restarting a node", async () => {
+        const user = userEvent.setup();
+
+        let resolveRestart: (
+            value: ComputeNode,
+        ) => void;
+
+        const restartPromise = new Promise<ComputeNode>((resolve) => {
+            resolveRestart = resolve;
+        });
+
+        const runningNode: ComputeNode = {
+            ...node,
+            status: "Running",
+        };
+
+        mockedNodesApi.restart.mockReturnValue(
+            restartPromise,
+        );
+
+        store.dispatch({
+            type: "nodes/fetchNodes/fulfilled",
+            payload: [runningNode],
+        });
+
+        renderWithProviders(<NodeCard node={runningNode} />);
+
+        const restartButton = screen.getByRole("button", {
+            name: "Restart",
+        });
+
+        await user.click(restartButton);
+
+        expect(
+            screen.getByRole("button", {
+                name: "Restarting...",
+            }),
+        ).toBeDisabled();
+
+        expect(
+            screen.queryByRole("button", {
+                name: "Restart",
+            }),
+        ).not.toBeInTheDocument();
+
+        const restartedNode: ComputeNode = {
+            ...runningNode,
+            status: "Running",
+        };
+
+        resolveRestart!(restartedNode);
+
+        await waitFor(() => {
+            expect(
+                screen.getByRole("button", {
+                    name: "Restart",
+                }),
+            ).toBeEnabled();
+
+            expect(
+                screen.queryByRole("button", {
+                    name: "Restarting...",
+                }),
+            ).not.toBeInTheDocument();
+
+            expect(
+                store.getState().nodes.actionLoadingByNodeId["node-1"],
+            ).toBe(false);
+        });
     });
     it("applies the correct status style", () => {
         const { rerender } = renderWithProviders(<NodeCard node={node} />);

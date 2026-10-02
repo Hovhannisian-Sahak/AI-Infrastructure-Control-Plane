@@ -23,11 +23,13 @@ export default function Home() {
     }, [dispatch]);
 
     useEffect(() => {
-        const hasProvisioningNodes = nodes.some(
-            (node) => node.status === "Provisioning",
+        const hasTransitionalNodes = nodes.some(
+            (node) =>
+                node.status === "Provisioning" ||
+                node.status === "Stopping",
         );
 
-        if (!hasProvisioningNodes) {
+        if (!hasTransitionalNodes) {
             return;
         }
 

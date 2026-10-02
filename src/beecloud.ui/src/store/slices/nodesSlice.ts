@@ -48,6 +48,13 @@ export const stopNode = createAsyncThunk(
     },
 );
 
+export const restartNode = createAsyncThunk(
+    "nodes/restartNode",
+    async (id: string) => {
+        return nodesApi.restart(id);
+    },
+);
+
 const nodesSlice = createSlice({
     name: "nodes",
     initialState,
@@ -129,7 +136,27 @@ const nodesSlice = createSlice({
                 state.actionLoadingByNodeId[action.meta.arg] = false;
                 state.error =
                     action.error.message ?? "Failed to stop node";
-            });
+            })
+            .addCase(restartNode.pending, (state, action) => {
+                state.actionLoadingByNodeId[action.meta.arg] = true;
+                state.error = null;
+            })
+            .addCase(restartNode.fulfilled, (state, action) => {
+                state.actionLoadingByNodeId[action.meta.arg] = false;
+
+                const index = state.nodes.findIndex(
+                    (node) => node.id === action.payload.id,
+                );
+
+                if (index !== -1) {
+                    state.nodes[index] = action.payload;
+                }
+            })
+            .addCase(restartNode.rejected, (state, action) => {
+                state.actionLoadingByNodeId[action.meta.arg] = false;
+                state.error =
+                    action.error.message ?? "Failed to restart node";
+            })
     },
 });
 
