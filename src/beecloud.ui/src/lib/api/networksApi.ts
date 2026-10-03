@@ -38,6 +38,6 @@ export const networksApi = {
   },
 
   detach(nodeId: string, networkId: string): Promise<void> {
-    return apiClient.delete<void>(`/api/v1/nodes/${nodeId}/networks/${networkId}`);
+    return apiClient.delete(`/api/v1/nodes/${nodeId}/networks/${networkId}`);
   },
 };
