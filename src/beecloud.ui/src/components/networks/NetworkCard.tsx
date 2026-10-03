@@ -4,144 +4,96 @@ import { useState } from "react";
 import { Network } from "@/types/network";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-    activateNetwork,
-    deactivateNetwork,
-    fetchNetworkAttachments,
+  activateNetwork,
+  deactivateNetwork,
+  fetchNetworkAttachments,
 } from "@/store/slices/networksSlice";
 
 type NetworkCardProps = {
-    network: Network;
+  network: Network;
 };
 
-export default function NetworkCard({
-                                        network,
-                                    }: NetworkCardProps) {
-    const dispatch = useAppDispatch();
+export default function NetworkCard({ network }: NetworkCardProps) {
+  const dispatch = useAppDispatch();
 
-    const [showAttachments, setShowAttachments] =
-        useState(false);
+  const [showAttachments, setShowAttachments] = useState(false);
 
-    const attachments = useAppSelector(
-        (state) => state.networks.attachments,
-    ).filter(
-        (attachment) =>
-            attachment.networkId === network.id,
-    );
+  const attachments = useAppSelector((state) => state.networks.attachments).filter(
+    (attachment) => attachment.networkId === network.id,
+  );
 
-    const attachmentsLoading = useAppSelector(
-        (state) =>
-            state.networks.attachmentsLoading,
-    );
+  const attachmentsLoading = useAppSelector((state) => state.networks.attachmentsLoading);
 
-    const attachmentsError = useAppSelector(
-        (state) =>
-            state.networks.attachmentsError,
-    );
+  const attachmentsError = useAppSelector((state) => state.networks.attachmentsError);
 
-    const handleToggleAttachments = async () => {
-        if (showAttachments) {
-            setShowAttachments(false);
-            return;
-        }
+  const handleToggleAttachments = async () => {
+    if (showAttachments) {
+      setShowAttachments(false);
+      return;
+    }
 
-        setShowAttachments(true);
+    setShowAttachments(true);
 
-        await dispatch(
-            fetchNetworkAttachments(network.id),
-        );
-    };
+    await dispatch(fetchNetworkAttachments(network.id));
+  };
 
-    const handleToggleActive = () => {
-        if (network.isActive) {
-            dispatch(
-                deactivateNetwork(network.id),
-            );
-        } else {
-            dispatch(
-                activateNetwork(network.id),
-            );
-        }
-    };
+  const handleToggleActive = () => {
+    if (network.isActive) {
+      dispatch(deactivateNetwork(network.id));
+    } else {
+      dispatch(activateNetwork(network.id));
+    }
+  };
 
-    return (
-        <article>
-            <div>
-                <h2>{network.name}</h2>
+  return (
+    <article>
+      <div>
+        <h2>{network.name}</h2>
 
-                {network.description && (
-                    <p>{network.description}</p>
-                )}
-            </div>
+        {network.description && <p>{network.description}</p>}
+      </div>
 
-            <div>
-                <span>
-                    {network.isActive
-                        ? "Active"
-                        : "Inactive"}
-                </span>
-            </div>
+      <div>
+        <span>{network.isActive ? "Active" : "Inactive"}</span>
+      </div>
 
-            <div>
-                <p>
-                    Attachments:{" "}
-                    {attachments.length} /{" "}
-                    {network.maxAttachments}
-                </p>
+      <div>
+        <p>
+          Attachments: {attachments.length} / {network.maxAttachments}
+        </p>
 
-                <button
-                    type="button"
-                    onClick={handleToggleAttachments}
-                >
-                    {showAttachments
-                        ? "Hide Attachments"
-                        : "Show Attachments"}
-                </button>
+        <button type="button" onClick={handleToggleAttachments}>
+          {showAttachments ? "Hide Attachments" : "Show Attachments"}
+        </button>
 
-                {showAttachments && (
-                    <div
-                        style={{
-                            minHeight: "60px",
-                        }}
-                    >
-                        {attachmentsLoading && (
-                            <p>Loading attachments...</p>
-                        )}
+        {showAttachments && (
+          <div
+            style={{
+              minHeight: "60px",
+            }}
+          >
+            {attachmentsLoading && <p>Loading attachments...</p>}
 
-                        {attachmentsError && (
-                            <p role="alert">
-                                {attachmentsError}
-                            </p>
-                        )}
+            {attachmentsError && <p role="alert">{attachmentsError}</p>}
 
-                        {!attachmentsLoading &&
-                            !attachmentsError &&
-                            attachments.length === 0 && (
-                                <p>No nodes attached.</p>
-                            )}
+            {!attachmentsLoading && !attachmentsError && attachments.length === 0 && (
+              <p>No nodes attached.</p>
+            )}
 
-                        {!attachmentsLoading &&
-                            !attachmentsError &&
-                            attachments.length > 0 && (
-                                <ul>
-                                    {attachments.map((attachment) => (
-                                        <li key={attachment.id}>
-                                            Node: {attachment.computeNodeId}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                    </div>
-                )}
+            {!attachmentsLoading && !attachmentsError && attachments.length > 0 && (
+              <ul>
+                {attachments.map((attachment) => (
+                  <li key={attachment.id}>Node: {attachment.computeNodeId}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
-                <button
-                    type="button"
-                    onClick={handleToggleActive}
-                >
-                    {network.isActive
-                        ? "Deactivate"
-                        : "Activate"}
-                </button>
-            </div>
-        </article>
-    );
+        <button type="button" onClick={handleToggleActive}>
+          {network.isActive ? "Deactivate" : "Activate"}
+        </button>
+      </div>
+    </article>
+  );
 }

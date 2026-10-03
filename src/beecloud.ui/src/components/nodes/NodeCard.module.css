@@ -1,240 +1,240 @@
 ﻿.card {
-    padding: 20px;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    background: #ffffff;
-    box-shadow: 0 2px 6px rgb(0 0 0 / 5%);
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 5%);
 }
 
 .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .title {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 600;
-    color: #111827;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
 }
 
 .status {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.2;
-    white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .available {
-    background: #dcfce7;
-    color: #166534;
+  background: #dcfce7;
+  color: #166534;
 }
 
 .running {
-    background: #dbeafe;
-    color: #1d4ed8;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .provisioning,
 .stopping {
-    background: #fef3c7;
-    color: #92400e;
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .stopped {
-    background: #f3f4f6;
-    color: #4b5563;
+  background: #f3f4f6;
+  color: #4b5563;
 }
 
 .unhealthy,
 .quarantined {
-    background: #ffedd5;
-    color: #c2410c;
+  background: #ffedd5;
+  color: #c2410c;
 }
 
 .remediating {
-    background: #f3e8ff;
-    color: #7e22ce;
+  background: #f3e8ff;
+  color: #7e22ce;
 }
 
 .failed {
-    background: #fee2e2;
-    color: #b91c1c;
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .details {
-    display: grid;
-    gap: 14px;
+  display: grid;
+  gap: 14px;
 }
 
 .detail {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .detail:last-child {
-    padding-bottom: 0;
-    border-bottom: none;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .info {
-    margin: 0 0 20px;
-    color: #92400e;
-    font-size: 14px;
-    font-weight: 500;
+  margin: 0 0 20px;
+  color: #92400e;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .label {
-    color: #6b7280;
-    font-size: 14px;
+  color: #6b7280;
+  font-size: 14px;
 }
 
 .value {
-    min-width: 0;
-    margin: 0;
-    color: #111827;
-    font-size: 14px;
-    font-weight: 500;
-    text-align: right;
-    overflow-wrap: anywhere;
+  min-width: 0;
+  margin: 0;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .actions button {
-    padding: 8px 14px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #374151;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
+  padding: 8px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
 }
 
 .actions button:hover {
-    background: #f3f4f6;
+  background: #f3f4f6;
 }
 
 .actions button:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .form {
-    display: grid;
-    gap: 16px;
-    margin-bottom: 32px;
-    padding: 20px;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    background: #ffffff;
+  display: grid;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
 }
 
 .field {
-    display: grid;
-    gap: 6px;
+  display: grid;
+  gap: 6px;
 }
 
 .label {
-    color: #374151;
-    font-size: 14px;
-    font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 9px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #111827;
-    font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
 }
 
 .input:focus {
-    outline: 2px solid #93c5fd;
-    outline-offset: 1px;
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
 }
 
 .input[aria-invalid="true"] {
-    border-color: #dc2626;
+  border-color: #dc2626;
 }
 
 .error {
-    margin: 0;
-    color: #dc2626;
-    font-size: 13px;
+  margin: 0;
+  color: #dc2626;
+  font-size: 13px;
 }
 
 .button {
-    justify-self: start;
-    padding: 9px 16px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    background: #111827;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
+  justify-self: start;
+  padding: 9px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
 }
 
 .button:hover {
-    background: #374151;
+  background: #374151;
 }
 
 .button:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .actionButton {
-    padding: 8px 14px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    background: #111827;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
+  padding: 8px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
 }
 
 .actionButton:hover {
-    background: #374151;
+  background: #374151;
 }
 
 .actionButton:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 @media (max-width: 600px) {
-    .card {
-        padding: 16px;
-    }
+  .card {
+    padding: 16px;
+  }
 
-    .detail {
-        gap: 12px;
-    }
+  .detail {
+    gap: 12px;
+  }
 
-    .value {
-        max-width: 60%;
-    }
+  .value {
+    max-width: 60%;
+  }
 }
