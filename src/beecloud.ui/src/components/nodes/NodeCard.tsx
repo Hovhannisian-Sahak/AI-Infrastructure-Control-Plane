@@ -3,7 +3,6 @@
 import type { ComputeNode, NodeStatus } from "@/lib/api/models/computeNode";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { restartNode, startNode, stopNode } from "@/store/slices/nodesSlice";
-import { ComputeNode } from "@/types/computeNode";
 import styles from "./NodeCard.module.css";
 
 type NodeCardProps = {

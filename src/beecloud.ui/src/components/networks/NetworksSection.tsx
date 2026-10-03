@@ -2,57 +2,123 @@
 
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { createNetwork, fetchNetworks } from "@/store/slices/networksSlice";
+import {
+  createNetwork,
+  fetchNetworks,
+} from "@/store/slices/networksSlice";
 import NetworkCard from "./NetworkCard";
-import CreateNetworkForm from "./NetworkForm";
+import CreateNetworkForm from "./CreateNetworkForm";
+import styles from "./NetworksSection.module.css";
 
 export default function NetworksSection() {
   const dispatch = useAppDispatch();
 
-  const { networks, loading, creating, error, createSuccess } = useAppSelector(
-    (state) => state.networks,
+  const {
+    networks,
+    loading,
+    creating,
+    error,
+    createSuccess,
+  } = useAppSelector(
+      (state) => state.networks,
   );
 
   useEffect(() => {
     dispatch(fetchNetworks());
   }, [dispatch]);
 
-  const handleCreateNetwork = async (request: { name: string; description?: string }) => {
+  const handleCreateNetwork = async (request: {
+    name: string;
+    description?: string;
+  }) => {
     await dispatch(createNetwork(request));
   };
 
   return (
-    <section>
-      <header>
-        <h2>Networks</h2>
+      <section className={styles.section}>
+        <div className={styles.header}>
+          <div>
+            <p className={styles.eyebrow}>
+              Infrastructure
+            </p>
 
-        <span>
-          {networks.length} {networks.length === 1 ? "network" : "networks"}
-        </span>
-      </header>
+            <h2 className={styles.title}>
+              Networks
+            </h2>
 
-      <CreateNetworkForm onSubmit={handleCreateNetwork} isSubmitting={creating} />
+            <p className={styles.subtitle}>
+              Manage network connectivity between
+              compute nodes.
+            </p>
+          </div>
 
-      {createSuccess && <p role="status">{createSuccess}</p>}
-
-      {loading && <p>Loading networks...</p>}
-
-      {error && <p role="alert">{error}</p>}
-
-      {!loading && !error && networks.length === 0 && (
-        <div>
-          <h3>No networks</h3>
-          <p>Create a network to connect compute nodes.</p>
+          <span className={styles.count}>
+                    {networks.length}{" "}
+            {networks.length === 1
+                ? "network"
+                : "networks"}
+                </span>
         </div>
-      )}
 
-      {!loading && !error && networks.length > 0 && (
-        <div>
-          {networks.map((network) => (
-            <NetworkCard key={network.id} network={network} />
-          ))}
-        </div>
-      )}
-    </section>
+        <CreateNetworkForm
+            onSubmit={handleCreateNetwork}
+            isSubmitting={creating}
+        />
+
+        {createSuccess && (
+            <div
+                className={styles.success}
+                role="status"
+            >
+              {createSuccess}
+            </div>
+        )}
+
+        {loading && (
+            <div className={styles.loading}>
+              <span className={styles.spinner} />
+              Loading networks...
+            </div>
+        )}
+
+        {error && (
+            <div
+                className={styles.error}
+                role="alert"
+            >
+              {error}
+            </div>
+        )}
+
+        {!loading &&
+            !error &&
+            networks.length === 0 && (
+                <div className={styles.empty}>
+                  <div className={styles.emptyIcon}>
+                    N
+                  </div>
+
+                  <h3>No networks yet</h3>
+
+                  <p>
+                    Create your first network to
+                    connect compute nodes.
+                  </p>
+                </div>
+            )}
+
+        {!loading &&
+            !error &&
+            networks.length > 0 && (
+                <div className={styles.grid}>
+                  {networks.map((network) => (
+                      <NetworkCard
+                          key={network.id}
+                          network={network}
+                      />
+                  ))}
+                </div>
+            )}
+      </section>
   );
 }

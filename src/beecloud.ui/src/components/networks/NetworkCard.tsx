@@ -1,99 +1,470 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Network } from "@/types/network";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  activateNetwork,
-  deactivateNetwork,
-  fetchNetworkAttachments,
+    useAppDispatch,
+    useAppSelector,
+} from "@/store/hooks";
+import {
+    activateNetwork,
+    attachNodeToNetwork,
+    deactivateNetwork,
+    detachNodeFromNetwork,
+    fetchNetworkAttachments,
 } from "@/store/slices/networksSlice";
+import styles from "./NetworkCard.module.css";
 
 type NetworkCardProps = {
-  network: Network;
+    network: Network;
 };
 
-export default function NetworkCard({ network }: NetworkCardProps) {
-  const dispatch = useAppDispatch();
+export default function NetworkCard({
+                                        network,
+                                    }: NetworkCardProps) {
+    const dispatch = useAppDispatch();
 
-  const [showAttachments, setShowAttachments] = useState(false);
+    const [showAttachments, setShowAttachments] =
+        useState(false);
 
-  const attachments = useAppSelector((state) => state.networks.attachments).filter(
-    (attachment) => attachment.networkId === network.id,
-  );
+    const [selectedNodeId, setSelectedNodeId] =
+        useState("");
 
-  const attachmentsLoading = useAppSelector((state) => state.networks.attachmentsLoading);
+    const [showAttachSuccess, setShowAttachSuccess] =
+        useState(false);
 
-  const attachmentsError = useAppSelector((state) => state.networks.attachmentsError);
+    const nodes = useAppSelector(
+        (state) => state.nodes.nodes,
+    );
 
-  const handleToggleAttachments = async () => {
-    if (showAttachments) {
-      setShowAttachments(false);
-      return;
-    }
+    const attachmentState = useAppSelector(
+        (state) =>
+            state.networks
+                .attachmentsByNetworkId[
+                network.id
+                ],
+    );
 
-    setShowAttachments(true);
+    const attachments =
+        attachmentState?.items ?? [];
 
-    await dispatch(fetchNetworkAttachments(network.id));
-  };
+    const attachmentsLoading =
+        attachmentState?.loading ?? false;
 
-  const handleToggleActive = () => {
-    if (network.isActive) {
-      dispatch(deactivateNetwork(network.id));
-    } else {
-      dispatch(activateNetwork(network.id));
-    }
-  };
+    const attachmentsError =
+        attachmentState?.error ?? null;
 
-  return (
-    <article>
-      <div>
-        <h2>{network.name}</h2>
+    const attachLoading =
+        attachmentState?.attachLoading ?? false;
 
-        {network.description && <p>{network.description}</p>}
-      </div>
+    const attachSuccess =
+        attachmentState?.attachSuccess ?? null;
 
-      <div>
-        <span>{network.isActive ? "Active" : "Inactive"}</span>
-      </div>
+    const attachError =
+        attachmentState?.attachError ?? null;
 
-      <div>
-        <p>
-          Attachments: {attachments.length} / {network.maxAttachments}
-        </p>
+    const availableNodes = nodes.filter(
+        (node) =>
+            !attachments.some(
+                (attachment) =>
+                    attachment.computeNodeId ===
+                    node.id,
+            ),
+    );
 
-        <button type="button" onClick={handleToggleAttachments}>
-          {showAttachments ? "Hide Attachments" : "Show Attachments"}
-        </button>
+    const maximumReached =
+        attachments.length >=
+        network.maxAttachments;
 
-        {showAttachments && (
-          <div
-            style={{
-              minHeight: "60px",
-            }}
-          >
-            {attachmentsLoading && <p>Loading attachments...</p>}
+    useEffect(() => {
+        dispatch(
+            fetchNetworkAttachments(
+                network.id,
+            ),
+        );
+    }, [dispatch, network.id]);
 
-            {attachmentsError && <p role="alert">{attachmentsError}</p>}
+    useEffect(() => {
+        if (!attachSuccess) {
+            return;
+        }
 
-            {!attachmentsLoading && !attachmentsError && attachments.length === 0 && (
-              <p>No nodes attached.</p>
+        setShowAttachSuccess(true);
+
+        const timeoutId = setTimeout(() => {
+            setShowAttachSuccess(false);
+        }, 3000);
+
+        return () => clearTimeout(timeoutId);
+    }, [attachSuccess]);
+
+    const handleToggleAttachments = () => {
+        setShowAttachments(
+            (current) => !current,
+        );
+    };
+
+    const handleAttachNode = async () => {
+        if (!selectedNodeId) {
+            return;
+        }
+
+        const result = await dispatch(
+            attachNodeToNetwork({
+                nodeId: selectedNodeId,
+                networkId: network.id,
+            }),
+        );
+
+        if (
+            attachNodeToNetwork.fulfilled.match(
+                result,
+            )
+        ) {
+            setSelectedNodeId("");
+        }
+    };
+
+    const handleDetachNode = (
+        nodeId: string,
+    ) => {
+        dispatch(
+            detachNodeFromNetwork({
+                nodeId,
+                networkId: network.id,
+            }),
+        );
+    };
+
+    const handleToggleActive = () => {
+        if (network.isActive) {
+            dispatch(
+                deactivateNetwork(
+                    network.id,
+                ),
+            );
+        } else {
+            dispatch(
+                activateNetwork(
+                    network.id,
+                ),
+            );
+        }
+    };
+
+    return (
+        <article
+            className={`${styles.card} ${
+                !network.isActive
+                    ? styles.inactive
+                    : ""
+            }`}
+        >
+            <div className={styles.header}>
+                <div>
+                    <h2 className={styles.name}>
+                        {network.name}
+                    </h2>
+
+                    {network.description && (
+                        <p className={styles.description}>
+                            {network.description}
+                        </p>
+                    )}
+                </div>
+
+                <span
+                    className={`${styles.status} ${
+                        network.isActive
+                            ? styles.active
+                            : styles.inactiveStatus
+                    }`}
+                >
+                    {network.isActive
+                        ? "Active"
+                        : "Inactive"}
+                </span>
+            </div>
+
+            <div className={styles.meta}>
+                <span>
+                    Attachments:{" "}
+                    <strong>
+                        {attachments.length}
+                    </strong>{" "}
+                    / {network.maxAttachments}
+                </span>
+
+                <span>
+                    Created{" "}
+                    {new Date(
+                        network.createdAt,
+                    ).toLocaleDateString()}
+                </span>
+            </div>
+
+            <div className={styles.actions}>
+                <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    onClick={
+                        handleToggleAttachments
+                    }
+                >
+                    {showAttachments
+                        ? "Hide Attachments"
+                        : "Show Attachments"}
+                </button>
+
+                <button
+                    type="button"
+                    className={
+                        network.isActive
+                            ? styles.dangerButton
+                            : styles.primaryButton
+                    }
+                    onClick={
+                        handleToggleActive
+                    }
+                >
+                    {network.isActive
+                        ? "Deactivate"
+                        : "Activate"}
+                </button>
+            </div>
+
+            {showAttachments && (
+                <div
+                    className={
+                        styles.attachmentsSection
+                    }
+                >
+                    <h3>
+                        Attached Nodes
+                    </h3>
+
+                    {attachmentsLoading && (
+                        <p
+                            className={
+                                styles.muted
+                            }
+                        >
+                            Loading attachments...
+                        </p>
+                    )}
+
+                    {attachmentsError && (
+                        <p
+                            className={
+                                styles.error
+                            }
+                            role="alert"
+                        >
+                            {attachmentsError}
+                        </p>
+                    )}
+
+                    {!attachmentsLoading &&
+                        !attachmentsError &&
+                        attachments.length ===
+                        0 && (
+                            <p
+                                className={
+                                    styles.muted
+                                }
+                            >
+                                No nodes attached.
+                            </p>
+                        )}
+
+                    {!attachmentsLoading &&
+                        !attachmentsError &&
+                        attachments.length >
+                        0 && (
+                            <ul
+                                className={
+                                    styles.attachmentList
+                                }
+                            >
+                                {attachments.map(
+                                    (
+                                        attachment,
+                                    ) => (
+                                        <li
+                                            key={
+                                                attachment.id
+                                            }
+                                            className={
+                                                styles.attachmentItem
+                                            }
+                                        >
+                                            <span>
+                                                Node:{" "}
+                                                {
+                                                    attachment.computeNodeId
+                                                }
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                className={
+                                                    styles.smallDangerButton
+                                                }
+                                                onClick={() =>
+                                                    handleDetachNode(
+                                                        attachment.computeNodeId,
+                                                    )
+                                                }
+                                            >
+                                                Detach
+                                            </button>
+                                        </li>
+                                    ),
+                                )}
+                            </ul>
+                        )}
+                </div>
             )}
 
-            {!attachmentsLoading && !attachmentsError && attachments.length > 0 && (
-              <ul>
-                {attachments.map((attachment) => (
-                  <li key={attachment.id}>Node: {attachment.computeNodeId}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+            <div
+                className={
+                    styles.attachSection
+                }
+            >
+                <h3>
+                    Attach Node
+                </h3>
 
-        <button type="button" onClick={handleToggleActive}>
-          {network.isActive ? "Deactivate" : "Activate"}
-        </button>
-      </div>
-    </article>
-  );
+                {!network.isActive && (
+                    <p
+                        className={
+                            styles.warning
+                        }
+                    >
+                        Activate this network before
+                        attaching nodes.
+                    </p>
+                )}
+
+                {network.isActive &&
+                    maximumReached && (
+                        <p
+                            className={
+                                styles.warning
+                            }
+                        >
+                            Maximum attachment limit
+                            reached (
+                            {
+                                network.maxAttachments
+                            }
+                            ).
+                        </p>
+                    )}
+
+                {network.isActive &&
+                    !maximumReached &&
+                    availableNodes.length ===
+                    0 && (
+                        <p
+                            className={
+                                styles.muted
+                            }
+                        >
+                            All nodes are already attached
+                            to this network.
+                        </p>
+                    )}
+
+                {network.isActive &&
+                    !maximumReached &&
+                    availableNodes.length > 0 && (
+                        <div
+                            className={
+                                styles.attachControls
+                            }
+                        >
+                            <select
+                                className={
+                                    styles.select
+                                }
+                                value={
+                                    selectedNodeId
+                                }
+                                onChange={(
+                                    event,
+                                ) =>
+                                    setSelectedNodeId(
+                                        event.target
+                                            .value,
+                                    )
+                                }
+                                disabled={
+                                    attachLoading
+                                }
+                            >
+                                <option value="">
+                                    Select a node
+                                </option>
+
+                                {availableNodes.map(
+                                    (node) => (
+                                        <option
+                                            key={
+                                                node.id
+                                            }
+                                            value={
+                                                node.id
+                                            }
+                                        >
+                                            {node.name}
+                                        </option>
+                                    ),
+                                )}
+                            </select>
+
+                            <button
+                                type="button"
+                                className={
+                                    styles.primaryButton
+                                }
+                                disabled={
+                                    !selectedNodeId ||
+                                    attachLoading
+                                }
+                                onClick={
+                                    handleAttachNode
+                                }
+                            >
+                                {attachLoading
+                                    ? "Attaching..."
+                                    : "Attach"}
+                            </button>
+                        </div>
+                    )}
+
+                {attachError && (
+                    <p
+                        className={
+                            styles.error
+                        }
+                        role="alert"
+                    >
+                        {attachError}
+                    </p>
+                )}
+            </div>
+
+            {showAttachSuccess && (
+                <div
+                    className={
+                        styles.successAlert
+                    }
+                    role="status"
+                >
+                    Node attached successfully.
+                </div>
+            )}
+        </article>
+    );
 }
