@@ -2,135 +2,261 @@
 
 import { useState } from "react";
 import styles from "./CreateNodeForm.module.css";
+
 type CreateNodeFormProps = {
-  onSubmit: (request: { name: string; gpuModel: string; gpuCount: number }) => void;
-  isSubmitting: boolean;
+    onSubmit: (request: {
+        name: string;
+        gpuModel: string;
+        gpuCount: number;
+    }) => void;
+    isSubmitting: boolean;
 };
 
-export default function CreateNodeForm({ onSubmit, isSubmitting }: CreateNodeFormProps) {
-  const [name, setName] = useState("");
-  const [gpuModel, setGpuModel] = useState("");
-  const [gpuCount, setGpuCount] = useState("1");
-  const [nameError, setNameError] = useState("");
-  const [gpuModelError, setGpuModelError] = useState("");
-  const [gpuCountError, setGpuCountError] = useState("");
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!name.trim()) {
-      setNameError("Node name is required.");
-      return;
-    }
+export default function CreateNodeForm({
+                                           onSubmit,
+                                           isSubmitting,
+                                       }: CreateNodeFormProps) {
+    const [name, setName] = useState("");
+    const [gpuModel, setGpuModel] = useState("");
+    const [gpuCount, setGpuCount] = useState("1");
 
-    setNameError("");
-    if (!gpuModel.trim()) {
-      setGpuModelError("GPU model is required.");
-      return;
-    }
+    const [nameError, setNameError] =
+        useState("");
+    const [gpuModelError, setGpuModelError] =
+        useState("");
+    const [gpuCountError, setGpuCountError] =
+        useState("");
 
-    setGpuModelError("");
+    const handleSubmit = (
+        event: React.FormEvent<HTMLFormElement>,
+    ) => {
+        event.preventDefault();
 
-    const parsedGpuCount = Number(gpuCount);
+        const trimmedName = name.trim();
+        const trimmedGpuModel = gpuModel.trim();
 
-    if (!Number.isInteger(parsedGpuCount) || parsedGpuCount <= 0) {
-      setGpuCountError("GPU count must be greater than zero.");
-      return;
-    }
+        if (!trimmedName) {
+            setNameError(
+                "Node name is required.",
+            );
+            return;
+        }
 
-    setGpuCountError("");
-    onSubmit({
-      name,
-      gpuModel,
-      gpuCount: Number(gpuCount),
-    });
-  };
+        setNameError("");
 
-  return (
-    <form className={styles.form} onSubmit={handleSubmit}>
-      <h2 className={styles.title}>Create Compute Node</h2>
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="node-name">
-          Node Name
-        </label>
+        if (!trimmedGpuModel) {
+            setGpuModelError(
+                "GPU model is required.",
+            );
+            return;
+        }
 
-        <input
-          className={styles.input}
-          id="node-name"
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
+        setGpuModelError("");
 
-            if (event.target.value.trim()) {
-              setNameError("");
-            }
-          }}
-          aria-invalid={Boolean(nameError)}
-          aria-describedby={nameError ? "node-name-error" : undefined}
-        />
+        const parsedGpuCount = Number(gpuCount);
 
-        {nameError && (
-          <p className={styles.error} id="node-name-error" role="alert">
-            {nameError}
-          </p>
-        )}
-      </div>
+        if (
+            !Number.isInteger(parsedGpuCount) ||
+            parsedGpuCount <= 0
+        ) {
+            setGpuCountError(
+                "GPU count must be greater than zero.",
+            );
+            return;
+        }
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="gpu-model">
-          GPU Model
-        </label>
+        setGpuCountError("");
 
-        <input
-          className={styles.input}
-          id="gpu-model"
-          value={gpuModel}
-          onChange={(event) => {
-            setGpuModel(event.target.value);
+        onSubmit({
+            name: trimmedName,
+            gpuModel: trimmedGpuModel,
+            gpuCount: parsedGpuCount,
+        });
+    };
 
-            if (event.target.value.trim()) {
-              setGpuModelError("");
-            }
-          }}
-          aria-invalid={Boolean(gpuModelError)}
-          aria-describedby={gpuModelError ? "gpu-model-error" : undefined}
-        />
+    return (
+        <div className={styles.container}>
+            <div className={styles.heading}>
+                <h2 className={styles.title}>
+                    Create Compute Node
+                </h2>
 
-        {gpuModelError && (
-          <p className={styles.error} id="gpu-model-error" role="alert">
-            {gpuModelError}
-          </p>
-        )}
-      </div>
+                <p className={styles.subtitle}>
+                    Add a GPU compute node to your
+                    BeeCloud fleet.
+                </p>
+            </div>
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="gpu-count">
-          GPU Count
-        </label>
+            <form
+                className={styles.form}
+                onSubmit={handleSubmit}
+                noValidate
+            >
+                <div className={styles.field}>
+                    <label
+                        className={styles.label}
+                        htmlFor="node-name"
+                    >
+                        Node Name
+                    </label>
 
-        <input
-          className={styles.input}
-          id="gpu-count"
-          type="number"
-          value={gpuCount}
-          onChange={(event) => {
-            setGpuCount(event.target.value);
+                    <input
+                        className={`${styles.input} ${
+                            nameError
+                                ? styles.inputError
+                                : ""
+                        }`}
+                        id="node-name"
+                        value={name}
+                        placeholder="e.g. gpu-node-01"
+                        onChange={(event) => {
+                            setName(event.target.value);
 
-            if (Number(event.target.value) > 0) {
-              setGpuCountError("");
-            }
-          }}
-          aria-invalid={Boolean(gpuCountError)}
-          aria-describedby={gpuCountError ? "gpu-count-error" : undefined}
-        />
+                            if (
+                                event.target.value.trim()
+                            ) {
+                                setNameError("");
+                            }
+                        }}
+                        aria-invalid={Boolean(
+                            nameError,
+                        )}
+                        aria-describedby={
+                            nameError
+                                ? "node-name-error"
+                                : undefined
+                        }
+                    />
 
-        {gpuCountError && (
-          <p className={styles.error} id="gpu-count-error" role="alert">
-            {gpuCountError}
-          </p>
-        )}
-      </div>
-      <button className={styles.button} type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Creating node..." : "Create Node"}
-      </button>
-    </form>
-  );
+                    {nameError && (
+                        <p
+                            className={styles.error}
+                            id="node-name-error"
+                            role="alert"
+                        >
+                            {nameError}
+                        </p>
+                    )}
+                </div>
+
+                <div className={styles.field}>
+                    <label
+                        className={styles.label}
+                        htmlFor="gpu-model"
+                    >
+                        GPU Model
+                    </label>
+
+                    <input
+                        className={`${styles.input} ${
+                            gpuModelError
+                                ? styles.inputError
+                                : ""
+                        }`}
+                        id="gpu-model"
+                        value={gpuModel}
+                        placeholder="e.g. NVIDIA A100"
+                        onChange={(event) => {
+                            setGpuModel(
+                                event.target.value,
+                            );
+
+                            if (
+                                event.target.value.trim()
+                            ) {
+                                setGpuModelError("");
+                            }
+                        }}
+                        aria-invalid={Boolean(
+                            gpuModelError,
+                        )}
+                        aria-describedby={
+                            gpuModelError
+                                ? "gpu-model-error"
+                                : undefined
+                        }
+                    />
+
+                    {gpuModelError && (
+                        <p
+                            className={styles.error}
+                            id="gpu-model-error"
+                            role="alert"
+                        >
+                            {gpuModelError}
+                        </p>
+                    )}
+                </div>
+
+                <div className={styles.field}>
+                    <label
+                        className={styles.label}
+                        htmlFor="gpu-count"
+                    >
+                        GPU Count
+                    </label>
+
+                    <input
+                        className={`${styles.input} ${
+                            gpuCountError
+                                ? styles.inputError
+                                : ""
+                        }`}
+                        id="gpu-count"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={gpuCount}
+                        onChange={(event) => {
+                            setGpuCount(
+                                event.target.value,
+                            );
+
+                            if (
+                                Number(event.target.value) >
+                                0
+                            ) {
+                                setGpuCountError("");
+                            }
+                        }}
+                        aria-invalid={Boolean(
+                            gpuCountError,
+                        )}
+                        aria-describedby={
+                            gpuCountError
+                                ? "gpu-count-error"
+                                : undefined
+                        }
+                    />
+
+                    {gpuCountError && (
+                        <p
+                            className={styles.error}
+                            id="gpu-count-error"
+                            role="alert"
+                        >
+                            {gpuCountError}
+                        </p>
+                    )}
+                </div>
+
+                <div className={styles.footer}>
+          <span className={styles.hint}>
+            The node will begin in Provisioning
+            status.
+          </span>
+
+                    <button
+                        className={styles.button}
+                        type="submit"
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting
+                            ? "Creating node..."
+                            : "Create Node"}
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
 }
