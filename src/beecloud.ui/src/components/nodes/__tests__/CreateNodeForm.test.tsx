@@ -4,7 +4,7 @@ import CreateNodeForm from "../CreateNodeForm";
 
 describe("CreateNodeForm", () => {
     it("renders all fields", () => {
-        render(<CreateNodeForm onSubmit={jest.fn()} />);
+        render(<CreateNodeForm isSubmitting={false} onSubmit={jest.fn()} />);
 
         expect(
             screen.getByRole("textbox", {
@@ -35,7 +35,7 @@ describe("CreateNodeForm", () => {
         const user = userEvent.setup();
         const onSubmit = jest.fn();
 
-        render(<CreateNodeForm onSubmit={onSubmit} />);
+        render(<CreateNodeForm isSubmitting={false} onSubmit={onSubmit} />);
 
         await user.type(
             screen.getByRole("textbox", {
@@ -72,7 +72,7 @@ describe("CreateNodeForm", () => {
     });
 
     it("uses one GPU by default", () => {
-        render(<CreateNodeForm onSubmit={jest.fn()} />);
+        render(<CreateNodeForm isSubmitting={false} onSubmit={jest.fn()} />);
 
         expect(
             screen.getByRole("spinbutton", {

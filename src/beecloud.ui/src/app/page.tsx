@@ -7,6 +7,7 @@ import NodeCard from "@/components/nodes/NodeCard";
 import styles from "./page.module.css";
 import CreateNodeForm from "@/components/nodes/CreateNodeForm";
 import { createNode } from "@/store/slices/nodesSlice";
+import NetworksSection from "@/components/networks/NetworksSection";
 export default function Home() {
     const dispatch = useAppDispatch();
 
@@ -124,6 +125,7 @@ export default function Home() {
                         ))}
                     </section>
                 )}
+                <NetworksSection />
             </main>
         </div>
     );

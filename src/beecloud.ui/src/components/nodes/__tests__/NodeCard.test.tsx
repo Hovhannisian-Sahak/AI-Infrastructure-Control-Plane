@@ -489,6 +489,30 @@ describe("NodeCard", () => {
             ).toBe(false);
         });
     });
+
+    it.each([
+        "Unhealthy",
+        "Quarantined",
+        "Remediating",
+    ] as const)(
+        "does not show Restart button when node status is %s",
+        (status) => {
+            const remediationNode: ComputeNode = {
+                ...node,
+                status,
+            };
+
+            renderWithProviders(
+                <NodeCard node={remediationNode} />,
+            );
+
+            expect(
+                screen.queryByRole("button", {
+                    name: "Restart",
+                }),
+            ).not.toBeInTheDocument();
+        },
+    );
     it("applies the correct status style", () => {
         const { rerender } = renderWithProviders(<NodeCard node={node} />);
 
