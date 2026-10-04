@@ -22,4 +22,8 @@ public interface INetworkService
     Task ActivateAsync(
         Guid id,
         CancellationToken cancellationToken = default);
+    
+    Task DeleteAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
 }

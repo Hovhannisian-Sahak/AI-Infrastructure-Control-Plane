@@ -18,6 +18,10 @@ public interface INetworkRepository
     Task AddAsync(
         Network network,
         CancellationToken cancellationToken = default);
+    
+    Task<bool> HasAttachmentsAsync(
+        Guid networkId,
+        CancellationToken cancellationToken = default);
 
     Task SaveChangesAsync(
         CancellationToken cancellationToken = default);

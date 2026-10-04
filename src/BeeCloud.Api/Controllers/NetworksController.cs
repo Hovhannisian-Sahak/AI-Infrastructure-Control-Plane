@@ -69,6 +69,18 @@ public class NetworksController : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        await _service.DeleteAsync(
+            id,
+            cancellationToken);
+
+        return NoContent();
+    }
+    
     [HttpPost("{id:guid}/activate")]
     public async Task<IActionResult> Activate(
         Guid id,

@@ -23,8 +23,12 @@ public class NetworkConfiguration
 
         builder.Property(network => network.CreatedAt)
             .IsRequired();
-
+        
+        builder.Property(network => network.DeletedAt)
+            .IsRequired(false);
+        
         builder.HasIndex(network => network.Name)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("\"DeletedAt\" IS NULL");
     }
 }

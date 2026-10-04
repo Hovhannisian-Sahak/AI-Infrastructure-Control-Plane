@@ -47,6 +47,16 @@ public class NetworksClient
 
         return await _client.ExecuteAsync<NetworkResponseModel>(request);
     }
+    
+    public async Task<RestResponse> DeleteAsync(
+        Guid networkId)
+    {
+        var request = new RestRequest(
+            $"/api/v1/networks/{networkId}",
+            Method.Delete);
+
+        return await _client.ExecuteAsync(request);
+    }
 
     public async Task<RestResponse<NetworkAttachmentResponseModel>> AttachToNodeAsync(
         Guid nodeId,

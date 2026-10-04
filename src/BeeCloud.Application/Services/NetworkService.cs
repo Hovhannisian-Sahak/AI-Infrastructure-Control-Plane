@@ -113,6 +113,36 @@ public class NetworkService : INetworkService
         await _repository.SaveChangesAsync(
             cancellationToken);
     }
+    
+    public async Task DeleteAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var network = await _repository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (network is null || network.DeletedAt is not null)
+        {
+            throw new KeyNotFoundException(
+                $"Network with id '{id}' was not found.");
+        }
+
+        var hasAttachments = await _repository.HasAttachmentsAsync(
+            id,
+            cancellationToken);
+
+        if (hasAttachments)
+        {
+            throw new InvalidOperationException(
+                "Network cannot be deleted while nodes are attached.");
+        }
+
+        network.SoftDelete();
+
+        await _repository.SaveChangesAsync(
+            cancellationToken);
+    }
     private static NetworkResponse MapToResponse(Network network)
     {
         return new NetworkResponse

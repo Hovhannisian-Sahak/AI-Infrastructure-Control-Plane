@@ -8,6 +8,8 @@ public class Network
     public bool IsActive { get; private set; }
     public int MaxAttachments { get; private set; }
     public DateTime CreatedAt { get; private set; }
+    
+    public DateTime? DeletedAt { get; private set; }
 
     private Network()
     {
@@ -49,5 +51,11 @@ public class Network
     public void Activate()
     {
         IsActive = true;
+    }
+    
+    public void SoftDelete()
+    {
+        DeletedAt = DateTime.UtcNow;
+        IsActive = false;
     }
 }

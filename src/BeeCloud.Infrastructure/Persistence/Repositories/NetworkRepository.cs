@@ -20,7 +20,9 @@ public class NetworkRepository : INetworkRepository
     {
         return await _dbContext.Networks
             .FirstOrDefaultAsync(
-                network => network.Id == id,
+                network =>
+                    network.Id == id &&
+                    network.DeletedAt == null,
                 cancellationToken);
     }
 
@@ -29,6 +31,7 @@ public class NetworkRepository : INetworkRepository
     {
         return await _dbContext.Networks
             .AsNoTracking()
+            .Where(network => network.DeletedAt == null)
             .OrderBy(network => network.CreatedAt)
             .ToListAsync(cancellationToken);
     }
@@ -39,7 +42,9 @@ public class NetworkRepository : INetworkRepository
     {
         return await _dbContext.Networks
             .AnyAsync(
-                network => network.Name == name,
+                network =>
+                    network.Name == name &&
+                    network.DeletedAt == null,
                 cancellationToken);
     }
 
@@ -52,6 +57,15 @@ public class NetworkRepository : INetworkRepository
             cancellationToken);
     }
 
+    public async Task<bool> HasAttachmentsAsync(
+        Guid networkId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.NetworkAttachments
+            .AnyAsync(
+                attachment => attachment.NetworkId == networkId,
+                cancellationToken);
+    }
     public async Task SaveChangesAsync(
         CancellationToken cancellationToken = default)
     {
