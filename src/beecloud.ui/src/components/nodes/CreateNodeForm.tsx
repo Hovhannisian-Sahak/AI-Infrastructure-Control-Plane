@@ -13,19 +13,16 @@ type CreateNodeFormProps = {
 };
 
 export default function CreateNodeForm({
-                                           onSubmit,
-                                           isSubmitting,
-                                       }: CreateNodeFormProps) {
+    onSubmit,
+    isSubmitting,
+}: CreateNodeFormProps) {
     const [name, setName] = useState("");
     const [gpuModel, setGpuModel] = useState("");
     const [gpuCount, setGpuCount] = useState("1");
 
-    const [nameError, setNameError] =
-        useState("");
-    const [gpuModelError, setGpuModelError] =
-        useState("");
-    const [gpuCountError, setGpuCountError] =
-        useState("");
+    const [nameError, setNameError] = useState("");
+    const [gpuModelError, setGpuModelError] = useState("");
+    const [gpuCountError, setGpuCountError] = useState("");
 
     const handleSubmit = (
         event: React.FormEvent<HTMLFormElement>,
@@ -36,8 +33,13 @@ export default function CreateNodeForm({
         const trimmedGpuModel = gpuModel.trim();
 
         if (!trimmedName) {
+            setNameError("Node name is required.");
+            return;
+        }
+
+        if (trimmedName.length > 100) {
             setNameError(
-                "Node name is required.",
+                "Node name must be 100 characters or fewer.",
             );
             return;
         }
@@ -45,8 +47,13 @@ export default function CreateNodeForm({
         setNameError("");
 
         if (!trimmedGpuModel) {
+            setGpuModelError("GPU model is required.");
+            return;
+        }
+
+        if (trimmedGpuModel.length > 100) {
             setGpuModelError(
-                "GPU model is required.",
+                "GPU model must be 100 characters or fewer.",
             );
             return;
         }
@@ -57,10 +64,11 @@ export default function CreateNodeForm({
 
         if (
             !Number.isInteger(parsedGpuCount) ||
-            parsedGpuCount <= 0
+            parsedGpuCount < 1 ||
+            parsedGpuCount > 16
         ) {
             setGpuCountError(
-                "GPU count must be greater than zero.",
+                "GPU count must be between 1 and 16.",
             );
             return;
         }
@@ -82,8 +90,7 @@ export default function CreateNodeForm({
                 </h2>
 
                 <p className={styles.subtitle}>
-                    Add a GPU compute node to your
-                    BeeCloud fleet.
+                    Add a GPU compute node to your BeeCloud fleet.
                 </p>
             </div>
 
@@ -102,25 +109,23 @@ export default function CreateNodeForm({
 
                     <input
                         className={`${styles.input} ${
-                            nameError
-                                ? styles.inputError
-                                : ""
-                        }`}
+    nameError
+        ? styles.inputError
+        : ""
+}`}
                         id="node-name"
+                        type="text"
                         value={name}
                         placeholder="e.g. gpu-node-01"
+                        maxLength={100}
                         onChange={(event) => {
                             setName(event.target.value);
 
-                            if (
-                                event.target.value.trim()
-                            ) {
+                            if (event.target.value.trim()) {
                                 setNameError("");
                             }
                         }}
-                        aria-invalid={Boolean(
-                            nameError,
-                        )}
+                        aria-invalid={Boolean(nameError)}
                         aria-describedby={
                             nameError
                                 ? "node-name-error"
@@ -149,27 +154,23 @@ export default function CreateNodeForm({
 
                     <input
                         className={`${styles.input} ${
-                            gpuModelError
-                                ? styles.inputError
-                                : ""
-                        }`}
+    gpuModelError
+        ? styles.inputError
+        : ""
+}`}
                         id="gpu-model"
+                        type="text"
                         value={gpuModel}
                         placeholder="e.g. NVIDIA A100"
+                        maxLength={100}
                         onChange={(event) => {
-                            setGpuModel(
-                                event.target.value,
-                            );
+                            setGpuModel(event.target.value);
 
-                            if (
-                                event.target.value.trim()
-                            ) {
+                            if (event.target.value.trim()) {
                                 setGpuModelError("");
                             }
                         }}
-                        aria-invalid={Boolean(
-                            gpuModelError,
-                        )}
+                        aria-invalid={Boolean(gpuModelError)}
                         aria-describedby={
                             gpuModelError
                                 ? "gpu-model-error"
@@ -198,30 +199,32 @@ export default function CreateNodeForm({
 
                     <input
                         className={`${styles.input} ${
-                            gpuCountError
-                                ? styles.inputError
-                                : ""
-                        }`}
+    gpuCountError
+        ? styles.inputError
+        : ""
+}`}
                         id="gpu-count"
                         type="number"
                         min="1"
+                        max="16"
                         step="1"
                         value={gpuCount}
                         onChange={(event) => {
-                            setGpuCount(
+                            setGpuCount(event.target.value);
+
+                            const value = Number(
                                 event.target.value,
                             );
 
                             if (
-                                Number(event.target.value) >
-                                0
+                                Number.isInteger(value) &&
+                                value >= 1 &&
+                                value <= 16
                             ) {
                                 setGpuCountError("");
                             }
                         }}
-                        aria-invalid={Boolean(
-                            gpuCountError,
-                        )}
+                        aria-invalid={Boolean(gpuCountError)}
                         aria-describedby={
                             gpuCountError
                                 ? "gpu-count-error"
@@ -241,10 +244,9 @@ export default function CreateNodeForm({
                 </div>
 
                 <div className={styles.footer}>
-          <span className={styles.hint}>
-            The node will begin in Provisioning
-            status.
-          </span>
+                    <span className={styles.hint}>
+                        The node will begin in Provisioning status.
+                    </span>
 
                     <button
                         className={styles.button}
