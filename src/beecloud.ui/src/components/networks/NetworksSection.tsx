@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
+  clearNetworkError,
   createNetwork,
   fetchNetworks,
 } from "@/store/slices/networksSlice";
@@ -26,7 +27,19 @@ export default function NetworksSection() {
   useEffect(() => {
     dispatch(fetchNetworks());
   }, [dispatch]);
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
 
+    const timeoutId = setTimeout(() => {
+      dispatch(clearNetworkError());
+    }, 5000);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [error, dispatch]);
   const handleCreateNetwork = async (request: {
     name: string;
     description?: string;
@@ -91,7 +104,6 @@ export default function NetworksSection() {
         )}
 
         {!loading &&
-            !error &&
             networks.length === 0 && (
                 <div className={styles.empty}>
                   <div className={styles.emptyIcon}>
@@ -108,7 +120,6 @@ export default function NetworksSection() {
             )}
 
         {!loading &&
-            !error &&
             networks.length > 0 && (
                 <div className={styles.grid}>
                   {networks.map((network) => (

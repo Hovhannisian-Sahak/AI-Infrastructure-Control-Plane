@@ -9,57 +9,135 @@ import CreateNodeForm from "../CreateNodeForm";
 describe("CreateNodeForm", () => {
   it("renders all fields", () => {
     render(
-      <CreateNodeForm
-        onSubmit={jest.fn()}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={jest.fn()}
+            isSubmitting={false}
+        />,
     );
 
     expect(
-      screen.getByLabelText("Node Name"),
+        screen.getByLabelText("Node Name"),
     ).toBeInTheDocument();
 
     expect(
-      screen.getByLabelText("GPU Model"),
+        screen.getByLabelText("GPU Model"),
     ).toBeInTheDocument();
 
     expect(
-      screen.getByLabelText("GPU Count"),
+        screen.getByLabelText("GPU Count"),
     ).toBeInTheDocument();
 
     expect(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+        screen.getByRole("button", {
+          name: "Create Node",
+        }),
     ).toBeInTheDocument();
   });
 
   it("renders the create node heading", () => {
     render(
-      <CreateNodeForm
-        onSubmit={jest.fn()}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={jest.fn()}
+            isSubmitting={false}
+        />,
     );
 
     expect(
-      screen.getByRole("heading", {
-        name: "Create Compute Node",
-      }),
+        screen.getByRole("heading", {
+          name: "Create Compute Node",
+        }),
     ).toBeInTheDocument();
   });
 
   it("uses one GPU by default", () => {
     render(
-      <CreateNodeForm
-        onSubmit={jest.fn()}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={jest.fn()}
+            isSubmitting={false}
+        />,
     );
 
     expect(
-      screen.getByLabelText("GPU Count"),
+        screen.getByLabelText("GPU Count"),
     ).toHaveValue(1);
+  });
+
+  it("disables the submit button when the form is empty", () => {
+    render(
+        <CreateNodeForm
+            onSubmit={jest.fn()}
+            isSubmitting={false}
+        />,
+    );
+
+    expect(
+        screen.getByRole("button", {
+          name: "Create Node",
+        }),
+    ).toBeDisabled();
+  });
+
+  it("keeps the submit button disabled until all fields are valid", async () => {
+    const user = userEvent.setup();
+
+    render(
+        <CreateNodeForm
+            onSubmit={jest.fn()}
+            isSubmitting={false}
+        />,
+    );
+
+    const button = screen.getByRole("button", {
+      name: "Create Node",
+    });
+
+    expect(button).toBeDisabled();
+
+    await user.type(
+        screen.getByLabelText("Node Name"),
+        "GPU Node 1",
+    );
+
+    expect(button).toBeDisabled();
+
+    await user.type(
+        screen.getByLabelText("GPU Model"),
+        "NVIDIA H100",
+    );
+
+    expect(button).toBeEnabled();
+  });
+
+  it("disables the submit button when GPU count is invalid", async () => {
+    const user = userEvent.setup();
+
+    render(
+        <CreateNodeForm
+            onSubmit={jest.fn()}
+            isSubmitting={false}
+        />,
+    );
+
+    await user.type(
+        screen.getByLabelText("Node Name"),
+        "GPU Node 1",
+    );
+
+    await user.type(
+        screen.getByLabelText("GPU Model"),
+        "NVIDIA H100",
+    );
+
+    const gpuCount = screen.getByLabelText("GPU Count");
+
+    await user.clear(gpuCount);
+    await user.type(gpuCount, "17");
+
+    expect(
+        screen.getByRole("button", {
+          name: "Create Node",
+        }),
+    ).toBeDisabled();
   });
 
   it("submits the entered node data", async () => {
@@ -67,20 +145,20 @@ describe("CreateNodeForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     await user.type(
-      screen.getByLabelText("Node Name"),
-      "GPU Node 2",
+        screen.getByLabelText("Node Name"),
+        "GPU Node 2",
     );
 
     await user.type(
-      screen.getByLabelText("GPU Model"),
-      "NVIDIA H100",
+        screen.getByLabelText("GPU Model"),
+        "NVIDIA H100",
     );
 
     const gpuCount = screen.getByLabelText("GPU Count");
@@ -89,9 +167,9 @@ describe("CreateNodeForm", () => {
     await user.type(gpuCount, "8");
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+        screen.getByRole("button", {
+          name: "Create Node",
+        }),
     );
 
     expect(onSubmit).toHaveBeenCalledWith({
@@ -103,40 +181,41 @@ describe("CreateNodeForm", () => {
 
   it("disables the submit button while creating a node", () => {
     render(
-      <CreateNodeForm
-        onSubmit={jest.fn()}
-        isSubmitting={true}
-      />,
+        <CreateNodeForm
+            onSubmit={jest.fn()}
+            isSubmitting={true}
+        />,
     );
 
     expect(
-      screen.getByRole("button", {
-        name: "Creating node...",
-      }),
+        screen.getByRole("button", {
+          name: "Creating node...",
+        }),
     ).toBeDisabled();
   });
 
-  it("shows an error when the node name is empty", async () => {
-    const user = userEvent.setup();
+  it("shows an error when the node name is empty", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+    fireEvent.submit(
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByRole("alert"),
+        screen.getByRole("alert"),
     ).toHaveTextContent(
-      "Node name is required.",
+        "Node name is required.",
     );
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -147,27 +226,29 @@ describe("CreateNodeForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     await user.type(
-      screen.getByLabelText("Node Name"),
-      "   ",
+        screen.getByLabelText("Node Name"),
+        "   ",
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+    fireEvent.submit(
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByRole("alert"),
+        screen.getByRole("alert"),
     ).toHaveTextContent(
-      "Node name is required.",
+        "Node name is required.",
     );
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -177,42 +258,42 @@ describe("CreateNodeForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     fireEvent.change(
-      screen.getByLabelText("Node Name"),
-      {
-        target: {
-          value: "a".repeat(101),
+        screen.getByLabelText("Node Name"),
+        {
+          target: {
+            value: "a".repeat(101),
+          },
         },
-      },
     );
 
     fireEvent.change(
-      screen.getByLabelText("GPU Model"),
-      {
-        target: {
-          value: "NVIDIA A100",
+        screen.getByLabelText("GPU Model"),
+        {
+          target: {
+            value: "NVIDIA A100",
+          },
         },
-      },
     );
 
     fireEvent.submit(
-      screen
-        .getByRole("button", {
-          name: "Create Node",
-        })
-        .closest("form")!,
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByText(
-        "Node name must be 100 characters or fewer.",
-      ),
+        screen.getByText(
+            "Node name must be 100 characters or fewer.",
+        ),
     ).toBeInTheDocument();
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -223,27 +304,29 @@ describe("CreateNodeForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     await user.type(
-      screen.getByLabelText("Node Name"),
-      "GPU Node 1",
+        screen.getByLabelText("Node Name"),
+        "GPU Node 1",
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+    fireEvent.submit(
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByRole("alert"),
+        screen.getByRole("alert"),
     ).toHaveTextContent(
-      "GPU model is required.",
+        "GPU model is required.",
     );
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -254,32 +337,34 @@ describe("CreateNodeForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     await user.type(
-      screen.getByLabelText("Node Name"),
-      "GPU Node 1",
+        screen.getByLabelText("Node Name"),
+        "GPU Node 1",
     );
 
     await user.type(
-      screen.getByLabelText("GPU Model"),
-      "   ",
+        screen.getByLabelText("GPU Model"),
+        "   ",
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+    fireEvent.submit(
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByRole("alert"),
+        screen.getByRole("alert"),
     ).toHaveTextContent(
-      "GPU model is required.",
+        "GPU model is required.",
     );
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -289,42 +374,42 @@ describe("CreateNodeForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     fireEvent.change(
-      screen.getByLabelText("Node Name"),
-      {
-        target: {
-          value: "gpu-node-01",
+        screen.getByLabelText("Node Name"),
+        {
+          target: {
+            value: "gpu-node-01",
+          },
         },
-      },
     );
 
     fireEvent.change(
-      screen.getByLabelText("GPU Model"),
-      {
-        target: {
-          value: "a".repeat(101),
+        screen.getByLabelText("GPU Model"),
+        {
+          target: {
+            value: "a".repeat(101),
+          },
         },
-      },
     );
 
     fireEvent.submit(
-      screen
-        .getByRole("button", {
-          name: "Create Node",
-        })
-        .closest("form")!,
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByText(
-        "GPU model must be 100 characters or fewer.",
-      ),
+        screen.getByText(
+            "GPU model must be 100 characters or fewer.",
+        ),
     ).toBeInTheDocument();
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -335,20 +420,20 @@ describe("CreateNodeForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     await user.type(
-      screen.getByLabelText("Node Name"),
-      "GPU Node 1",
+        screen.getByLabelText("Node Name"),
+        "GPU Node 1",
     );
 
     await user.type(
-      screen.getByLabelText("GPU Model"),
-      "NVIDIA H100",
+        screen.getByLabelText("GPU Model"),
+        "NVIDIA H100",
     );
 
     const gpuCount = screen.getByLabelText("GPU Count");
@@ -356,16 +441,18 @@ describe("CreateNodeForm", () => {
     await user.clear(gpuCount);
     await user.type(gpuCount, "0");
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+    fireEvent.submit(
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByRole("alert"),
+        screen.getByRole("alert"),
     ).toHaveTextContent(
-      "GPU count must be between 1 and 16.",
+        "GPU count must be between 1 and 16.",
     );
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -376,20 +463,20 @@ describe("CreateNodeForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     await user.type(
-      screen.getByLabelText("Node Name"),
-      "GPU Node 1",
+        screen.getByLabelText("Node Name"),
+        "GPU Node 1",
     );
 
     await user.type(
-      screen.getByLabelText("GPU Model"),
-      "NVIDIA H100",
+        screen.getByLabelText("GPU Model"),
+        "NVIDIA H100",
     );
 
     const gpuCount = screen.getByLabelText("GPU Count");
@@ -397,16 +484,18 @@ describe("CreateNodeForm", () => {
     await user.clear(gpuCount);
     await user.type(gpuCount, "-2");
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+    fireEvent.submit(
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByRole("alert"),
+        screen.getByRole("alert"),
     ).toHaveTextContent(
-      "GPU count must be between 1 and 16.",
+        "GPU count must be between 1 and 16.",
     );
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -416,51 +505,51 @@ describe("CreateNodeForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     fireEvent.change(
-      screen.getByLabelText("Node Name"),
-      {
-        target: {
-          value: "gpu-node-01",
+        screen.getByLabelText("Node Name"),
+        {
+          target: {
+            value: "gpu-node-01",
+          },
         },
-      },
     );
 
     fireEvent.change(
-      screen.getByLabelText("GPU Model"),
-      {
-        target: {
-          value: "NVIDIA A100",
+        screen.getByLabelText("GPU Model"),
+        {
+          target: {
+            value: "NVIDIA A100",
+          },
         },
-      },
     );
 
     fireEvent.change(
-      screen.getByLabelText("GPU Count"),
-      {
-        target: {
-          value: "17",
+        screen.getByLabelText("GPU Count"),
+        {
+          target: {
+            value: "17",
+          },
         },
-      },
     );
 
     fireEvent.submit(
-      screen
-        .getByRole("button", {
-          name: "Create Node",
-        })
-        .closest("form")!,
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByText(
-        "GPU count must be between 1 and 16.",
-      ),
+        screen.getByText(
+            "GPU count must be between 1 and 16.",
+        ),
     ).toBeInTheDocument();
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -470,45 +559,45 @@ describe("CreateNodeForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     fireEvent.change(
-      screen.getByLabelText("Node Name"),
-      {
-        target: {
-          value: "gpu-node-01",
+        screen.getByLabelText("Node Name"),
+        {
+          target: {
+            value: "gpu-node-01",
+          },
         },
-      },
     );
 
     fireEvent.change(
-      screen.getByLabelText("GPU Model"),
-      {
-        target: {
-          value: "NVIDIA A100",
+        screen.getByLabelText("GPU Model"),
+        {
+          target: {
+            value: "NVIDIA A100",
+          },
         },
-      },
     );
 
     fireEvent.change(
-      screen.getByLabelText("GPU Count"),
-      {
-        target: {
-          value: "16",
+        screen.getByLabelText("GPU Count"),
+        {
+          target: {
+            value: "16",
+          },
         },
-      },
     );
 
     fireEvent.submit(
-      screen
-        .getByRole("button", {
-          name: "Create Node",
-        })
-        .closest("form")!,
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(onSubmit).toHaveBeenCalledWith({
@@ -523,20 +612,20 @@ describe("CreateNodeForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNodeForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     await user.type(
-      screen.getByLabelText("Node Name"),
-      "GPU Node 1",
+        screen.getByLabelText("Node Name"),
+        "GPU Node 1",
     );
 
     await user.type(
-      screen.getByLabelText("GPU Model"),
-      "NVIDIA H100",
+        screen.getByLabelText("GPU Model"),
+        "NVIDIA H100",
     );
 
     const gpuCount = screen.getByLabelText("GPU Count");
@@ -544,16 +633,18 @@ describe("CreateNodeForm", () => {
     await user.clear(gpuCount);
     await user.type(gpuCount, "2.5");
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+    fireEvent.submit(
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByRole("alert"),
+        screen.getByRole("alert"),
     ).toHaveTextContent(
-      "GPU count must be between 1 and 16.",
+        "GPU count must be between 1 and 16.",
     );
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -563,31 +654,33 @@ describe("CreateNodeForm", () => {
     const user = userEvent.setup();
 
     render(
-      <CreateNodeForm
-        onSubmit={jest.fn()}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={jest.fn()}
+            isSubmitting={false}
+        />,
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+    fireEvent.submit(
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByRole("alert"),
+        screen.getByRole("alert"),
     ).toHaveTextContent(
-      "Node name is required.",
+        "Node name is required.",
     );
 
     await user.type(
-      screen.getByLabelText("Node Name"),
-      "GPU Node 1",
+        screen.getByLabelText("Node Name"),
+        "GPU Node 1",
     );
 
     expect(
-      screen.queryByRole("alert"),
+        screen.queryByRole("alert"),
     ).not.toBeInTheDocument();
   });
 
@@ -595,36 +688,38 @@ describe("CreateNodeForm", () => {
     const user = userEvent.setup();
 
     render(
-      <CreateNodeForm
-        onSubmit={jest.fn()}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={jest.fn()}
+            isSubmitting={false}
+        />,
     );
 
     await user.type(
-      screen.getByLabelText("Node Name"),
-      "GPU Node 1",
+        screen.getByLabelText("Node Name"),
+        "GPU Node 1",
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+    fireEvent.submit(
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByRole("alert"),
+        screen.getByRole("alert"),
     ).toHaveTextContent(
-      "GPU model is required.",
+        "GPU model is required.",
     );
 
     await user.type(
-      screen.getByLabelText("GPU Model"),
-      "NVIDIA H100",
+        screen.getByLabelText("GPU Model"),
+        "NVIDIA H100",
     );
 
     expect(
-      screen.queryByRole("alert"),
+        screen.queryByRole("alert"),
     ).not.toBeInTheDocument();
   });
 
@@ -632,20 +727,20 @@ describe("CreateNodeForm", () => {
     const user = userEvent.setup();
 
     render(
-      <CreateNodeForm
-        onSubmit={jest.fn()}
-        isSubmitting={false}
-      />,
+        <CreateNodeForm
+            onSubmit={jest.fn()}
+            isSubmitting={false}
+        />,
     );
 
     await user.type(
-      screen.getByLabelText("Node Name"),
-      "GPU Node 1",
+        screen.getByLabelText("Node Name"),
+        "GPU Node 1",
     );
 
     await user.type(
-      screen.getByLabelText("GPU Model"),
-      "NVIDIA H100",
+        screen.getByLabelText("GPU Model"),
+        "NVIDIA H100",
     );
 
     const gpuCount = screen.getByLabelText("GPU Count");
@@ -653,23 +748,25 @@ describe("CreateNodeForm", () => {
     await user.clear(gpuCount);
     await user.type(gpuCount, "0");
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Create Node",
-      }),
+    fireEvent.submit(
+        screen
+            .getByRole("button", {
+              name: "Create Node",
+            })
+            .closest("form")!,
     );
 
     expect(
-      screen.getByRole("alert"),
+        screen.getByRole("alert"),
     ).toHaveTextContent(
-      "GPU count must be between 1 and 16.",
+        "GPU count must be between 1 and 16.",
     );
 
     await user.clear(gpuCount);
     await user.type(gpuCount, "8");
 
     expect(
-      screen.queryByRole("alert"),
+        screen.queryByRole("alert"),
     ).not.toBeInTheDocument();
   });
 });

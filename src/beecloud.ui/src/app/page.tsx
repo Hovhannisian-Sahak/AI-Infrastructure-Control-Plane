@@ -83,25 +83,27 @@ export default function Home() {
         )}
 
         {error && (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
+            <p className={styles.error} role="alert">
+              {error}
+            </p>
         )}
 
-        {!loading && !error && nodes.length === 0 && (
-          <div className={styles.emptyState}>
-            <h2 className={styles.emptyTitle}>No compute nodes</h2>
+        {!loading && nodes.length === 0 && (
+            <div className={styles.emptyState}>
+              <h2 className={styles.emptyTitle}>No compute nodes</h2>
 
-            <p className={styles.emptyMessage}>Create a node to start managing your GPU fleet.</p>
-          </div>
+              <p className={styles.emptyMessage}>
+                Create a node to start managing your GPU fleet.
+              </p>
+            </div>
         )}
 
-        {!loading && !error && nodes.length > 0 && (
-          <section className={styles.nodes}>
-            {nodes.map((node) => (
-              <NodeCard key={node.id} node={node} />
-            ))}
-          </section>
+        {!loading && nodes.length > 0 && (
+            <section className={styles.nodes}>
+              {nodes.map((node) => (
+                  <NodeCard key={node.id} node={node} />
+              ))}
+            </section>
         )}
         <NetworksSection />
       </main>

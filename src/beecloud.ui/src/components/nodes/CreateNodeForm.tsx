@@ -23,7 +23,14 @@ export default function CreateNodeForm({
     const [nameError, setNameError] = useState("");
     const [gpuModelError, setGpuModelError] = useState("");
     const [gpuCountError, setGpuCountError] = useState("");
-
+    const isFormValid =
+        name.trim().length > 0 &&
+        name.trim().length <= 100 &&
+        gpuModel.trim().length > 0 &&
+        gpuModel.trim().length <= 100 &&
+        Number.isInteger(Number(gpuCount)) &&
+        Number(gpuCount) >= 1 &&
+        Number(gpuCount) <= 16;
     const handleSubmit = (
         event: React.FormEvent<HTMLFormElement>,
     ) => {
@@ -251,7 +258,7 @@ export default function CreateNodeForm({
                     <button
                         className={styles.button}
                         type="submit"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || !isFormValid}
                     >
                         {isSubmitting
                             ? "Creating node..."
