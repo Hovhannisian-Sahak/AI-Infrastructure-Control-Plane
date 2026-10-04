@@ -11,27 +11,77 @@ export class ApiClient {
     this.baseUrl = baseUrl;
   }
 
+  private handleError(
+      response: Response,
+      action: string,
+  ): never {
+    switch (response.status) {
+      case 400:
+        throw new Error(
+            `The ${action} request is invalid.`,
+        );
+
+      case 401:
+        throw new Error(
+            `You are not authorized to ${action} this resource.`,
+        );
+
+      case 403:
+        throw new Error(
+            `You do not have permission to ${action} this resource.`,
+        );
+
+      case 404:
+        throw new Error(
+            "The resource was not found.",
+        );
+
+      case 409:
+        throw new Error(
+            "The request conflicts with the current state of the resource.",
+        );
+
+      case 500:
+        throw new Error(
+            `The server could not ${action} the resource.`,
+        );
+
+      default:
+        throw new Error(
+            `Failed to ${action} the resource. Please try again.`,
+        );
+    }
+  }
+
   async get<T>(path: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`);
+    const response = await fetch(
+        `${this.baseUrl}${path}`,
+    );
 
     if (!response.ok) {
-      throw new Error(`GET ${path} failed with status ${response.status}`);
+      this.handleError(response, "get");
     }
 
     return response.json() as Promise<T>;
   }
 
-  async post<TResponse, TRequest>(path: string, body: TRequest): Promise<TResponse> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+  async post<TResponse, TRequest>(
+      path: string,
+      body: TRequest,
+  ): Promise<TResponse> {
+    const response = await fetch(
+        `${this.baseUrl}${path}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        },
+    );
 
     if (!response.ok) {
-      throw new Error(`POST ${path} failed with status ${response.status}`);
+      this.handleError(response, "create");
     }
 
     if (response.status === 204) {
@@ -41,64 +91,38 @@ export class ApiClient {
     return response.json() as Promise<TResponse>;
   }
 
-  async put<TResponse, TRequest>(path: string, body: TRequest): Promise<TResponse> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+  async put<TResponse, TRequest>(
+      path: string,
+      body: TRequest,
+  ): Promise<TResponse> {
+    const response = await fetch(
+        `${this.baseUrl}${path}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        },
+    );
 
     if (!response.ok) {
-      throw new Error(`PUT ${path} failed with status ${response.status}`);
+      this.handleError(response, "update");
     }
 
     return response.json() as Promise<TResponse>;
   }
 
   async delete(path: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: "DELETE",
-    });
+    const response = await fetch(
+        `${this.baseUrl}${path}`,
+        {
+          method: "DELETE",
+        },
+    );
 
     if (!response.ok) {
-      switch (response.status) {
-        case 400:
-          throw new Error(
-              "The delete request is invalid.",
-          );
-
-        case 401:
-          throw new Error(
-              "You are not authorized to delete this resource.",
-          );
-
-        case 403:
-          throw new Error(
-              "You do not have permission to delete this resource.",
-          );
-
-        case 404:
-          throw new Error(
-              "The resource was not found.",
-          );
-
-        case 409:
-          throw new Error(
-              "The request conflicts with the current state of the resource.",
-          );
-
-        case 500:
-          throw new Error(
-              "The server could not delete the resource.",
-          );
-
-        default:
-          throw new Error(
-              "Failed to delete the resource. Please try again.",
-          );
-      }
+      this.handleError(response, "delete");
     }
   }
 }
