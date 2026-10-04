@@ -43,6 +43,7 @@ const initialState: NetworksState = {
     attachmentsByNetworkId: {},
     loading: false,
     creating: false,
+    deletingNetworkId: null,
     error: null,
     createSuccess: null,
 };
