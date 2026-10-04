@@ -30,6 +30,10 @@ export const networksApi = {
     return apiClient.get<NetworkAttachment[]>(`/api/v1/nodes/${nodeId}/networks`);
   },
 
+  delete(id: string): Promise<void> {
+    return apiClient.delete(`/api/v1/networks/${id}`);
+  },
+  
   attach(nodeId: string, networkId: string): Promise<NetworkAttachment> {
     return apiClient.post<NetworkAttachment, undefined>(
       `/api/v1/nodes/${nodeId}/networks/${networkId}`,

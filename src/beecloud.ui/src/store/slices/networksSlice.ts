@@ -20,12 +20,10 @@ type NetworkAttachmentState = {
 
 type NetworksState = {
     networks: Network[];
-    attachmentsByNetworkId: Record<
-        string,
-        NetworkAttachmentState
-    >;
+    attachmentsByNetworkId: Record<string, NetworkAttachmentState>;
     loading: boolean;
     creating: boolean;
+    deletingNetworkId: string | null;
     error: string | null;
     createSuccess: string | null;
 };
@@ -121,7 +119,14 @@ export const deactivateNetwork = createAsyncThunk(
         }
     },
 );
+export const deleteNetwork = createAsyncThunk(
+    "networks/deleteNetwork",
+    async (networkId: string) => {
+        await networksApi.delete(networkId);
 
+        return networkId;
+    },
+);
 export const fetchNetworkAttachments =
     createAsyncThunk(
         "networks/fetchNetworkAttachments",
@@ -289,6 +294,25 @@ const networksSlice = createSlice({
                         "Failed to create network.";
                 },
             )
+            .addCase(deleteNetwork.pending, (state, action) => {
+                state.deletingNetworkId = action.meta.arg;
+                state.error = null;
+            })
+            .addCase(deleteNetwork.fulfilled, (state, action) => {
+                state.networks = state.networks.filter(
+                    (network) => network.id !== action.payload,
+                );
+
+                delete state.attachmentsByNetworkId[action.payload];
+
+                state.deletingNetworkId = null;
+            })
+            .addCase(deleteNetwork.rejected, (state, action) => {
+                state.deletingNetworkId = null;
+                state.error =
+                    action.error.message ??
+                    "Failed to delete network.";
+            })
 
             // -----------------------------
             // Activate network

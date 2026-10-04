@@ -187,4 +187,14 @@ describe("networksApi", () => {
             "/api/v1/nodes/node-1/networks/network-1",
         );
     });
+
+    it("deletes a network", async () => {
+        mockedApiClient.delete.mockResolvedValue(undefined);
+
+        await networksApi.delete("network-1");
+
+        expect(mockedApiClient.delete).toHaveBeenCalledWith(
+            "/api/v1/networks/network-1",
+        );
+    });
 });

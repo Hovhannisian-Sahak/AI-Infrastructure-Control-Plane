@@ -60,7 +60,10 @@ const nodes = [
   },
 ];
 
-function renderNetworkCard(overrides?: { network?: Network; attachments?: NetworkAttachment[] }) {
+function renderNetworkCard(overrides?: {
+  network?: Network;
+  attachments?: NetworkAttachment[];
+}) {
   const store = createTestStore({
     nodes: {
       nodes,
@@ -83,9 +86,11 @@ function renderNetworkCard(overrides?: { network?: Network; attachments?: Networ
   return {
     store,
     ...render(
-      <Provider store={store}>
-        <NetworkCard network={overrides?.network ?? network} />
-      </Provider>,
+        <Provider store={store}>
+          <NetworkCard
+              network={overrides?.network ?? network}
+          />
+        </Provider>,
     ),
   };
 }
@@ -93,11 +98,29 @@ function renderNetworkCard(overrides?: { network?: Network; attachments?: Networ
 beforeEach(() => {
   jest.resetAllMocks();
 
-  mockedNetworksApi.getNetworkNodes.mockReturnValue(new Promise<NetworkAttachment[]>(() => {}));
-  mockedNetworksApi.activate.mockReturnValue(new Promise<void>(() => {}));
-  mockedNetworksApi.deactivate.mockReturnValue(new Promise<void>(() => {}));
-  mockedNetworksApi.attach.mockReturnValue(new Promise<NetworkAttachment>(() => {}));
-  mockedNetworksApi.detach.mockReturnValue(new Promise<void>(() => {}));
+  mockedNetworksApi.getNetworkNodes.mockReturnValue(
+      new Promise<NetworkAttachment[]>(() => {}),
+  );
+
+  mockedNetworksApi.activate.mockReturnValue(
+      new Promise<void>(() => {}),
+  );
+
+  mockedNetworksApi.deactivate.mockReturnValue(
+      new Promise<void>(() => {}),
+  );
+
+  mockedNetworksApi.delete.mockReturnValue(
+      new Promise<void>(() => {}),
+  );
+
+  mockedNetworksApi.attach.mockReturnValue(
+      new Promise<NetworkAttachment>(() => {}),
+  );
+
+  mockedNetworksApi.detach.mockReturnValue(
+      new Promise<void>(() => {}),
+  );
 });
 
 describe("NetworkCard", () => {
@@ -105,12 +128,14 @@ describe("NetworkCard", () => {
     renderNetworkCard();
 
     expect(
-      screen.getByRole("heading", {
-        name: "gpu-production",
-      }),
+        screen.getByRole("heading", {
+          name: "gpu-production",
+        }),
     ).toBeInTheDocument();
 
-    expect(screen.getByText("Production GPU network")).toBeInTheDocument();
+    expect(
+        screen.getByText("Production GPU network"),
+    ).toBeInTheDocument();
 
     expect(screen.getByText("Active")).toBeInTheDocument();
     expect(screen.getByText("0 / 4")).toBeInTheDocument();
@@ -121,14 +146,24 @@ describe("NetworkCard", () => {
     const { store } = renderNetworkCard();
 
     await waitFor(() => {
-      expect(mockedNetworksApi.getNetworkNodes).toHaveBeenCalledWith("network-1");
-      expect(store.getState().networks.attachmentsByNetworkId["network-1"].loading).toBe(false);
+      expect(
+          mockedNetworksApi.getNetworkNodes,
+      ).toHaveBeenCalledWith("network-1");
+
+      expect(
+          store.getState().networks.attachmentsByNetworkId[
+              "network-1"
+              ].loading,
+      ).toBe(false);
     });
   });
 
   it("shows attachments when Show attachments is clicked", async () => {
     const user = userEvent.setup();
-    mockedNetworksApi.getNetworkNodes.mockResolvedValue([attachment]);
+
+    mockedNetworksApi.getNetworkNodes.mockResolvedValue([
+      attachment,
+    ]);
 
     renderNetworkCard({
       attachments: [attachment],
@@ -137,48 +172,57 @@ describe("NetworkCard", () => {
     expect(screen.getByText("1 / 4")).toBeInTheDocument();
 
     await user.click(
-      screen.getByRole("button", {
-        name: /show attachments/i,
-      }),
+        screen.getByRole("button", {
+          name: /show attachments/i,
+        }),
     );
 
-    expect(await screen.findByText("GPU Node 1")).toBeInTheDocument();
+    expect(
+        await screen.findByText("GPU Node 1"),
+    ).toBeInTheDocument();
 
     expect(
-      screen.getByRole("button", {
-        name: /hide attachments/i,
-      }),
+        screen.getByRole("button", {
+          name: /hide attachments/i,
+        }),
     ).toBeInTheDocument();
   });
 
   it("hides attachments when Hide attachments is clicked", async () => {
     const user = userEvent.setup();
-    mockedNetworksApi.getNetworkNodes.mockResolvedValue([attachment]);
+
+    mockedNetworksApi.getNetworkNodes.mockResolvedValue([
+      attachment,
+    ]);
 
     renderNetworkCard({
       attachments: [attachment],
     });
 
     await user.click(
-      screen.getByRole("button", {
-        name: /show attachments/i,
-      }),
+        screen.getByRole("button", {
+          name: /show attachments/i,
+        }),
     );
-
-    expect(await screen.findByText("GPU Node 1")).toBeInTheDocument();
-
-    await user.click(
-      screen.getByRole("button", {
-        name: /hide attachments/i,
-      }),
-    );
-
-    expect(screen.queryByText("GPU Node 1")).not.toBeInTheDocument();
 
     expect(
-      screen.getByRole("button", {
-        name: /show attachments/i,
-      }),
+        await screen.findByText("GPU Node 1"),
+    ).toBeInTheDocument();
+
+    await user.click(
+        screen.getByRole("button", {
+          name: /hide attachments/i,
+        }),
+    );
+
+    expect(
+        screen.queryByText("GPU Node 1"),
+    ).not.toBeInTheDocument();
+
+    expect(
+        screen.getByRole("button", {
+          name: /show attachments/i,
+        }),
     ).toBeInTheDocument();
   });
 
@@ -189,9 +233,13 @@ describe("NetworkCard", () => {
 
     expect(screen.getByText("2 / 4")).toBeInTheDocument();
 
-    expect(screen.queryByText("GPU Node 1")).not.toBeInTheDocument();
+    expect(
+        screen.queryByText("GPU Node 1"),
+    ).not.toBeInTheDocument();
 
-    expect(screen.queryByText("GPU Node 2")).not.toBeInTheDocument();
+    expect(
+        screen.queryByText("GPU Node 2"),
+    ).not.toBeInTheDocument();
   });
 
   it("does not offer nodes that are already attached", async () => {
@@ -202,9 +250,9 @@ describe("NetworkCard", () => {
     });
 
     await user.click(
-      screen.getByRole("button", {
-        name: /show attachments/i,
-      }),
+        screen.getByRole("button", {
+          name: /show attachments/i,
+        }),
     );
 
     const select = screen.getByRole("combobox");
@@ -212,21 +260,21 @@ describe("NetworkCard", () => {
     expect(select).toBeInTheDocument();
 
     expect(
-      screen.queryByRole("option", {
-        name: /GPU Node 1/,
-      }),
+        screen.queryByRole("option", {
+          name: /GPU Node 1/,
+        }),
     ).not.toBeInTheDocument();
 
     expect(
-      screen.getByRole("option", {
-        name: /GPU Node 2/,
-      }),
+        screen.getByRole("option", {
+          name: /GPU Node 2/,
+        }),
     ).toBeInTheDocument();
 
     expect(
-      screen.getByRole("option", {
-        name: /GPU Node 3/,
-      }),
+        screen.getByRole("option", {
+          name: /GPU Node 3/,
+        }),
     ).toBeInTheDocument();
   });
 
@@ -243,9 +291,9 @@ describe("NetworkCard", () => {
     const { store } = renderNetworkCard();
 
     await user.click(
-      screen.getByRole("button", {
-        name: /show attachments/i,
-      }),
+        screen.getByRole("button", {
+          name: /show attachments/i,
+        }),
     );
 
     const select = screen.getByRole("combobox");
@@ -253,43 +301,61 @@ describe("NetworkCard", () => {
     await user.selectOptions(select, "node-2");
 
     await user.click(
-      screen.getByRole("button", {
-        name: /^attach$/i,
-      }),
+        screen.getByRole("button", {
+          name: /^attach$/i,
+        }),
     );
 
     await waitFor(() => {
-      expect(mockedNetworksApi.attach).toHaveBeenCalledWith("node-2", "network-1");
-      expect(store.getState().networks.attachmentsByNetworkId["network-1"].attachLoading).toBe(
-        false,
+      expect(
+          mockedNetworksApi.attach,
+      ).toHaveBeenCalledWith(
+          "node-2",
+          "network-1",
       );
+
+      expect(
+          store.getState().networks.attachmentsByNetworkId[
+              "network-1"
+              ].attachLoading,
+      ).toBe(false);
     });
   });
 
   it("detaches an attached node", async () => {
     const user = userEvent.setup();
-    mockedNetworksApi.getNetworkNodes.mockResolvedValue([attachment]);
+
+    mockedNetworksApi.getNetworkNodes.mockResolvedValue([
+      attachment,
+    ]);
 
     renderNetworkCard({
       attachments: [attachment],
     });
 
     await user.click(
-      screen.getByRole("button", {
-        name: /show attachments/i,
-      }),
+        screen.getByRole("button", {
+          name: /show attachments/i,
+        }),
     );
 
-    expect(await screen.findByText("GPU Node 1")).toBeInTheDocument();
+    expect(
+        await screen.findByText("GPU Node 1"),
+    ).toBeInTheDocument();
 
     await user.click(
-      screen.getByRole("button", {
-        name: /detach/i,
-      }),
+        screen.getByRole("button", {
+          name: /detach/i,
+        }),
     );
 
     await waitFor(() => {
-      expect(mockedNetworksApi.detach).toHaveBeenCalledWith("node-1", "network-1");
+      expect(
+          mockedNetworksApi.detach,
+      ).toHaveBeenCalledWith(
+          "node-1",
+          "network-1",
+      );
     });
   });
 
@@ -308,13 +374,15 @@ describe("NetworkCard", () => {
     expect(screen.getByText("Inactive")).toBeInTheDocument();
 
     await user.click(
-      screen.getByRole("button", {
-        name: /activate/i,
-      }),
+        screen.getByRole("button", {
+          name: /activate/i,
+        }),
     );
 
     await waitFor(() => {
-      expect(mockedNetworksApi.activate).toHaveBeenCalledWith("network-1");
+      expect(
+          mockedNetworksApi.activate,
+      ).toHaveBeenCalledWith("network-1");
     });
   });
 
@@ -324,13 +392,15 @@ describe("NetworkCard", () => {
     renderNetworkCard();
 
     await user.click(
-      screen.getByRole("button", {
-        name: /deactivate/i,
-      }),
+        screen.getByRole("button", {
+          name: /deactivate/i,
+        }),
     );
 
     await waitFor(() => {
-      expect(mockedNetworksApi.deactivate).toHaveBeenCalledWith("network-1");
+      expect(
+          mockedNetworksApi.deactivate,
+      ).toHaveBeenCalledWith("network-1");
     });
   });
 
@@ -344,14 +414,20 @@ describe("NetworkCard", () => {
       network: inactiveNetwork,
     });
 
-    expect(screen.getByText(/activate this network before attaching nodes/i)).toBeInTheDocument();
-
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(
+        screen.getByText(
+            /activate this network before attaching nodes/i,
+        ),
+    ).toBeInTheDocument();
 
     expect(
-      screen.queryByRole("button", {
-        name: /^attach$/i,
-      }),
+        screen.queryByRole("combobox"),
+    ).not.toBeInTheDocument();
+
+    expect(
+        screen.queryByRole("button", {
+          name: /^attach$/i,
+        }),
     ).not.toBeInTheDocument();
   });
 
@@ -363,17 +439,26 @@ describe("NetworkCard", () => {
 
     renderNetworkCard({
       network: fullNetwork,
-      attachments: [attachment, secondAttachment],
+      attachments: [
+        attachment,
+        secondAttachment,
+      ],
     });
 
-    expect(screen.getByText(/maximum attachment limit reached/i)).toBeInTheDocument();
-
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(
+        screen.getByText(
+            /maximum attachment limit reached/i,
+        ),
+    ).toBeInTheDocument();
 
     expect(
-      screen.queryByRole("button", {
-        name: /^attach$/i,
-      }),
+        screen.queryByRole("combobox"),
+    ).not.toBeInTheDocument();
+
+    expect(
+        screen.queryByRole("button", {
+          name: /^attach$/i,
+        }),
     ).not.toBeInTheDocument();
   });
 
@@ -403,9 +488,15 @@ describe("NetworkCard", () => {
       attachments: allAttachments,
     });
 
-    expect(screen.getByText(/all nodes are already attached/i)).toBeInTheDocument();
+    expect(
+        screen.getByText(
+            /all nodes are already attached/i,
+        ),
+    ).toBeInTheDocument();
 
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(
+        screen.queryByRole("combobox"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows attach loading state", () => {
@@ -429,15 +520,15 @@ describe("NetworkCard", () => {
     });
 
     render(
-      <Provider store={store}>
-        <NetworkCard network={network} />
-      </Provider>,
+        <Provider store={store}>
+          <NetworkCard network={network} />
+        </Provider>,
     );
 
     expect(
-      screen.getByRole("button", {
-        name: /attaching/i,
-      }),
+        screen.getByRole("button", {
+          name: /attaching/i,
+        }),
     ).toBeDisabled();
   });
 
@@ -462,12 +553,14 @@ describe("NetworkCard", () => {
     });
 
     render(
-      <Provider store={store}>
-        <NetworkCard network={network} />
-      </Provider>,
+        <Provider store={store}>
+          <NetworkCard network={network} />
+        </Provider>,
     );
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Failed to attach node.");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+        "Failed to attach node.",
+    );
   });
 
   it("shows attachment success message", () => {
@@ -483,7 +576,8 @@ describe("NetworkCard", () => {
             loading: false,
             error: null,
             attachLoading: false,
-            attachSuccess: "Node attached successfully.",
+            attachSuccess:
+                "Node attached successfully.",
             attachError: null,
           },
         },
@@ -491,11 +585,148 @@ describe("NetworkCard", () => {
     });
 
     render(
-      <Provider store={store}>
-        <NetworkCard network={network} />
-      </Provider>,
+        <Provider store={store}>
+          <NetworkCard network={network} />
+        </Provider>,
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("Node attached successfully.");
+    expect(screen.getByRole("status")).toHaveTextContent(
+        "Node attached successfully.",
+    );
+  });
+
+  it("asks for confirmation before deleting a network", async () => {
+    const user = userEvent.setup();
+
+    const confirmSpy = jest
+        .spyOn(window, "confirm")
+        .mockReturnValue(false);
+
+    renderNetworkCard();
+
+    await user.click(
+        screen.getByRole("button", {
+          name: /^delete$/i,
+        }),
+    );
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+        'Are you sure you want to delete "gpu-production"?',
+    );
+
+    expect(
+        mockedNetworksApi.delete,
+    ).not.toHaveBeenCalled();
+
+    confirmSpy.mockRestore();
+  });
+
+  it("deletes the network after confirmation", async () => {
+    const user = userEvent.setup();
+
+    jest
+        .spyOn(window, "confirm")
+        .mockReturnValue(true);
+
+    mockedNetworksApi.delete.mockResolvedValue(undefined);
+
+    const { store } = renderNetworkCard();
+
+    await user.click(
+        screen.getByRole("button", {
+          name: /^delete$/i,
+        }),
+    );
+
+    await waitFor(() => {
+      expect(
+          mockedNetworksApi.delete,
+      ).toHaveBeenCalledWith("network-1");
+    });
+
+    expect(
+        store.getState().networks.deletingNetworkId,
+    ).toBeNull();
+
+    jest.restoreAllMocks();
+  });
+
+  it("shows deleting state while network deletion is in progress", async () => {
+    const user = userEvent.setup();
+
+    jest
+        .spyOn(window, "confirm")
+        .mockReturnValue(true);
+
+    let resolveDelete: (() => void) | undefined;
+
+    mockedNetworksApi.delete.mockReturnValue(
+        new Promise<void>((resolve) => {
+          resolveDelete = resolve;
+        }),
+    );
+
+    const { store } = renderNetworkCard();
+
+    await user.click(
+        screen.getByRole("button", {
+          name: /^delete$/i,
+        }),
+    );
+
+    expect(
+        screen.getByRole("button", {
+          name: /deleting/i,
+        }),
+    ).toBeDisabled();
+
+    expect(
+        store.getState().networks.deletingNetworkId,
+    ).toBe("network-1");
+
+    resolveDelete!();
+
+    await waitFor(() => {
+      expect(
+          store.getState().networks.deletingNetworkId,
+      ).toBeNull();
+    });
+
+    jest.restoreAllMocks();
+  });
+  it("shows an error when network deletion fails", () => {
+    const store = createTestStore({
+      nodes: {
+        nodes,
+      },
+      networks: {
+        networks: [],
+        attachmentsByNetworkId: {
+          "network-1": {
+            items: [attachment],
+            loading: false,
+            error: null,
+            attachLoading: false,
+            attachSuccess: null,
+            attachError: null,
+          },
+        },
+        loading: false,
+        creating: false,
+        deletingNetworkId: null,
+        error: "Network cannot be deleted while nodes are attached.",
+        createSuccess: null,
+      },
+    });
+
+    render(
+        <Provider store={store}>
+          <NetworkCard network={network} />
+        </Provider>,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+        "Network cannot be deleted while nodes are attached.",
+    );
   });
 });

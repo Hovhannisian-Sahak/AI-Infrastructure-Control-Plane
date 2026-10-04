@@ -4,6 +4,7 @@ import networksReducer, {
     attachNodeToNetwork,
     createNetwork,
     deactivateNetwork,
+    deleteNetwork,
     detachNodeFromNetwork,
     fetchNetworkAttachments,
     fetchNetworks,
@@ -158,6 +159,7 @@ describe("networksSlice", () => {
                         attachmentsByNetworkId: {},
                         loading: false,
                         creating: false,
+                        deletingNetworkId: null,
                         error: null,
                         createSuccess: null,
                     },
@@ -188,6 +190,7 @@ describe("networksSlice", () => {
                         attachmentsByNetworkId: {},
                         loading: false,
                         creating: false,
+                        deletingNetworkId: null,
                         error: null,
                         createSuccess: null,
                     },
@@ -220,6 +223,7 @@ describe("networksSlice", () => {
                         attachmentsByNetworkId: {},
                         loading: false,
                         creating: false,
+                        deletingNetworkId: null,
                         error: null,
                         createSuccess: null,
                     },
@@ -250,6 +254,7 @@ describe("networksSlice", () => {
                         attachmentsByNetworkId: {},
                         loading: false,
                         creating: false,
+                        deletingNetworkId: null,
                         error: null,
                         createSuccess: null,
                     },
@@ -263,6 +268,162 @@ describe("networksSlice", () => {
             expect(
                 store.getState().networks.error,
             ).toBe("Deactivation failed");
+        });
+    });
+
+    describe("deleteNetwork", () => {
+        it("sets the deleting network id while deletion is in progress", async () => {
+            let resolveDelete:
+                | (() => void)
+                | undefined;
+
+            mockedNetworksApi.delete.mockReturnValue(
+                new Promise<void>((resolve) => {
+                    resolveDelete = resolve;
+                }),
+            );
+
+            const store = configureStore({
+                reducer: {
+                    networks: networksReducer,
+                },
+                preloadedState: {
+                    networks: {
+                        networks: [network, secondNetwork],
+                        attachmentsByNetworkId: {},
+                        loading: false,
+                        creating: false,
+                        deletingNetworkId: null,
+                        error: null,
+                        createSuccess: null,
+                    },
+                },
+            });
+
+            const deletePromise = store.dispatch(
+                deleteNetwork("network-1"),
+            );
+
+            const pendingState =
+                store.getState().networks;
+
+            expect(
+                pendingState.deletingNetworkId,
+            ).toBe("network-1");
+
+            expect(
+                pendingState.networks,
+            ).toEqual([
+                network,
+                secondNetwork,
+            ]);
+
+            resolveDelete!();
+
+            await deletePromise;
+
+            const completedState =
+                store.getState().networks;
+
+            expect(
+                completedState.deletingNetworkId,
+            ).toBeNull();
+
+            expect(
+                completedState.networks,
+            ).toEqual([
+                secondNetwork,
+            ]);
+        });
+
+        it("removes the deleted network and its attachments", async () => {
+            mockedNetworksApi.delete.mockResolvedValue(
+                undefined,
+            );
+
+            const store = configureStore({
+                reducer: {
+                    networks: networksReducer,
+                },
+                preloadedState: {
+                    networks: {
+                        networks: [network, secondNetwork],
+                        attachmentsByNetworkId: {
+                            "network-1": {
+                                items: [attachment],
+                                loading: false,
+                                error: null,
+                                attachLoading: false,
+                                attachSuccess: null,
+                                attachError: null,
+                            },
+                        },
+                        loading: false,
+                        creating: false,
+                        deletingNetworkId: null,
+                        error: null,
+                        createSuccess: null,
+                    },
+                },
+            });
+
+            await store.dispatch(
+                deleteNetwork("network-1"),
+            );
+
+            const state = store.getState().networks;
+
+            expect(
+                mockedNetworksApi.delete,
+            ).toHaveBeenCalledWith("network-1");
+
+            expect(state.networks).toEqual([
+                secondNetwork,
+            ]);
+
+            expect(
+                state.attachmentsByNetworkId["network-1"],
+            ).toBeUndefined();
+
+            expect(state.deletingNetworkId).toBeNull();
+            expect(state.error).toBeNull();
+        });
+
+        it("stores an error when deleting a network fails", async () => {
+            mockedNetworksApi.delete.mockRejectedValue(
+                new Error("Delete failed"),
+            );
+
+            const store = configureStore({
+                reducer: {
+                    networks: networksReducer,
+                },
+                preloadedState: {
+                    networks: {
+                        networks: [network, secondNetwork],
+                        attachmentsByNetworkId: {},
+                        loading: false,
+                        creating: false,
+                        deletingNetworkId: null,
+                        error: null,
+                        createSuccess: null,
+                    },
+                },
+            });
+
+            await store.dispatch(
+                deleteNetwork("network-1"),
+            );
+
+            const state = store.getState().networks;
+
+            expect(state.networks).toEqual([
+                network,
+                secondNetwork,
+            ]);
+
+            expect(state.deletingNetworkId).toBeNull();
+            expect(state.error).toBe("Delete failed");
         });
     });
 
@@ -421,6 +582,7 @@ describe("networksSlice", () => {
                         },
                         loading: false,
                         creating: false,
+                        deletingNetworkId: null,
                         error: null,
                         createSuccess: null,
                     },
@@ -465,6 +627,7 @@ describe("networksSlice", () => {
                         },
                         loading: false,
                         creating: false,
+                        deletingNetworkId: null,
                         error: null,
                         createSuccess: null,
                     },
