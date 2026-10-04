@@ -37,9 +37,12 @@ export default function NetworkCard({ network }: NetworkCardProps) {
   );
 
   const deleting = deletingNetworkId === network.id;
-
+  
   const networkError = useAppSelector(
-      (state) => state.networks.error,
+      (state) =>
+          state.networks.deleteErrorByNetworkId[
+              network.id
+              ] ?? null,
   );
 
   const attachments = attachmentState?.items ?? [];

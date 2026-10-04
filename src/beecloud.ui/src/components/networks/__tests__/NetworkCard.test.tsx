@@ -4,7 +4,10 @@ import NetworkCard from "../NetworkCard";
 import { networksApi } from "@/lib/api/networksApi";
 import { createTestStore } from "@/test-utils";
 import { Provider } from "react-redux";
-import type { Network, NetworkAttachment } from "@/types/network";
+import type {
+  Network,
+  NetworkAttachment,
+} from "@/types/network";
 
 jest.mock("@/lib/api/networksApi");
 
@@ -80,6 +83,7 @@ function renderNetworkCard(overrides?: {
           attachError: null,
         },
       },
+      deleteErrorByNetworkId: {},
     },
   });
 
@@ -137,12 +141,20 @@ describe("NetworkCard", () => {
         screen.getByText("Production GPU network"),
     ).toBeInTheDocument();
 
-    expect(screen.getByText("Active")).toBeInTheDocument();
-    expect(screen.getByText("0 / 4")).toBeInTheDocument();
+    expect(
+        screen.getByText("Active"),
+    ).toBeInTheDocument();
+
+    expect(
+        screen.getByText("0 / 4"),
+    ).toBeInTheDocument();
   });
 
   it("fetches attachments when mounted", async () => {
-    mockedNetworksApi.getNetworkNodes.mockResolvedValue([]);
+    mockedNetworksApi.getNetworkNodes.mockResolvedValue(
+        [],
+    );
+
     const { store } = renderNetworkCard();
 
     await waitFor(() => {
@@ -151,7 +163,8 @@ describe("NetworkCard", () => {
       ).toHaveBeenCalledWith("network-1");
 
       expect(
-          store.getState().networks.attachmentsByNetworkId[
+          store.getState().networks
+              .attachmentsByNetworkId[
               "network-1"
               ].loading,
       ).toBe(false);
@@ -169,7 +182,9 @@ describe("NetworkCard", () => {
       attachments: [attachment],
     });
 
-    expect(screen.getByText("1 / 4")).toBeInTheDocument();
+    expect(
+        screen.getByText("1 / 4"),
+    ).toBeInTheDocument();
 
     await user.click(
         screen.getByRole("button", {
@@ -228,10 +243,15 @@ describe("NetworkCard", () => {
 
   it("displays the attachment count before attachments are shown", () => {
     renderNetworkCard({
-      attachments: [attachment, secondAttachment],
+      attachments: [
+        attachment,
+        secondAttachment,
+      ],
     });
 
-    expect(screen.getByText("2 / 4")).toBeInTheDocument();
+    expect(
+        screen.getByText("2 / 4"),
+    ).toBeInTheDocument();
 
     expect(
         screen.queryByText("GPU Node 1"),
@@ -315,7 +335,8 @@ describe("NetworkCard", () => {
       );
 
       expect(
-          store.getState().networks.attachmentsByNetworkId[
+          store.getState().networks
+              .attachmentsByNetworkId[
               "network-1"
               ].attachLoading,
       ).toBe(false);
@@ -371,7 +392,9 @@ describe("NetworkCard", () => {
       network: inactiveNetwork,
     });
 
-    expect(screen.getByText("Inactive")).toBeInTheDocument();
+    expect(
+        screen.getByText("Inactive"),
+    ).toBeInTheDocument();
 
     await user.click(
         screen.getByRole("button", {
@@ -516,6 +539,7 @@ describe("NetworkCard", () => {
             attachError: null,
           },
         },
+        deleteErrorByNetworkId: {},
       },
     });
 
@@ -546,9 +570,11 @@ describe("NetworkCard", () => {
             error: null,
             attachLoading: false,
             attachSuccess: null,
-            attachError: "Failed to attach node.",
+            attachError:
+                "Failed to attach node.",
           },
         },
+        deleteErrorByNetworkId: {},
       },
     });
 
@@ -558,7 +584,9 @@ describe("NetworkCard", () => {
         </Provider>,
     );
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
+    expect(
+        screen.getByRole("alert"),
+    ).toHaveTextContent(
         "Failed to attach node.",
     );
   });
@@ -581,6 +609,7 @@ describe("NetworkCard", () => {
             attachError: null,
           },
         },
+        deleteErrorByNetworkId: {},
       },
     });
 
@@ -590,7 +619,9 @@ describe("NetworkCard", () => {
         </Provider>,
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent(
+    expect(
+        screen.getByRole("status"),
+    ).toHaveTextContent(
         "Node attached successfully.",
     );
   });
@@ -628,7 +659,9 @@ describe("NetworkCard", () => {
         .spyOn(window, "confirm")
         .mockReturnValue(true);
 
-    mockedNetworksApi.delete.mockResolvedValue(undefined);
+    mockedNetworksApi.delete.mockResolvedValue(
+        undefined,
+    );
 
     const { store } = renderNetworkCard();
 
@@ -645,8 +678,16 @@ describe("NetworkCard", () => {
     });
 
     expect(
-        store.getState().networks.deletingNetworkId,
+        store.getState().networks
+            .deletingNetworkId,
     ).toBeNull();
+
+    expect(
+        store.getState().networks
+            .deleteErrorByNetworkId[
+            "network-1"
+            ],
+    ).toBeUndefined();
 
     jest.restoreAllMocks();
   });
@@ -658,7 +699,9 @@ describe("NetworkCard", () => {
         .spyOn(window, "confirm")
         .mockReturnValue(true);
 
-    let resolveDelete: (() => void) | undefined;
+    let resolveDelete:
+        | (() => void)
+        | undefined;
 
     mockedNetworksApi.delete.mockReturnValue(
         new Promise<void>((resolve) => {
@@ -681,19 +724,22 @@ describe("NetworkCard", () => {
     ).toBeDisabled();
 
     expect(
-        store.getState().networks.deletingNetworkId,
+        store.getState().networks
+            .deletingNetworkId,
     ).toBe("network-1");
 
     resolveDelete!();
 
     await waitFor(() => {
       expect(
-          store.getState().networks.deletingNetworkId,
+          store.getState().networks
+              .deletingNetworkId,
       ).toBeNull();
     });
 
     jest.restoreAllMocks();
   });
+
   it("shows an error when network deletion fails", () => {
     const store = createTestStore({
       nodes: {
@@ -711,11 +757,10 @@ describe("NetworkCard", () => {
             attachError: null,
           },
         },
-        loading: false,
-        creating: false,
-        deletingNetworkId: null,
-        error: "Network cannot be deleted while nodes are attached.",
-        createSuccess: null,
+        deleteErrorByNetworkId: {
+          "network-1":
+              "The network cannot be deleted while nodes are attached.",
+        },
       },
     });
 
@@ -725,8 +770,45 @@ describe("NetworkCard", () => {
         </Provider>,
     );
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
-        "Network cannot be deleted while nodes are attached.",
+    expect(
+        screen.getByRole("alert"),
+    ).toHaveTextContent(
+        "The network cannot be deleted while nodes are attached.",
     );
+  });
+
+  it("does not show a delete error belonging to another network", () => {
+    const store = createTestStore({
+      nodes: {
+        nodes,
+      },
+      networks: {
+        networks: [],
+        attachmentsByNetworkId: {
+          "network-1": {
+            items: [],
+            loading: false,
+            error: null,
+            attachLoading: false,
+            attachSuccess: null,
+            attachError: null,
+          },
+        },
+        deleteErrorByNetworkId: {
+          "network-2":
+              "The network cannot be deleted while nodes are attached.",
+        },
+      },
+    });
+
+    render(
+        <Provider store={store}>
+          <NetworkCard network={network} />
+        </Provider>,
+    );
+
+    expect(
+        screen.queryByRole("alert"),
+    ).not.toBeInTheDocument();
   });
 });

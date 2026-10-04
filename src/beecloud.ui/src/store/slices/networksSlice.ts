@@ -20,10 +20,14 @@ type NetworkAttachmentState = {
 
 type NetworksState = {
     networks: Network[];
-    attachmentsByNetworkId: Record<string, NetworkAttachmentState>;
+    attachmentsByNetworkId: Record<
+        string,
+        NetworkAttachmentState
+    >;
     loading: boolean;
     creating: boolean;
     deletingNetworkId: string | null;
+    deleteErrorByNetworkId: Record<string, string | null>;
     error: string | null;
     createSuccess: string | null;
 };
@@ -44,6 +48,7 @@ const initialState: NetworksState = {
     loading: false,
     creating: false,
     deletingNetworkId: null,
+    deleteErrorByNetworkId: {},
     error: null,
     createSuccess: null,
 };
@@ -57,7 +62,7 @@ export const fetchNetworks = createAsyncThunk(
             return rejectWithValue(
                 error instanceof Error
                     ? error.message
-                    : "Failed to load networks.",
+                    : "Unable to load networks. Please try again.",
             );
         }
     },
@@ -75,7 +80,7 @@ export const createNetwork = createAsyncThunk(
             return rejectWithValue(
                 error instanceof Error
                     ? error.message
-                    : "Failed to create network.",
+                    : "Unable to create the network. Please try again.",
             );
         }
     },
@@ -95,7 +100,7 @@ export const activateNetwork = createAsyncThunk(
             return rejectWithValue(
                 error instanceof Error
                     ? error.message
-                    : "Failed to activate network.",
+                    : "Unable to activate the network. Please try again.",
             );
         }
     },
@@ -115,19 +120,32 @@ export const deactivateNetwork = createAsyncThunk(
             return rejectWithValue(
                 error instanceof Error
                     ? error.message
-                    : "Failed to deactivate network.",
+                    : "Unable to deactivate the network. Please try again.",
             );
         }
     },
 );
+
 export const deleteNetwork = createAsyncThunk(
     "networks/deleteNetwork",
-    async (networkId: string) => {
-        await networksApi.delete(networkId);
+    async (
+        networkId: string,
+        { rejectWithValue },
+    ) => {
+        try {
+            await networksApi.delete(networkId);
 
-        return networkId;
+            return networkId;
+        } catch (error) {
+            return rejectWithValue(
+                error instanceof Error
+                    ? error.message
+                    : "Unable to delete the network. Please try again.",
+            );
+        }
     },
 );
+
 export const fetchNetworkAttachments =
     createAsyncThunk(
         "networks/fetchNetworkAttachments",
@@ -143,7 +161,7 @@ export const fetchNetworkAttachments =
                 return rejectWithValue(
                     error instanceof Error
                         ? error.message
-                        : "Failed to load network attachments.",
+                        : "Unable to load network attachments. Please try again.",
                 );
             }
         },
@@ -171,7 +189,7 @@ export const attachNodeToNetwork =
                 return rejectWithValue(
                     error instanceof Error
                         ? error.message
-                        : "Failed to attach node to network.",
+                        : "Unable to attach the node to the network. Please try again.",
                 );
             }
         },
@@ -204,7 +222,7 @@ export const detachNodeFromNetwork =
                 return rejectWithValue(
                     error instanceof Error
                         ? error.message
-                        : "Failed to detach node from network.",
+                        : "Unable to detach the node from the network. Please try again.",
                 );
             }
         },
@@ -243,8 +261,7 @@ const networksSlice = createSlice({
                 fetchNetworks.fulfilled,
                 (state, action) => {
                     state.loading = false;
-                    state.networks =
-                        action.payload;
+                    state.networks = action.payload;
                 },
             )
 
@@ -254,7 +271,8 @@ const networksSlice = createSlice({
                     state.loading = false;
                     state.error =
                         (action.payload as string) ??
-                        "Failed to load networks.";
+                        action.error.message ??
+                        "Unable to load networks. Please try again.";
                 },
             )
 
@@ -289,35 +307,90 @@ const networksSlice = createSlice({
                 createNetwork.rejected,
                 (state, action) => {
                     state.creating = false;
+                    state.createSuccess = null;
+
+                    const error =
+                        (action.payload as string) ??
+                        action.error.message ??
+                        "Unable to create the network. Please try again.";
 
                     state.error =
-                        (action.payload as string) ??
-                        "Failed to create network.";
+                        error.includes(
+                            "conflicts with the current state",
+                        )
+                            ? "A network with this name already exists."
+                            : error;
                 },
             )
-            .addCase(deleteNetwork.pending, (state, action) => {
-                state.deletingNetworkId = action.meta.arg;
-                state.error = null;
-            })
-            .addCase(deleteNetwork.fulfilled, (state, action) => {
-                state.networks = state.networks.filter(
-                    (network) => network.id !== action.payload,
-                );
 
-                delete state.attachmentsByNetworkId[action.payload];
+            // -----------------------------
+            // Delete network
+            // -----------------------------
 
-                state.deletingNetworkId = null;
-            })
-            .addCase(deleteNetwork.rejected, (state, action) => {
-                state.deletingNetworkId = null;
-                state.error =
-                    action.error.message ??
-                    "Failed to delete network.";
-            })
+            .addCase(
+                deleteNetwork.pending,
+                (state, action) => {
+                    const networkId = action.meta.arg;
+
+                    state.deletingNetworkId = networkId;
+                    state.deleteErrorByNetworkId[networkId] = null;
+                },
+            )
+
+            .addCase(
+                deleteNetwork.fulfilled,
+                (state, action) => {
+                    const networkId = action.payload;
+
+                    state.networks =
+                        state.networks.filter(
+                            (network) =>
+                                network.id !== networkId,
+                        );
+
+                    delete state.attachmentsByNetworkId[
+                        networkId
+                        ];
+
+                    delete state.deleteErrorByNetworkId[
+                        networkId
+                        ];
+
+                    state.deletingNetworkId = null;
+                },
+            )
+
+            .addCase(
+                deleteNetwork.rejected,
+                (state, action) => {
+                    const networkId = action.meta.arg;
+
+                    const error =
+                        (action.payload as string) ??
+                        action.error.message ??
+                        "Unable to delete the network. Please try again.";
+
+                    state.deletingNetworkId = null;
+
+                    state.deleteErrorByNetworkId[networkId] =
+                        error.includes(
+                            "conflicts with the current state",
+                        )
+                            ? "The network cannot be deleted while nodes are attached."
+                            : error;
+                },
+            )
 
             // -----------------------------
             // Activate network
             // -----------------------------
+
+            .addCase(
+                activateNetwork.pending,
+                (state) => {
+                    state.error = null;
+                },
+            )
 
             .addCase(
                 activateNetwork.fulfilled,
@@ -340,13 +413,21 @@ const networksSlice = createSlice({
                 (state, action) => {
                     state.error =
                         (action.payload as string) ??
-                        "Failed to activate network.";
+                        action.error.message ??
+                        "Unable to activate the network. Please try again.";
                 },
             )
 
             // -----------------------------
             // Deactivate network
             // -----------------------------
+
+            .addCase(
+                deactivateNetwork.pending,
+                (state) => {
+                    state.error = null;
+                },
+            )
 
             .addCase(
                 deactivateNetwork.fulfilled,
@@ -369,7 +450,8 @@ const networksSlice = createSlice({
                 (state, action) => {
                     state.error =
                         (action.payload as string) ??
-                        "Failed to deactivate network.";
+                        action.error.message ??
+                        "Unable to deactivate the network. Please try again.";
                 },
             )
 
@@ -441,7 +523,8 @@ const networksSlice = createSlice({
                         loading: false,
                         error:
                             (action.payload as string) ??
-                            "Failed to load network attachments.",
+                            action.error.message ??
+                            "Unable to load network attachments. Please try again.",
                     };
                 },
             )
@@ -524,7 +607,8 @@ const networksSlice = createSlice({
                         attachSuccess: null,
                         attachError:
                             (action.payload as string) ??
-                            "Failed to attach node to network.",
+                            action.error.message ??
+                            "Unable to attach the node to the network. Please try again.",
                     };
                 },
             )
@@ -532,6 +616,27 @@ const networksSlice = createSlice({
             // -----------------------------
             // Detach node
             // -----------------------------
+
+            .addCase(
+                detachNodeFromNetwork.pending,
+                (state, action) => {
+                    const { networkId } =
+                        action.meta.arg;
+
+                    const current =
+                        state.attachmentsByNetworkId[
+                            networkId
+                            ] ??
+                        createEmptyAttachmentState();
+
+                    state.attachmentsByNetworkId[
+                        networkId
+                        ] = {
+                        ...current,
+                        attachError: null,
+                    };
+                },
+            )
 
             .addCase(
                 detachNodeFromNetwork.fulfilled,
@@ -560,6 +665,8 @@ const networksSlice = createSlice({
                                     networkId
                                 ),
                         );
+
+                    current.attachError = null;
                 },
             )
 
@@ -581,7 +688,8 @@ const networksSlice = createSlice({
                         ...current,
                         attachError:
                             (action.payload as string) ??
-                            "Failed to detach node from network.",
+                            action.error.message ??
+                            "Unable to detach the node from the network. Please try again.",
                     };
                 },
             );

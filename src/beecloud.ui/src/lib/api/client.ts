@@ -63,7 +63,42 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`DELETE ${path} failed with status ${response.status}`);
+      switch (response.status) {
+        case 400:
+          throw new Error(
+              "The delete request is invalid.",
+          );
+
+        case 401:
+          throw new Error(
+              "You are not authorized to delete this resource.",
+          );
+
+        case 403:
+          throw new Error(
+              "You do not have permission to delete this resource.",
+          );
+
+        case 404:
+          throw new Error(
+              "The resource was not found.",
+          );
+
+        case 409:
+          throw new Error(
+              "The request conflicts with the current state of the resource.",
+          );
+
+        case 500:
+          throw new Error(
+              "The server could not delete the resource.",
+          );
+
+        default:
+          throw new Error(
+              "Failed to delete the resource. Please try again.",
+          );
+      }
     }
   }
 }

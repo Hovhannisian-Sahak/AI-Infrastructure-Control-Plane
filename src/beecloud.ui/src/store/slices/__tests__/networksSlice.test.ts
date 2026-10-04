@@ -160,6 +160,7 @@ describe("networksSlice", () => {
                         loading: false,
                         creating: false,
                         deletingNetworkId: null,
+                        deleteErrorByNetworkId: {},
                         error: null,
                         createSuccess: null,
                     },
@@ -171,7 +172,8 @@ describe("networksSlice", () => {
             );
 
             expect(
-                store.getState().networks.networks[0].isActive,
+                store.getState().networks.networks[0]
+                    .isActive,
             ).toBe(true);
         });
 
@@ -191,6 +193,7 @@ describe("networksSlice", () => {
                         loading: false,
                         creating: false,
                         deletingNetworkId: null,
+                        deleteErrorByNetworkId: {},
                         error: null,
                         createSuccess: null,
                     },
@@ -224,6 +227,7 @@ describe("networksSlice", () => {
                         loading: false,
                         creating: false,
                         deletingNetworkId: null,
+                        deleteErrorByNetworkId: {},
                         error: null,
                         createSuccess: null,
                     },
@@ -235,7 +239,8 @@ describe("networksSlice", () => {
             );
 
             expect(
-                store.getState().networks.networks[0].isActive,
+                store.getState().networks.networks[0]
+                    .isActive,
             ).toBe(false);
         });
 
@@ -255,6 +260,7 @@ describe("networksSlice", () => {
                         loading: false,
                         creating: false,
                         deletingNetworkId: null,
+                        deleteErrorByNetworkId: {},
                         error: null,
                         createSuccess: null,
                     },
@@ -294,6 +300,7 @@ describe("networksSlice", () => {
                         loading: false,
                         creating: false,
                         deletingNetworkId: null,
+                        deleteErrorByNetworkId: {},
                         error: null,
                         createSuccess: null,
                     },
@@ -310,6 +317,12 @@ describe("networksSlice", () => {
             expect(
                 pendingState.deletingNetworkId,
             ).toBe("network-1");
+
+            expect(
+                pendingState.deleteErrorByNetworkId[
+                    "network-1"
+                    ],
+            ).toBeNull();
 
             expect(
                 pendingState.networks,
@@ -361,6 +374,10 @@ describe("networksSlice", () => {
                         loading: false,
                         creating: false,
                         deletingNetworkId: null,
+                        deleteErrorByNetworkId: {
+                            "network-1":
+                                "Previous delete error",
+                        },
                         error: null,
                         createSuccess: null,
                     },
@@ -385,13 +402,21 @@ describe("networksSlice", () => {
                 state.attachmentsByNetworkId["network-1"],
             ).toBeUndefined();
 
+            expect(
+                state.deleteErrorByNetworkId[
+                    "network-1"
+                    ],
+            ).toBeUndefined();
+
             expect(state.deletingNetworkId).toBeNull();
             expect(state.error).toBeNull();
         });
 
-        it("stores an error when deleting a network fails", async () => {
+        it("stores a delete error for the affected network only", async () => {
             mockedNetworksApi.delete.mockRejectedValue(
-                new Error("Delete failed"),
+                new Error(
+                    "The request conflicts with the current state of the resource.",
+                ),
             );
 
             const store = configureStore({
@@ -405,6 +430,7 @@ describe("networksSlice", () => {
                         loading: false,
                         creating: false,
                         deletingNetworkId: null,
+                        deleteErrorByNetworkId: {},
                         error: null,
                         createSuccess: null,
                     },
@@ -417,13 +443,126 @@ describe("networksSlice", () => {
 
             const state = store.getState().networks;
 
+            expect(
+                state.deleteErrorByNetworkId[
+                    "network-1"
+                    ],
+            ).toBe(
+                "The network cannot be deleted while nodes are attached.",
+            );
+
+            expect(
+                state.deleteErrorByNetworkId[
+                    "network-2"
+                    ],
+            ).toBeUndefined();
+
+            expect(state.deletingNetworkId).toBeNull();
             expect(state.networks).toEqual([
                 network,
                 secondNetwork,
             ]);
+        });
 
-            expect(state.deletingNetworkId).toBeNull();
-            expect(state.error).toBe("Delete failed");
+        it("clears the previous delete error when deletion starts again", async () => {
+            mockedNetworksApi.delete.mockReturnValue(
+                new Promise<void>(() => {}),
+            );
+
+            const store = configureStore({
+                reducer: {
+                    networks: networksReducer,
+                },
+                preloadedState: {
+                    networks: {
+                        networks: [network],
+                        attachmentsByNetworkId: {},
+                        loading: false,
+                        creating: false,
+                        deletingNetworkId: null,
+                        deleteErrorByNetworkId: {
+                            "network-1":
+                                "The network cannot be deleted while nodes are attached.",
+                        },
+                        error: null,
+                        createSuccess: null,
+                    },
+                },
+            });
+
+            store.dispatch(
+                deleteNetwork("network-1"),
+            );
+
+            const state = store.getState().networks;
+
+            expect(
+                state.deleteErrorByNetworkId[
+                    "network-1"
+                    ],
+            ).toBeNull();
+
+            expect(
+                state.deletingNetworkId,
+            ).toBe("network-1");
+        });
+
+        it("keeps delete errors isolated between networks", async () => {
+            mockedNetworksApi.delete
+                .mockRejectedValueOnce(
+                    new Error(
+                        "The request conflicts with the current state of the resource.",
+                    ),
+                )
+                .mockReturnValueOnce(
+                    new Promise<void>(() => {}),
+                );
+
+            const store = configureStore({
+                reducer: {
+                    networks: networksReducer,
+                },
+                preloadedState: {
+                    networks: {
+                        networks: [network, secondNetwork],
+                        attachmentsByNetworkId: {},
+                        loading: false,
+                        creating: false,
+                        deletingNetworkId: null,
+                        deleteErrorByNetworkId: {},
+                        error: null,
+                        createSuccess: null,
+                    },
+                },
+            });
+
+            await store.dispatch(
+                deleteNetwork("network-1"),
+            );
+
+            store.dispatch(
+                deleteNetwork("network-2"),
+            );
+
+            const state = store.getState().networks;
+
+            expect(
+                state.deleteErrorByNetworkId[
+                    "network-1"
+                    ],
+            ).toBe(
+                "The network cannot be deleted while nodes are attached.",
+            );
+
+            expect(
+                state.deleteErrorByNetworkId[
+                    "network-2"
+                    ],
+            ).toBeNull();
+
+            expect(
+                state.deletingNetworkId,
+            ).toBe("network-2");
         });
     });
 
@@ -583,6 +722,7 @@ describe("networksSlice", () => {
                         loading: false,
                         creating: false,
                         deletingNetworkId: null,
+                        deleteErrorByNetworkId: {},
                         error: null,
                         createSuccess: null,
                     },
@@ -628,6 +768,7 @@ describe("networksSlice", () => {
                         loading: false,
                         creating: false,
                         deletingNetworkId: null,
+                        deleteErrorByNetworkId: {},
                         error: null,
                         createSuccess: null,
                     },
