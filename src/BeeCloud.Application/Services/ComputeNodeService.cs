@@ -33,10 +33,10 @@ public class ComputeNodeService : IComputeNodeService
             throw new ArgumentException("GPU model is required.");
         }
 
-        if (request.GpuCount <= 0)
+        if (request.GpuCount is < 1 or > 16)
         {
             throw new ArgumentException(
-                "GPU count must be greater than zero.");
+                "GPU count must be between 1 and 16.");
         }
 
         var nameExists = await _repository.ExistsByNameAsync(

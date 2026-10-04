@@ -52,6 +52,9 @@ builder.Services
 builder.Services
     .AddValidatorsFromAssemblyContaining<
         CreateComputeNodeRequestValidator>();
+builder.Services
+    .AddValidatorsFromAssemblyContaining<
+        CreateNetworkRequestValidator>();
 // ProblemDetails
 builder.Services.AddProblemDetails();
 // Infrastructure

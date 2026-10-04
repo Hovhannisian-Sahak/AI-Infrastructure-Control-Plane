@@ -17,6 +17,6 @@ public class CreateComputeNodeRequestValidator
             .MaximumLength(100);
 
         RuleFor(x => x.GpuCount)
-            .GreaterThan(0);
+            .InclusiveBetween(1, 16);
     }
 }

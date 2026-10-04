@@ -74,6 +74,68 @@ public class NodesApiTests
         TestContext.WriteLine(
             $"Invalid create node response: {response.Content}");
     }
+    
+    [Test]
+    public async Task CreateNode_WithGpuCountGreaterThan16_ShouldReturnBadRequest()
+    {
+        // Arrange
+        var request = new CreateNodeRequestModel
+        {
+            Name = $"api-test-node-{Guid.NewGuid():N}",
+            GpuModel = "NVIDIA H100",
+            GpuCount = 17
+        };
+
+        // Act
+        var response =
+            await _nodesClient.CreateAsync(request);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task CreateNode_WithNameLongerThan100Characters_ShouldReturnBadRequest()
+    {
+        // Arrange
+        var request = new CreateNodeRequestModel
+        {
+            Name = new string('a', 101),
+            GpuModel = "NVIDIA H100",
+            GpuCount = 1
+        };
+
+        // Act
+        var response =
+            await _nodesClient.CreateAsync(request);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+    [Test]
+    public async Task CreateNode_WithGpuModelLongerThan100Characters_ShouldReturnBadRequest()
+    {
+        // Arrange
+        var request = new CreateNodeRequestModel
+        {
+            Name = $"api-test-node-{Guid.NewGuid():N}",
+            GpuModel = new string('a', 101),
+            GpuCount = 1
+        };
+
+        // Act
+        var response =
+            await _nodesClient.CreateAsync(request);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.BadRequest));
+    }
     [Test]
     public async Task GetAllNodes_ShouldReturnOk()
     {

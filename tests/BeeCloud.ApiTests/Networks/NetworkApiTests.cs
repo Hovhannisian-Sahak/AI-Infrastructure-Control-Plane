@@ -90,6 +90,43 @@ public class NetworkApiTests
             secondResponse.StatusCode,
             Is.EqualTo(HttpStatusCode.Conflict));
     }
+    
+    [Test]
+    public async Task CreateNetwork_WithNameLongerThan100Characters_ShouldReturnBadRequest()
+    {
+        // Arrange
+        var networkName = new string('a', 101);
+
+        // Act
+        var response = await _networksClient.CreateAsync(
+            networkName,
+            "API test network");
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task CreateNetwork_WithDescriptionLongerThan500Characters_ShouldReturnBadRequest()
+    {
+        // Arrange
+        var networkName =
+            $"api-test-network-{Guid.NewGuid():N}";
+
+        var description = new string('a', 501);
+
+        // Act
+        var response = await _networksClient.CreateAsync(
+            networkName,
+            description);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.BadRequest));
+    }
 
     [Test]
     public async Task GetAllNetworks_ShouldReturnOk()
