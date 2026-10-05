@@ -50,7 +50,8 @@ public class ComputeNodeRepository : IComputeNodeRepository
     {
         return await _dbContext.ComputeNodes
             .AnyAsync(
-                node => node.Name == name,
+                node => node.Name == name &&
+                        node.DeletedAt == null,
                 cancellationToken);
     }
 
