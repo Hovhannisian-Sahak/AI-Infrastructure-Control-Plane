@@ -3,6 +3,7 @@
     display: flex;
     flex-direction: column;
     gap: 18px;
+    min-width: 0;
     padding: 24px;
     border: 1px solid #e2e8f0;
     border-radius: 14px;
@@ -19,23 +20,31 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
+    min-width: 0;
 }
 
 .name {
+    min-width: 0;
     margin: 0;
     font-size: 20px;
     font-weight: 700;
     color: #0f172a;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .description {
+    min-width: 0;
     margin: 6px 0 0;
     color: #64748b;
     font-size: 14px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .status {
     display: inline-flex;
+    flex-shrink: 0;
     align-items: center;
     padding: 5px 10px;
     border-radius: 999px;
@@ -58,11 +67,13 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    min-width: 0;
     padding: 12px 14px;
     border-radius: 10px;
     background: #f8fafc;
     color: #64748b;
     font-size: 13px;
+    overflow-wrap: anywhere;
 }
 
 .meta strong {
@@ -166,6 +177,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    min-width: 0;
     padding: 10px 12px;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -214,6 +226,7 @@
     background: #fef3c7;
     color: #92400e;
     font-size: 13px;
+    overflow-wrap: anywhere;
 }
 
 .error {
@@ -223,6 +236,7 @@
     background: #fee2e2;
     color: #991b1b;
     font-size: 13px;
+    overflow-wrap: anywhere;
 }
 
 .successAlert {
