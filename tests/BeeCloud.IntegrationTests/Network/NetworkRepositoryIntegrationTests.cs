@@ -164,4 +164,86 @@ public class NetworkRepositoryIntegrationTests
         // Assert
         Assert.That(result, Is.False);
     }
+    
+    [Test]
+    public async Task GetByIdAsync_WhenNetworkIsSoftDeleted_ShouldReturnNull()
+    {
+        // Arrange
+        var network = new Network(
+            $"deleted-network-{Guid.NewGuid():N}",
+            "Deleted network");
+
+        network.SoftDelete();
+
+        await _dbContext.Networks.AddAsync(network);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetByIdAsync(network.Id);
+
+        // Assert
+        Assert.That(result, Is.Null);
+    }
+    [Test]
+    public async Task GetAllAsync_WhenNetworkIsSoftDeleted_ShouldExcludeDeletedNetwork()
+    {
+        // Arrange
+        var activeNetwork = new Network(
+            $"active-network-{Guid.NewGuid():N}");
+
+        var deletedNetwork = new Network(
+            $"deleted-network-{Guid.NewGuid():N}");
+
+        deletedNetwork.SoftDelete();
+
+        await _dbContext.Networks.AddRangeAsync(
+            activeNetwork,
+            deletedNetwork);
+
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _repository.GetAllAsync();
+
+        // Assert
+        Assert.That(result, Has.Count.EqualTo(1));
+        Assert.That(result[0].Id, Is.EqualTo(activeNetwork.Id));
+    }
+    [Test]
+    public async Task AddAsync_WhenDeletedNetworkHasSameName_ShouldAllowNewNetwork()
+    {
+        // Arrange
+        var deletedNetwork = new Network(
+            "reusable-network",
+            "Deleted network");
+
+        deletedNetwork.SoftDelete();
+
+        await _dbContext.Networks.AddAsync(deletedNetwork);
+        await _dbContext.SaveChangesAsync();
+
+        var newNetwork = new Network(
+            "reusable-network",
+            "New active network");
+
+        // Act
+        await _repository.AddAsync(newNetwork);
+        await _repository.SaveChangesAsync();
+
+        // Assert
+        var networks = await _dbContext.Networks
+            .AsNoTracking()
+            .Where(x => x.Name == "reusable-network")
+            .ToListAsync();
+
+        Assert.That(networks, Has.Count.EqualTo(2));
+
+        Assert.That(
+            networks.Count(x => x.DeletedAt == null),
+            Is.EqualTo(1));
+
+        Assert.That(
+            networks.Count(x => x.DeletedAt != null),
+            Is.EqualTo(1));
+    }
 }

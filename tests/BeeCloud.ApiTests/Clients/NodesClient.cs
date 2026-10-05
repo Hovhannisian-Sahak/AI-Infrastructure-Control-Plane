@@ -44,6 +44,16 @@ public class NodesClient
 
         return await _client.ExecuteAsync<ComputeNodeResponseModel>(request);
     }
+    
+    public async Task<RestResponse> DeleteAsync(
+        Guid nodeId)
+    {
+        var request = new RestRequest(
+            $"/api/v1/nodes/{nodeId}",
+            Method.Delete);
+
+        return await _client.ExecuteAsync(request);
+    }
 
     public async Task<RestResponse<ComputeNodeResponseModel>> StartAsync(
         Guid nodeId)

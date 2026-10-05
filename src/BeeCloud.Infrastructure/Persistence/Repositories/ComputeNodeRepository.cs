@@ -20,7 +20,8 @@ public class ComputeNodeRepository : IComputeNodeRepository
     {
         return await _dbContext.ComputeNodes
             .FirstOrDefaultAsync(
-                node => node.Id == id,
+                node => node.Id == id &&
+                        node.DeletedAt == null,
                 cancellationToken);
     }
 
@@ -29,6 +30,7 @@ public class ComputeNodeRepository : IComputeNodeRepository
     {
         return await _dbContext.ComputeNodes
             .AsNoTracking()
+            .Where(node => node.DeletedAt == null)
             .OrderBy(node => node.CreatedAt)
             .ToListAsync(cancellationToken);
     }
@@ -37,7 +39,8 @@ public class ComputeNodeRepository : IComputeNodeRepository
         CancellationToken cancellationToken = default)
     {
         return await _dbContext.ComputeNodes
-            .Where(node => node.Status == status)
+            .Where(node => node.Status == status &&
+                           node.DeletedAt == null)
             .OrderBy(node => node.CreatedAt)
             .ToListAsync(cancellationToken);
     }

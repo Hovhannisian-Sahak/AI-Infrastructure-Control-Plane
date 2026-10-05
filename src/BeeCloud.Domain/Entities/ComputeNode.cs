@@ -20,6 +20,10 @@ public class ComputeNode
     public DateTime CreatedAt { get; private set; }
 
     public DateTime UpdatedAt { get; private set; }
+    
+    public bool IsActive { get; private set; }
+
+    public DateTime? DeletedAt { get; private set; }
 
     public DateTime? LastHealthCheck { get; private set; }
 
@@ -177,6 +181,13 @@ public class ComputeNode
     public void ClearFault()
     {
         ActiveFault = NodeFault.None;
+        UpdatedAt = DateTime.UtcNow;
+    }
+    
+    public void SoftDelete()
+    {
+        DeletedAt = DateTime.UtcNow;
+        IsActive = false;
         UpdatedAt = DateTime.UtcNow;
     }
 }

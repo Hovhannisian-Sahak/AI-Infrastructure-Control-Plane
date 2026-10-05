@@ -432,6 +432,51 @@ public class ComputeNodeServiceTests
             () => _service.RestartAsync(nodeId));
     }
     [Test]
+    public async Task DeleteAsync_WhenNodeExists_ShouldSoftDeleteNode()
+    {
+        // Arrange
+        var node = CreateNode();
+
+        _repository
+            .Setup(repository => repository.GetByIdAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+
+        // Act
+        await _service.DeleteAsync(node.Id);
+
+        // Assert
+        Assert.That(node.IsActive, Is.False);
+        Assert.That(node.DeletedAt, Is.Not.Null);
+
+        _repository.Verify(
+            repository => repository.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+    [Test]
+    public void DeleteAsync_WhenNodeDoesNotExist_ShouldThrow()
+    {
+        // Arrange
+        var nodeId = Guid.NewGuid();
+
+        _repository
+            .Setup(repository => repository.GetByIdAsync(
+                nodeId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ComputeNode?)null);
+
+        // Act & Assert
+        Assert.ThrowsAsync<KeyNotFoundException>(
+            async () => await _service.DeleteAsync(nodeId));
+
+        _repository.Verify(
+            repository => repository.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+    [Test]
     public async Task SimulateFaultAsync_WhenNodeExists_ShouldSetFault()
     {
         // Arrange

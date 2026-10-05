@@ -250,4 +250,23 @@ public class ComputeNodeService : IComputeNodeService
         await _repository.SaveChangesAsync(
             cancellationToken);
     }
+    public async Task DeleteAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var node = await _repository.GetByIdAsync(
+            id,
+            cancellationToken);
+
+        if (node is null)
+        {
+            throw new KeyNotFoundException(
+                $"Compute node with id '{id}' was not found.");
+        }
+
+        node.SoftDelete();
+
+        await _repository.SaveChangesAsync(
+            cancellationToken);
+    }
 }

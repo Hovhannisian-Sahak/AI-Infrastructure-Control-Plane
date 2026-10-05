@@ -84,4 +84,15 @@ public class ComputeNodesController : ControllerBase
 
         return Ok(response);
     }
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        await _service.DeleteAsync(
+            id,
+            cancellationToken);
+
+        return NoContent();
+    }
 }

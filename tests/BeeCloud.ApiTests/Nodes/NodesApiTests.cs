@@ -208,7 +208,56 @@ public class NodesApiTests
         TestContext.WriteLine(
             $"Get non-existing node response: {response.Content}");
     }
+    [Test]
+    public async Task DeleteNode_WhenNodeExists_ShouldReturnNoContent()
+    {
+        // Arrange
+        var nodeId =
+            await CreateNodeAsync();
 
+        await _nodesClient.WaitForAvailableAsync(nodeId);
+
+        // Act
+        var response =
+            await _nodesClient.DeleteAsync(nodeId);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.NoContent));
+
+        Assert.That(
+            response.Content,
+            Is.Null.Or.Empty);
+
+        TestContext.WriteLine(
+            $"Delete node response: {response.Content}");
+
+        var getResponse =
+            await _nodesClient.GetByIdAsync(nodeId);
+
+        Assert.That(
+            getResponse.StatusCode,
+            Is.EqualTo(HttpStatusCode.NotFound));
+    }
+    [Test]
+    public async Task DeleteNode_WhenNodeDoesNotExist_ShouldReturnNotFound()
+    {
+        // Arrange
+        var nodeId = Guid.NewGuid();
+
+        // Act
+        var response =
+            await _nodesClient.DeleteAsync(nodeId);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.NotFound));
+
+        TestContext.WriteLine(
+            $"Delete non-existing node response: {response.Content}");
+    }
     [Test]
     public async Task StartNode_WhenNodeIsAvailable_ShouldReturnRunning()
     {

@@ -32,4 +32,8 @@ public interface IComputeNodeService
         Guid nodeId,
         NodeFault fault,
         CancellationToken cancellationToken = default);
+    
+    Task DeleteAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
 }

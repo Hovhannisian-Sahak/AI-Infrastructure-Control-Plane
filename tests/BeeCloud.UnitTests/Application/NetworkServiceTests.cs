@@ -249,4 +249,97 @@ public class NetworkServiceTests
             x => x.SaveChangesAsync(cancellationToken),
             Times.Once);
     }
+    
+    [Test]
+    public async Task DeleteAsync_WhenNetworkExists_ShouldSoftDeleteNetwork()
+    {
+        // Arrange
+        var network = new Network(
+            "production-network",
+            "Production GPU network");
+
+        _repositoryMock
+            .Setup(x => x.GetByIdAsync(
+                network.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(network);
+
+        _repositoryMock
+            .Setup(x => x.HasAttachmentsAsync(
+                network.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        // Act
+        await _service.DeleteAsync(network.Id);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(network.IsActive, Is.False);
+            Assert.That(network.DeletedAt, Is.Not.Null);
+        });
+
+        _repositoryMock.Verify(
+            x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+    [Test]
+    public void DeleteAsync_WhenNetworkDoesNotExist_ShouldThrow()
+    {
+        // Arrange
+        var networkId = Guid.NewGuid();
+
+        _repositoryMock
+            .Setup(x => x.GetByIdAsync(
+                networkId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Network?)null);
+
+        // Act & Assert
+        Assert.ThrowsAsync<KeyNotFoundException>(
+            async () => await _service.DeleteAsync(networkId));
+
+        _repositoryMock.Verify(
+            x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+    [Test]
+    public void DeleteAsync_WhenNetworkHasAttachments_ShouldThrow()
+    {
+        // Arrange
+        var network = new Network(
+            "production-network",
+            "Production GPU network");
+
+        _repositoryMock
+            .Setup(x => x.GetByIdAsync(
+                network.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(network);
+
+        _repositoryMock
+            .Setup(x => x.HasAttachmentsAsync(
+                network.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act & Assert
+        var exception = Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await _service.DeleteAsync(network.Id));
+
+        Assert.That(
+            exception!.Message,
+            Is.EqualTo("Network cannot be deleted while nodes are attached."));
+
+        _repositoryMock.Verify(
+            x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(network.IsActive, Is.True);
+            Assert.That(network.DeletedAt, Is.Null);
+        });
+    }
 }

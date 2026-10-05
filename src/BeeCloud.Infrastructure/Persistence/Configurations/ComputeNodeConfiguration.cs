@@ -43,11 +43,18 @@ public class ComputeNodeConfiguration
 
         builder.Property(node => node.UpdatedAt)
             .IsRequired();
+        
+        builder.Property(node => node.IsActive)
+            .IsRequired();
+
+        builder.Property(node => node.DeletedAt)
+            .IsRequired(false);
 
         builder.Property(node => node.LastHealthCheck)
             .IsRequired(false);
 
         builder.HasIndex(node => node.Name)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("\"DeletedAt\" IS NULL");
     }
 }

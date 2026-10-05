@@ -97,7 +97,56 @@ public class ComputeNodeServiceIntegrationTests
         await _dbContext.DisposeAsync();
         await _postgres.DisposeAsync();
     }
+    [Test]
+    public async Task DeleteAsync_WhenNodeExists_ShouldPersistSoftDelete()
+    {
+        // Arrange
+        var node = new ComputeNode(
+            "delete-integration-test-node",
+            "NVIDIA A100",
+            2);
 
+        await _dbContext.ComputeNodes.AddAsync(node);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        await _service.DeleteAsync(node.Id);
+
+        // Assert
+        _dbContext.ChangeTracker.Clear();
+
+        var persistedNode =
+            await _dbContext.ComputeNodes
+                .SingleAsync(x => x.Id == node.Id);
+
+        Assert.That(
+            persistedNode.IsActive,
+            Is.False);
+
+        Assert.That(
+            persistedNode.DeletedAt,
+            Is.Not.Null);
+    }
+    [Test]
+    public async Task GetByIdAsync_WhenNodeIsSoftDeleted_ShouldReturnNull()
+    {
+        // Arrange
+        var node = new ComputeNode(
+            "deleted-node-integration-test-node",
+            "NVIDIA A100",
+            2);
+
+        await _dbContext.ComputeNodes.AddAsync(node);
+        await _dbContext.SaveChangesAsync();
+
+        await _service.DeleteAsync(node.Id);
+
+        // Act
+        var result = await _service.GetByIdAsync(node.Id);
+
+        // Assert
+        Assert.That(result, Is.Null);
+    }
     [Test]
     public async Task SimulateFaultAsync_WhenGpuFailureIsSimulated_ShouldPersistFault()
     {
