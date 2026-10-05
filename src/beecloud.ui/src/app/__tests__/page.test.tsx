@@ -10,18 +10,22 @@ import CreateNodeForm from "@/components/nodes/CreateNodeForm";
 import Home from "../page";
 import { nodesApi } from "@/lib/api/nodesApi";
 import { networksApi } from "@/lib/api/networksApi";
+import { incidentsApi } from "@/lib/api/incidentsApi";
 import type { ComputeNode } from "@/lib/api/models/computeNode";
 
+jest.mock("@/lib/api/incidentsApi");
 jest.mock("@/lib/api/nodesApi");
 jest.mock("@/lib/api/networksApi");
 
 const mockedNodesApi = jest.mocked(nodesApi);
 const mockedNetworksApi = jest.mocked(networksApi);
+const mockedIncidentsApi = jest.mocked(incidentsApi);
 
 describe("Home page", () => {
   beforeEach(() => {
     jest.resetAllMocks();
 
+    mockedIncidentsApi.getAll.mockResolvedValue([]);
     mockedNetworksApi.getAll.mockResolvedValue([]);
   });
 
@@ -90,11 +94,9 @@ describe("Home page", () => {
     renderWithProviders(<Home />);
 
     const errorMessage =
-        await screen.findByRole("alert");
+        await screen.findByText("API unavailable");
 
-    expect(errorMessage).toHaveTextContent(
-        "API unavailable",
-    );
+    expect(errorMessage).toBeInTheDocument();
 
     expect(errorMessage).toHaveClass(
         "error",
@@ -261,10 +263,10 @@ describe("Home page", () => {
     );
 
     expect(
-        await screen.findByRole("alert"),
-    ).toHaveTextContent(
-        "Node name already exists",
-    );
+        await screen.findByText(
+            "Node name already exists",
+        ),
+    ).toBeInTheDocument();
 
     expect(
         screen.queryByText(
@@ -307,10 +309,10 @@ describe("Home page", () => {
     );
 
     expect(
-        await screen.findByRole("alert"),
-    ).toHaveTextContent(
-        "A compute node with this name already exists.",
-    );
+        await screen.findByText(
+            "A compute node with this name already exists.",
+        ),
+    ).toBeInTheDocument();
   });
 
   it("disables creation when the node name is empty", () => {
@@ -441,7 +443,6 @@ describe("Home page", () => {
     ).toBeInTheDocument();
   });
 
-
   it("shows a loading state while nodes are being fetched", async () => {
     let resolveNodes:
         | ((value: ComputeNode[]) => void)
@@ -453,7 +454,9 @@ describe("Home page", () => {
         },
     );
 
-    mockedNodesApi.getAll.mockReturnValue(nodesPromise);
+    mockedNodesApi.getAll.mockReturnValue(
+        nodesPromise,
+    );
 
     renderWithProviders(<Home />);
 

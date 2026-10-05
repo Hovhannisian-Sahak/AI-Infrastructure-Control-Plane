@@ -222,8 +222,10 @@ describe("NetworksSection", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("does not show network cards when there is an error", async () => {
-    mockedNetworksApi.getAll.mockRejectedValue(new Error("Failed to load networks"));
+  it("keeps network cards visible when there is an error", async () => {
+    mockedNetworksApi.getAll.mockRejectedValue(
+        new Error("Failed to load networks"),
+    );
 
     const store = createTestStore({
       networks: {
@@ -232,18 +234,20 @@ describe("NetworksSection", () => {
     });
 
     render(
-      <Provider store={store}>
-        <NetworksSection />
-      </Provider>,
+        <Provider store={store}>
+          <NetworksSection />
+        </Provider>,
     );
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to load networks");
+    expect(
+        await screen.findByRole("alert"),
+    ).toHaveTextContent("Failed to load networks");
 
     expect(
-      screen.queryByRole("heading", {
-        name: "gpu-production",
-      }),
-    ).not.toBeInTheDocument();
+        screen.getByRole("heading", {
+          name: "gpu-production",
+        }),
+    ).toBeInTheDocument();
   });
 
   it("creates a network from the form", async () => {

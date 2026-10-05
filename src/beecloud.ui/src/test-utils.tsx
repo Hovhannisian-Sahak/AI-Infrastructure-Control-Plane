@@ -5,6 +5,7 @@ import type { ReactElement, ReactNode } from "react";
 
 import nodesReducer from "@/store/slices/nodesSlice";
 import networksReducer from "@/store/slices/networksSlice";
+import indicentReducer from "@/store/slices/incidentsSlice";
 
 type PreloadedState = {
   nodes?: {
@@ -27,11 +28,16 @@ export function createTestStore(preloadedState?: PreloadedState) {
   const defaultNetworksState = networksReducer(undefined, {
     type: "@@INIT",
   });
+  
+  const defaultIncidentState = indicentReducer(undefined, {
+    type: "@@INIT",
+  });
 
   return configureStore({
     reducer: {
       nodes: nodesReducer,
       networks: networksReducer,
+      incidents: indicentReducer,
     },
     preloadedState: {
       nodes: {
@@ -41,6 +47,10 @@ export function createTestStore(preloadedState?: PreloadedState) {
       networks: {
         ...defaultNetworksState,
         ...preloadedState?.networks,
+      },
+      incidents: {
+        ...defaultIncidentState,
+        ...preloadedState?.incidents,
       },
     },
   });

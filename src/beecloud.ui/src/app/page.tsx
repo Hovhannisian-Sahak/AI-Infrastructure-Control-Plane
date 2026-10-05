@@ -8,6 +8,7 @@ import styles from "./page.module.css";
 import CreateNodeForm from "@/components/nodes/CreateNodeForm";
 import { createNode } from "@/store/slices/nodesSlice";
 import NetworksSection from "@/components/networks/NetworksSection";
+import IncidentsSection from "@/components/incidents/IncidentsSection";
 export default function Home() {
   const dispatch = useAppDispatch();
 
@@ -106,6 +107,7 @@ export default function Home() {
             </section>
         )}
         <NetworksSection />
+        <IncidentsSection />
       </main>
     </div>
   );
