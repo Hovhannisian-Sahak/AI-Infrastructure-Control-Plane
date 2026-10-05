@@ -5,6 +5,7 @@ jest.mock("../client", () => ({
   apiClient: {
     get: jest.fn(),
     post: jest.fn(),
+    delete: jest.fn(),
   },
 }));
 
@@ -116,5 +117,14 @@ describe("nodesApi", () => {
     await expect(nodesApi.stop("node-1")).rejects.toThrow("POST /api/v1/nodes/node-1/stop failed");
 
     expect(mockedApiClient.post).toHaveBeenCalledWith("/api/v1/nodes/node-1/stop", undefined);
+  });
+  it("deletes a node", async () => {
+    mockedApiClient.delete.mockResolvedValue(undefined);
+
+    await nodesApi.delete("node-1");
+
+    expect(mockedApiClient.delete).toHaveBeenCalledWith(
+        "/api/v1/nodes/node-1",
+    );
   });
 });

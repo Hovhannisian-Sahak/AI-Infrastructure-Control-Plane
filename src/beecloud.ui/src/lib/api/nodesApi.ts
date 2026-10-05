@@ -26,4 +26,8 @@ export const nodesApi = {
   create(request: CreateComputeNodeRequest): Promise<ComputeNode> {
     return apiClient.post<ComputeNode, CreateComputeNodeRequest>("/api/v1/nodes", request);
   },
+  
+  delete(id: string): Promise<void> {
+    return apiClient.delete(`/api/v1/nodes/${id}`);
+  },
 };

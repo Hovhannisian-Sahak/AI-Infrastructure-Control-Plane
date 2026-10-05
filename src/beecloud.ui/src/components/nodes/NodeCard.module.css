@@ -175,7 +175,23 @@
           opacity 0.15s ease,
           transform 0.15s ease;
 }
+.deleteButton {
+  border-color: #dc2626;
+  color: #dc2626;
+}
 
+.deleteButton:hover:not(:disabled) {
+  background-color: #dc2626;
+  color: white;
+}
+.error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #dc2626;
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 14px;
+}
 .startButton {
   color: #ffffff;
   background: #2563eb;

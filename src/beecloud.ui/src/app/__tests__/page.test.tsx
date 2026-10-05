@@ -313,8 +313,7 @@ describe("Home page", () => {
     );
   });
 
-  it("shows an error when the node name is empty", async () => {
-    const user = userEvent.setup();
+  it("disables creation when the node name is empty", () => {
     const onSubmit = jest.fn();
 
     render(
@@ -324,17 +323,11 @@ describe("Home page", () => {
         />,
     );
 
-    await user.click(
+    expect(
         screen.getByRole("button", {
           name: "Create Node",
         }),
-    );
-
-    expect(
-        screen.getByRole("alert"),
-    ).toHaveTextContent(
-        "Node name is required.",
-    );
+    ).toBeDisabled();
 
     expect(
         onSubmit,

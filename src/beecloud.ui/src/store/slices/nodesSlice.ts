@@ -7,13 +7,15 @@ import type { ComputeNode } from "@/lib/api/models/computeNode";
 import type { CreateComputeNodeRequest } from "@/lib/api/models/createComputeNodeRequest";
 
 type NodesState = {
-  nodes: ComputeNode[];
-  loading: boolean;
-  creating: boolean;
-  refreshing: boolean;
-  createSuccess: string | null;
-  actionLoadingByNodeId: Record<string, boolean>;
-  error: string | null;
+    nodes: ComputeNode[];
+    loading: boolean;
+    creating: boolean;
+    refreshing: boolean;
+    createSuccess: string | null;
+    actionLoadingByNodeId: Record<string, boolean>;
+    deletingNodeId: string | null;
+    deleteErrorByNodeId: Record<string, string | null>;
+    error: string | null;
 };
 
 const initialState: NodesState = {
@@ -23,6 +25,8 @@ const initialState: NodesState = {
   refreshing: false,
   createSuccess: null,
   actionLoadingByNodeId: {},
+  deletingNodeId: null,
+  deleteErrorByNodeId: {},
   error: null,
 };
 
@@ -42,6 +46,13 @@ export const createNode = createAsyncThunk(
     },
 );
 
+export const deleteNode = createAsyncThunk(
+    "nodes/deleteNode",
+    async (id: string) => {
+        await nodesApi.delete(id);
+        return id;
+    },
+);
 export const startNode = createAsyncThunk(
     "nodes/startNode",
     async (id: string) => {
@@ -151,7 +162,47 @@ const nodesSlice = createSlice({
                       : error;
             },
         )
+        // -----------------------------
+        // Delete node
+        // -----------------------------
 
+        .addCase(
+            deleteNode.pending,
+            (state, action) => {
+                const nodeId = action.meta.arg;
+
+                state.deletingNodeId = nodeId;
+                state.deleteErrorByNodeId[nodeId] = null;
+            },
+        )
+
+        .addCase(
+            deleteNode.fulfilled,
+            (state, action) => {
+                const nodeId = action.payload;
+
+                state.nodes = state.nodes.filter(
+                    (node) => node.id !== nodeId,
+                );
+
+                delete state.deleteErrorByNodeId[nodeId];
+
+                state.deletingNodeId = null;
+            },
+        )
+
+        .addCase(
+            deleteNode.rejected,
+            (state, action) => {
+                const nodeId = action.meta.arg;
+
+                state.deletingNodeId = null;
+
+                state.deleteErrorByNodeId[nodeId] =
+                    action.error.message ??
+                    "Unable to delete the node. Please try again.";
+            },
+        )
         // -----------------------------
         // Start node
         // -----------------------------

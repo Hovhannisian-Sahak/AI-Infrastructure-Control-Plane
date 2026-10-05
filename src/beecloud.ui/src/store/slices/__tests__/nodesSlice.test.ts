@@ -1,5 +1,5 @@
 ﻿import { configureStore } from "@reduxjs/toolkit";
-import nodesReducer, { fetchNodes, createNode, startNode, stopNode } from "../nodesSlice";
+import nodesReducer, { fetchNodes, createNode, startNode, stopNode, deleteNode } from "../nodesSlice";
 import { nodesApi } from "@/lib/api/nodesApi";
 
 jest.mock("@/lib/api/nodesApi");
@@ -248,5 +248,72 @@ describe("nodesSlice", () => {
     await promise;
 
     expect(store.getState().nodes.creating).toBe(false);
+  });
+  it("removes a node when deleteNode succeeds", async () => {
+    const node = {
+      id: "node-1",
+      name: "GPU Node 1",
+      gpuModel: "NVIDIA A100",
+      gpuCount: 4,
+      status: "Available" as const,
+      activeFault: "None" as const,
+    };
+
+    mockedNodesApi.delete.mockResolvedValue(undefined);
+
+    const store = configureStore({
+      reducer: {
+        nodes: nodesReducer,
+      },
+    });
+
+    store.dispatch({
+      type: "nodes/fetchNodes/fulfilled",
+      payload: [node],
+    });
+
+    await store.dispatch(deleteNode(node.id));
+
+    const state = store.getState().nodes;
+
+    expect(mockedNodesApi.delete).toHaveBeenCalledWith("node-1");
+    expect(state.nodes).toEqual([]);
+    expect(state.deletingNodeId).toBeNull();
+    expect(state.deleteErrorByNodeId["node-1"]).toBeUndefined();
+  });
+  it("stores a delete error when deleteNode fails", async () => {
+    mockedNodesApi.delete.mockRejectedValue(
+        new Error("Failed to delete node"),
+    );
+
+    const store = configureStore({
+      reducer: {
+        nodes: nodesReducer,
+      },
+    });
+
+    const node = {
+      id: "node-1",
+      name: "GPU Node 1",
+      gpuModel: "NVIDIA A100",
+      gpuCount: 4,
+      status: "Available" as const,
+      activeFault: "None" as const,
+    };
+
+    store.dispatch({
+      type: "nodes/fetchNodes/fulfilled",
+      payload: [node],
+    });
+
+    await store.dispatch(deleteNode(node.id));
+
+    const state = store.getState().nodes;
+
+    expect(state.nodes).toEqual([node]);
+    expect(state.deletingNodeId).toBeNull();
+    expect(state.deleteErrorByNodeId["node-1"]).toBe(
+        "Failed to delete node",
+    );
   });
 });

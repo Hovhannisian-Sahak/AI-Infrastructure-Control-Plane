@@ -398,4 +398,175 @@ describe("NodeCard", () => {
       ).toBe(false);
     });
   });
+  it("does not delete a node when deletion is cancelled", async () => {
+    const user = userEvent.setup();
+
+    const confirmSpy = jest
+        .spyOn(window, "confirm")
+        .mockReturnValue(false);
+
+    const { store } = renderWithProviders(
+        <NodeCard node={node} />,
+        {
+          nodes: {
+            nodes: [node],
+          },
+        },
+    );
+
+    await user.click(
+        screen.getByRole("button", {
+          name: "Delete",
+        }),
+    );
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+        'Are you sure you want to delete "GPU Node 1"?',
+    );
+
+    expect(
+        mockedNodesApi.delete,
+    ).not.toHaveBeenCalled();
+
+    expect(
+        store.getState().nodes.nodes,
+    ).toEqual([node]);
+
+    confirmSpy.mockRestore();
+  });
+  it("deletes a node when deletion is confirmed", async () => {
+    const user = userEvent.setup();
+
+    jest
+        .spyOn(window, "confirm")
+        .mockReturnValue(true);
+
+    mockedNodesApi.delete.mockResolvedValue(undefined);
+
+    const { store } = renderWithProviders(
+        <NodeCard node={node} />,
+        {
+          nodes: {
+            nodes: [node],
+          },
+        },
+    );
+
+    await user.click(
+        screen.getByRole("button", {
+          name: "Delete",
+        }),
+    );
+
+    await waitFor(() => {
+      expect(
+          mockedNodesApi.delete,
+      ).toHaveBeenCalledWith("node-1");
+    });
+
+    await waitFor(() => {
+      expect(
+          store.getState().nodes.nodes,
+      ).toEqual([]);
+    });
+
+    expect(
+        store.getState().nodes.deletingNodeId,
+    ).toBeNull();
+  });
+  it("shows a loading state while deleting a node", async () => {
+    const user = userEvent.setup();
+
+    jest
+        .spyOn(window, "confirm")
+        .mockReturnValue(true);
+
+    let resolveDelete:
+        | (() => void)
+        | undefined;
+
+    mockedNodesApi.delete.mockReturnValue(
+        new Promise<void>((resolve) => {
+          resolveDelete = resolve;
+        }),
+    );
+
+    const { store } = renderWithProviders(
+        <NodeCard node={node} />,
+        {
+          nodes: {
+            nodes: [node],
+          },
+        },
+    );
+
+    await user.click(
+        screen.getByRole("button", {
+          name: "Delete",
+        }),
+    );
+
+    expect(
+        screen.getByRole("button", {
+          name: "Deleting...",
+        }),
+    ).toBeDisabled();
+
+    expect(
+        store.getState().nodes.deletingNodeId,
+    ).toBe("node-1");
+
+    resolveDelete!();
+
+    await waitFor(() => {
+      expect(
+          store.getState().nodes.deletingNodeId,
+      ).toBeNull();
+    });
+  });
+  it("shows an error when deleting a node fails", async () => {
+    const user = userEvent.setup();
+
+    jest
+        .spyOn(window, "confirm")
+        .mockReturnValue(true);
+
+    mockedNodesApi.delete.mockRejectedValue(
+        new Error("Failed to delete node"),
+    );
+
+    const { store } = renderWithProviders(
+        <NodeCard node={node} />,
+        {
+          nodes: {
+            nodes: [node],
+          },
+        },
+    );
+
+    await user.click(
+        screen.getByRole("button", {
+          name: "Delete",
+        }),
+    );
+
+    await waitFor(() => {
+      expect(
+          store.getState().nodes
+              .deleteErrorByNodeId["node-1"],
+      ).toBe("Failed to delete node");
+    });
+
+    expect(
+        screen.getByRole("alert"),
+    ).toHaveTextContent("Failed to delete node");
+
+    expect(
+        store.getState().nodes.deletingNodeId,
+    ).toBeNull();
+
+    expect(
+        store.getState().nodes.nodes,
+    ).toEqual([node]);
+  });
 });

@@ -104,6 +104,7 @@ export default function NetworksSection() {
         )}
 
         {!loading &&
+            !error &&
             networks.length === 0 && (
                 <div className={styles.empty}>
                   <div className={styles.emptyIcon}>

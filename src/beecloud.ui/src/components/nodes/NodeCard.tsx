@@ -9,6 +9,7 @@ import {
   useAppSelector,
 } from "@/store/hooks";
 import {
+  deleteNode,
   restartNode,
   startNode,
   stopNode,
@@ -42,7 +43,18 @@ export default function NodeCard({
               node.id
               ] ?? false,
   );
+  const deleting =
+      useAppSelector(
+          (state) =>
+              state.nodes.deletingNodeId === node.id,
+      );
 
+  const deleteError =
+      useAppSelector(
+          (state) =>
+              state.nodes.deleteErrorByNodeId[node.id] ??
+              null,
+      );
   const canStart =
       node.status === "Available" ||
       node.status === "Stopped";
@@ -55,7 +67,17 @@ export default function NodeCard({
 
   const hasActiveFault =
       node.activeFault !== "None";
+  const handleDelete = () => {
+    const confirmed = window.confirm(
+        `Are you sure you want to delete "${node.name}"?`,
+    );
 
+    if (!confirmed) {
+      return;
+    }
+
+    dispatch(deleteNode(node.id));
+  };
   return (
       <article className={styles.card}>
         <div className={styles.header}>
@@ -172,7 +194,26 @@ export default function NodeCard({
                     : "Restart"}
               </button>
           )}
+
+          <button
+              className={`${styles.actionButton} ${styles.deleteButton}`}
+              type="button"
+              onClick={handleDelete}
+              disabled={actionLoading || deleting}
+          >
+            {deleting
+                ? "Deleting..."
+                : "Delete"}
+          </button>
         </div>
+        {deleteError && (
+            <p
+                className={styles.error}
+                role="alert"
+            >
+              {deleteError}
+            </p>
+        )}
       </article>
   );
 }
