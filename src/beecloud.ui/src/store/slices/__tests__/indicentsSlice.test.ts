@@ -20,6 +20,7 @@ describe("incidentsSlice", () => {
                 severity: "Critical" as const,
                 status: "Open" as const,
                 createdAt: "2026-10-05T10:00:00Z",
+                updatedAt: "2026-10-03T12:00:00Z",
             },
         ];
 
@@ -70,6 +71,7 @@ describe("incidentsSlice", () => {
                 severity: "High" as const,
                 status: "Open" as const,
                 createdAt: "2026-10-05T10:00:00Z",
+                updatedAt: "2026-10-03T12:00:00Z",
             },
         ];
 
@@ -108,6 +110,7 @@ describe("incidentsSlice", () => {
                 severity: "Critical";
                 status: "Open";
                 createdAt: string;
+                updatedAt: string;
             }[],
         ) => void;
 
@@ -120,6 +123,7 @@ describe("incidentsSlice", () => {
                 severity: "Critical";
                 status: "Open";
                 createdAt: string;
+                updatedAt: string;
             }[]
         >((resolve) => {
             resolveFetch = resolve;
@@ -146,6 +150,7 @@ describe("incidentsSlice", () => {
                 severity: "Critical",
                 status: "Open",
                 createdAt: "2026-10-05T10:00:00Z",
+                updatedAt: "2026-10-03T12:00:00Z",
             },
         ]);
 

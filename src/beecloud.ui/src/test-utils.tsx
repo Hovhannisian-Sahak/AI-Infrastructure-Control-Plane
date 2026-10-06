@@ -18,6 +18,7 @@ type PreloadedState = {
     error?: string | null;
   };
   networks?: Partial<ReturnType<typeof networksReducer>>;
+  incidents?: Partial<ReturnType<typeof indicentReducer>>;
 };
 
 export function createTestStore(preloadedState?: PreloadedState) {
