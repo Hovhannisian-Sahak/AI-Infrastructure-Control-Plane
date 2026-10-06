@@ -4,6 +4,7 @@ import type {
   ComputeNode,
   NodeStatus,
 } from "@/lib/api/models/computeNode";
+import type { HealthCheck } from "@/lib/api/models/healthCheck";
 import {
   useAppDispatch,
   useAppSelector,
@@ -14,10 +15,12 @@ import {
   startNode,
   stopNode,
 } from "@/store/slices/nodesSlice";
+import HealthSparkline from "@/components/health/HealthSparkline";
 import styles from "./NodeCard.module.css";
 
 type NodeCardProps = {
   node: ComputeNode;
+  healthHistory: HealthCheck[];
 };
 
 const statusClassMap: Record<NodeStatus, string> = {
@@ -34,27 +37,27 @@ const statusClassMap: Record<NodeStatus, string> = {
 
 export default function NodeCard({
                                    node,
+                                   healthHistory,
                                  }: NodeCardProps) {
   const dispatch = useAppDispatch();
 
   const actionLoading = useAppSelector(
       (state) =>
-          state.nodes.actionLoadingByNodeId[
-              node.id
-              ] ?? false,
+          state.nodes.actionLoadingByNodeId[node.id] ??
+          false,
   );
-  const deleting =
-      useAppSelector(
-          (state) =>
-              state.nodes.deletingNodeId === node.id,
-      );
 
-  const deleteError =
-      useAppSelector(
-          (state) =>
-              state.nodes.deleteErrorByNodeId[node.id] ??
-              null,
-      );
+  const deleting = useAppSelector(
+      (state) =>
+          state.nodes.deletingNodeId === node.id,
+  );
+
+  const deleteError = useAppSelector(
+      (state) =>
+          state.nodes.deleteErrorByNodeId[node.id] ??
+          null,
+  );
+
   const canStart =
       node.status === "Available" ||
       node.status === "Stopped";
@@ -67,6 +70,20 @@ export default function NodeCard({
 
   const hasActiveFault =
       node.activeFault !== "None";
+
+  const latestHealth =
+      healthHistory.length > 0
+          ? healthHistory[healthHistory.length - 1]
+          : null;
+
+  const cpuHistory = healthHistory.map(
+      (check) => check.cpuUsagePercent,
+  );
+
+  const temperatureHistory = healthHistory.map(
+      (check) => check.gpuTemperatureCelsius,
+  );
+
   const handleDelete = () => {
     const confirmed = window.confirm(
         `Are you sure you want to delete "${node.name}"?`,
@@ -78,6 +95,7 @@ export default function NodeCard({
 
     dispatch(deleteNode(node.id));
   };
+
   return (
       <article className={styles.card}>
         <div className={styles.header}>
@@ -138,6 +156,92 @@ export default function NodeCard({
           </div>
         </dl>
 
+        <section className={styles.healthSection}>
+          <div className={styles.healthHeader}>
+            <h3 className={styles.healthTitle}>
+              Health
+            </h3>
+
+            {latestHealth && (
+                <span
+                    className={`${styles.healthStatus} ${
+                        latestHealth.isHealthy
+                            ? styles.healthHealthy
+                            : styles.healthUnhealthy
+                    }`}
+                >
+              {latestHealth.isHealthy
+                  ? "Healthy"
+                  : "Unhealthy"}
+            </span>
+            )}
+          </div>
+
+          {latestHealth ? (
+              <div className={styles.healthMetrics}>
+                <div className={styles.healthMetric}>
+                  <div
+                      className={
+                        styles.healthMetricHeader
+                      }
+                  >
+                <span className={styles.label}>
+                  CPU Usage
+                </span>
+
+                    <strong className={styles.value}>
+                      {latestHealth.cpuUsagePercent !==
+                      null
+                          ? `${latestHealth.cpuUsagePercent.toFixed(
+                              1,
+                          )}%`
+                          : "N/A"}
+                    </strong>
+                  </div>
+
+                  <HealthSparkline
+                      values={cpuHistory}
+                      min={0}
+                      max={100}
+                      ariaLabel="CPU usage trend"
+                  />
+                </div>
+
+                <div className={styles.healthMetric}>
+                  <div
+                      className={
+                        styles.healthMetricHeader
+                      }
+                  >
+                <span className={styles.label}>
+                  GPU Temperature
+                </span>
+
+                    <strong className={styles.value}>
+                      {latestHealth.gpuTemperatureCelsius !==
+                      null
+                          ? `${latestHealth.gpuTemperatureCelsius.toFixed(
+                              1,
+                          )}°C`
+                          : "N/A"}
+                    </strong>
+                  </div>
+
+                  <HealthSparkline
+                      values={temperatureHistory}
+                      min={50}
+                      max={100}
+                      ariaLabel="GPU temperature trend"
+                  />
+                </div>
+              </div>
+          ) : (
+              <p className={styles.noHealthData}>
+                No health check yet
+              </p>
+          )}
+        </section>
+
         {node.status === "Provisioning" && (
             <p
                 className={styles.info}
@@ -183,9 +287,7 @@ export default function NodeCard({
                   className={`${styles.actionButton} ${styles.restartButton}`}
                   type="button"
                   onClick={() =>
-                      dispatch(
-                          restartNode(node.id),
-                      )
+                      dispatch(restartNode(node.id))
                   }
                   disabled={actionLoading}
               >
@@ -199,13 +301,16 @@ export default function NodeCard({
               className={`${styles.actionButton} ${styles.deleteButton}`}
               type="button"
               onClick={handleDelete}
-              disabled={actionLoading || deleting}
+              disabled={
+                  actionLoading || deleting
+              }
           >
             {deleting
                 ? "Deleting..."
                 : "Delete"}
           </button>
         </div>
+
         {deleteError && (
             <p
                 className={styles.error}

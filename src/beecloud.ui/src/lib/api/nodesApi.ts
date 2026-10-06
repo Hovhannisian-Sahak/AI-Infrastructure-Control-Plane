@@ -11,6 +11,15 @@ export const nodesApi = {
     return apiClient.get<ComputeNode>(`/api/v1/nodes/${id}`);
   },
 
+  getHealthHistory(
+      id: string,
+      limit = 10,
+  ): Promise<HealthCheck[]> {
+    return apiClient.get<HealthCheck[]>(
+        `/api/v1/nodes/${id}/health/history?limit=${limit}`,
+    );
+  },
+  
   start(id: string): Promise<ComputeNode> {
     return apiClient.post<ComputeNode, undefined>(`/api/v1/nodes/${id}/start`, undefined);
   },
