@@ -174,7 +174,7 @@ describe("Home page", () => {
     ).toBeInTheDocument();
 
     expect(
-        screen.getByText("Provisioning"),
+        screen.getByText("Provisioning", { selector: "span" }),
     ).toBeInTheDocument();
 
     expect(
@@ -288,6 +288,12 @@ describe("Home page", () => {
 
     renderWithProviders(<Home />);
 
+      await waitFor(() => {
+          expect(
+              mockedNodesApi.getAll,
+          ).toHaveBeenCalledTimes(1);
+      });
+      
     await user.type(
         screen.getByRole("textbox", {
           name: "Node Name",

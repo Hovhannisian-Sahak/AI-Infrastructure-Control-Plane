@@ -99,7 +99,7 @@ describe("NetworksSection", () => {
       }),
     ).toBeInTheDocument();
 
-    expect(screen.getByLabelText("Network name")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Network name/i)).toBeInTheDocument();
 
     expect(screen.getByLabelText(/Description/)).toBeInTheDocument();
 
@@ -257,7 +257,7 @@ describe("NetworksSection", () => {
 
     renderNetworksSection();
 
-    const nameInput = screen.getByLabelText("Network name");
+    const nameInput = screen.getByLabelText(/Network name/i);
 
     const descriptionInput = screen.getByLabelText(/Description/);
 
@@ -286,7 +286,7 @@ describe("NetworksSection", () => {
 
     renderNetworksSection();
 
-    await user.type(screen.getByLabelText("Network name"), "gpu-production");
+    await user.type(screen.getByLabelText(/Network name/i), "gpu-production");
 
     await user.click(
       screen.getByRole("button", {

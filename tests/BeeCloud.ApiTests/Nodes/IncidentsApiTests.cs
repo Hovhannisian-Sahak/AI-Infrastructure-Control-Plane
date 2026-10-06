@@ -325,6 +325,34 @@ public class IncidentApiTests
             Has.All.Matches<IncidentResponseModel>(
                 x => x.Status == status.ToString()));
     }
+    [Test]
+    public async Task GetIncidentsBySeverityAndStatus_ShouldReturnOnlyMatchingIncidents()
+    {
+        // Arrange
+        var severity = IncidentSeverity.High;
+        var status = IncidentStatus.Open;
+
+        // Act
+        var response = await _incidentsClient.GetAllAsync(
+            severity: severity,
+            status: status);
+
+        // Assert
+        Assert.That(
+            response.StatusCode,
+            Is.EqualTo(HttpStatusCode.OK));
+
+        Assert.That(
+            response.Data,
+            Is.Not.Null);
+
+        Assert.That(
+            response.Data!,
+            Has.All.Matches<IncidentResponseModel>(
+                incident =>
+                    incident.Severity == severity.ToString() &&
+                    incident.Status == status.ToString()));
+    }
     private static IEnumerable<IncidentSeverity> AllIncidentSeverities =>
         Enum.GetValues<IncidentSeverity>();
     private static IEnumerable<IncidentStatus> AllIncidentStatuses =>

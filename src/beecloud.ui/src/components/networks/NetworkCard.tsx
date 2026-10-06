@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Network } from "@/types/network";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  useAppDispatch,
+  useAppSelector,
+} from "@/store/hooks";
 import {
   activateNetwork,
   attachNodeToNetwork,
@@ -17,27 +20,38 @@ type NetworkCardProps = {
   network: Network;
 };
 
-export default function NetworkCard({ network }: NetworkCardProps) {
+export default function NetworkCard({
+                                      network,
+                                    }: NetworkCardProps) {
   const dispatch = useAppDispatch();
 
-  const [showAttachments, setShowAttachments] = useState(false);
+  const [showAttachments, setShowAttachments] =
+      useState(false);
 
-  const [selectedNodeId, setSelectedNodeId] = useState("");
+  const [selectedNodeId, setSelectedNodeId] =
+      useState("");
 
-  const [showAttachSuccess, setShowAttachSuccess] = useState(false);
+  const [showAttachSuccess, setShowAttachSuccess] =
+      useState(false);
 
-  const nodes = useAppSelector((state) => state.nodes.nodes);
+  const nodes = useAppSelector(
+      (state) => state.nodes.nodes,
+  );
 
   const attachmentState = useAppSelector(
-      (state) => state.networks.attachmentsByNetworkId[network.id],
+      (state) =>
+          state.networks.attachmentsByNetworkId[
+              network.id
+              ],
   );
 
   const deletingNetworkId = useAppSelector(
       (state) => state.networks.deletingNetworkId,
   );
 
-  const deleting = deletingNetworkId === network.id;
-  
+  const deleting =
+      deletingNetworkId === network.id;
+
   const networkError = useAppSelector(
       (state) =>
           state.networks.deleteErrorByNetworkId[
@@ -45,29 +59,40 @@ export default function NetworkCard({ network }: NetworkCardProps) {
               ] ?? null,
   );
 
-  const attachments = attachmentState?.items ?? [];
+  const attachments =
+      attachmentState?.items ?? [];
 
-  const attachmentsLoading = attachmentState?.loading ?? false;
+  const attachmentsLoading =
+      attachmentState?.loading ?? false;
 
-  const attachmentsError = attachmentState?.error ?? null;
+  const attachmentsError =
+      attachmentState?.error ?? null;
 
-  const attachLoading = attachmentState?.attachLoading ?? false;
+  const attachLoading =
+      attachmentState?.attachLoading ?? false;
 
-  const attachSuccess = attachmentState?.attachSuccess ?? null;
+  const attachSuccess =
+      attachmentState?.attachSuccess ?? null;
 
-  const attachError = attachmentState?.attachError ?? null;
+  const attachError =
+      attachmentState?.attachError ?? null;
 
   const availableNodes = nodes.filter(
       (node) =>
           !attachments.some(
-              (attachment) => attachment.computeNodeId === node.id,
+              (attachment) =>
+                  attachment.computeNodeId === node.id,
           ),
   );
 
-  const maximumReached = attachments.length >= network.maxAttachments;
+  const maximumReached =
+      attachments.length >=
+      network.maxAttachments;
 
   useEffect(() => {
-    dispatch(fetchNetworkAttachments(network.id));
+    dispatch(
+        fetchNetworkAttachments(network.id),
+    );
   }, [dispatch, network.id]);
 
   useEffect(() => {
@@ -85,7 +110,9 @@ export default function NetworkCard({ network }: NetworkCardProps) {
   }, [attachSuccess]);
 
   const handleToggleAttachments = () => {
-    setShowAttachments((current) => !current);
+    setShowAttachments(
+        (current) => !current,
+    );
   };
 
   const handleAttachNode = async () => {
@@ -100,12 +127,18 @@ export default function NetworkCard({ network }: NetworkCardProps) {
         }),
     );
 
-    if (attachNodeToNetwork.fulfilled.match(result)) {
+    if (
+        attachNodeToNetwork.fulfilled.match(
+            result,
+        )
+    ) {
       setSelectedNodeId("");
     }
   };
 
-  const handleDetachNode = (nodeId: string) => {
+  const handleDetachNode = (
+      nodeId: string,
+  ) => {
     dispatch(
         detachNodeFromNetwork({
           nodeId,
@@ -116,9 +149,13 @@ export default function NetworkCard({ network }: NetworkCardProps) {
 
   const handleToggleActive = () => {
     if (network.isActive) {
-      dispatch(deactivateNetwork(network.id));
+      dispatch(
+          deactivateNetwork(network.id),
+      );
     } else {
-      dispatch(activateNetwork(network.id));
+      dispatch(
+          activateNetwork(network.id),
+      );
     }
   };
 
@@ -137,15 +174,30 @@ export default function NetworkCard({ network }: NetworkCardProps) {
   return (
       <article
           className={`${styles.card} ${
-              !network.isActive ? styles.inactive : ""
+              !network.isActive
+                  ? styles.inactive
+                  : ""
           }`}
       >
         <div className={styles.header}>
-          <div>
-            <h2 className={styles.name}>{network.name}</h2>
+          <div className={styles.heading}>
+            <div className={styles.titleRow}>
+            <span
+                className={styles.networkIcon}
+                aria-hidden="true"
+            >
+              N
+            </span>
+
+              <h2 className={styles.name}>
+                {network.name}
+              </h2>
+            </div>
 
             {network.description && (
-                <p className={styles.description}>{network.description}</p>
+                <p className={styles.description}>
+                  {network.description}
+                </p>
             )}
           </div>
 
@@ -156,27 +208,50 @@ export default function NetworkCard({ network }: NetworkCardProps) {
                       : styles.inactiveStatus
               }`}
           >
-          {network.isActive ? "Active" : "Inactive"}
+          <span
+              className={styles.statusDot}
+              aria-hidden="true"
+          />
+
+            {network.isActive
+                ? "Active"
+                : "Inactive"}
         </span>
         </div>
 
         <div className={styles.meta}>
-          <span>Attachments:</span>
-          <strong>
-            {" "}
-            {attachments.length} / {network.maxAttachments}
-          </strong>
+          <div className={styles.metaItem}>
+          <span className={styles.metaLabel}>
+            Attachments
+          </span>
 
-          <span>
-          Created {new Date(network.createdAt).toLocaleDateString()}
-        </span>
+            <strong className={styles.metaValue}>
+              {attachments.length} / {network.maxAttachments}
+            </strong>
+          </div>
+
+          <div className={styles.metaDivider} />
+
+          <div className={styles.metaItem}>
+          <span className={styles.metaLabel}>
+            Created
+          </span>
+
+            <strong className={styles.metaDate}>
+              {new Date(
+                  network.createdAt,
+              ).toLocaleDateString()}
+            </strong>
+          </div>
         </div>
 
         <div className={styles.actions}>
           <button
               type="button"
               className={styles.secondaryButton}
-              onClick={handleToggleAttachments}
+              onClick={
+                handleToggleAttachments
+              }
               disabled={deleting}
           >
             {showAttachments
@@ -194,35 +269,66 @@ export default function NetworkCard({ network }: NetworkCardProps) {
               onClick={handleToggleActive}
               disabled={deleting}
           >
-            {network.isActive ? "Deactivate" : "Activate"}
+            {network.isActive
+                ? "Deactivate"
+                : "Activate"}
           </button>
 
           <button
               type="button"
-              className={styles.dangerButton}
+              className={styles.deleteButton}
               onClick={handleDelete}
               disabled={deleting}
           >
-            {deleting ? "Deleting..." : "Delete"}
+            {deleting
+                ? "Deleting..."
+                : "Delete"}
           </button>
         </div>
+
         {networkError && (
-            <p className={styles.error} role="alert">
+            <p
+                className={styles.error}
+                role="alert"
+            >
               {networkError}
             </p>
         )}
+
         {showAttachments && (
-            <div className={styles.attachmentsSection}>
-              <h3>Attached Nodes</h3>
+            <div
+                className={styles.attachmentsSection}
+            >
+              <div className={styles.subsectionHeader}>
+                <div>
+                  <h3>Attached Nodes</h3>
+
+                  <p>
+                    Manage nodes connected to this
+                    network.
+                  </p>
+                </div>
+
+                <span className={styles.subsectionCount}>
+              {attachments.length}
+            </span>
+              </div>
 
               {attachmentsLoading && (
-                  <p className={styles.muted}>
+                  <div className={styles.loading}>
+              <span
+                  className={styles.spinner}
+                  aria-hidden="true"
+              />
                     Loading attachments...
-                  </p>
+                  </div>
               )}
 
               {attachmentsError && (
-                  <p className={styles.error} role="alert">
+                  <p
+                      className={styles.error}
+                      role="alert"
+                  >
                     {attachmentsError}
                   </p>
               )}
@@ -238,107 +344,186 @@ export default function NetworkCard({ network }: NetworkCardProps) {
               {!attachmentsLoading &&
                   !attachmentsError &&
                   attachments.length > 0 && (
-                      <ul className={styles.attachmentList}>
-                        {attachments.map((attachment) => (
-                            <li
-                                key={attachment.id}
-                                className={styles.attachmentItem}
-                            >
-                              <>
-                                <span>Node:</span>
-                                <span>
-                        {nodes.find(
-                                (node) =>
-                                    node.id ===
-                                    attachment.computeNodeId,
-                            )?.name ??
-                            attachment.computeNodeId}
-                      </span>
-                              </>
+                      <ul
+                          className={
+                            styles.attachmentList
+                          }
+                      >
+                        {attachments.map(
+                            (attachment) => (
+                                <li
+                                    key={attachment.id}
+                                    className={
+                                      styles.attachmentItem
+                                    }
+                                >
+                                  <div
+                                      className={
+                                        styles.attachmentInfo
+                                      }
+                                  >
+                        <span
+                            className={
+                              styles.nodeIndicator
+                            }
+                            aria-hidden="true"
+                        />
 
-                              <button
-                                  type="button"
-                                  className={styles.smallDangerButton}
-                                  onClick={() =>
-                                      handleDetachNode(
-                                          attachment.computeNodeId,
-                                      )
-                                  }
-                              >
-                                Detach
-                              </button>
-                            </li>
-                        ))}
+                                    <div>
+                          <span
+                              className={
+                                styles.attachmentLabel
+                              }
+                          >
+                            Node
+                          </span>
+
+                                      <span
+                                          className={
+                                            styles.attachmentName
+                                          }
+                                      >
+                            {nodes.find(
+                                    (node) =>
+                                        node.id ===
+                                        attachment.computeNodeId,
+                                )?.name ??
+                                attachment.computeNodeId}
+                          </span>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                      type="button"
+                                      className={
+                                        styles.smallDangerButton
+                                      }
+                                      onClick={() =>
+                                          handleDetachNode(
+                                              attachment.computeNodeId,
+                                          )
+                                      }
+                                  >
+                                    Detach
+                                  </button>
+                                </li>
+                            ),
+                        )}
                       </ul>
                   )}
             </div>
         )}
 
         <div className={styles.attachSection}>
-          <h3>Attach Node</h3>
+          <div className={styles.subsectionHeader}>
+            <div>
+              <h3>Attach Node</h3>
+
+              <p>
+                Connect an available compute node
+                to this network.
+              </p>
+            </div>
+          </div>
 
           {!network.isActive && (
               <p className={styles.warning}>
-                Activate this network before attaching nodes.
+                Activate this network before
+                attaching nodes.
               </p>
           )}
 
-          {network.isActive && maximumReached && (
-              <p className={styles.warning}>
-                Maximum attachment limit reached (
-                {network.maxAttachments}).
-              </p>
-          )}
+          {network.isActive &&
+              maximumReached && (
+                  <p className={styles.warning}>
+                    Maximum attachment limit reached (
+                    {network.maxAttachments}).
+                  </p>
+              )}
 
           {network.isActive &&
               !maximumReached &&
               availableNodes.length === 0 && (
                   <p className={styles.muted}>
-                    All nodes are already attached to this network.
+                    All nodes are already attached to
+                    this network.
                   </p>
               )}
 
           {network.isActive &&
               !maximumReached &&
               availableNodes.length > 0 && (
-                  <div className={styles.attachControls}>
+                  <div
+                      className={
+                        styles.attachControls
+                      }
+                  >
                     <select
                         className={styles.select}
                         value={selectedNodeId}
                         onChange={(event) =>
-                            setSelectedNodeId(event.target.value)
+                            setSelectedNodeId(
+                                event.target.value,
+                            )
                         }
                         disabled={attachLoading}
                     >
-                      <option value="">Select a node</option>
+                      <option value="">
+                        Select a node
+                      </option>
 
-                      {availableNodes.map((node) => (
-                          <option key={node.id} value={node.id}>
-                            {node.name}
-                          </option>
-                      ))}
+                      {availableNodes.map(
+                          (node) => (
+                              <option
+                                  key={node.id}
+                                  value={node.id}
+                              >
+                                {node.name}
+                              </option>
+                          ),
+                      )}
                     </select>
 
                     <button
                         type="button"
-                        className={styles.primaryButton}
-                        disabled={!selectedNodeId || attachLoading}
+                        className={
+                          styles.primaryButton
+                        }
+                        disabled={
+                            !selectedNodeId ||
+                            attachLoading
+                        }
                         onClick={handleAttachNode}
                     >
-                      {attachLoading ? "Attaching..." : "Attach"}
+                      {attachLoading
+                          ? "Attaching..."
+                          : "Attach Node"}
                     </button>
                   </div>
               )}
 
           {attachError && (
-              <p className={styles.error} role="alert">
+              <p
+                  className={styles.error}
+                  role="alert"
+              >
                 {attachError}
               </p>
           )}
         </div>
 
         {showAttachSuccess && (
-            <div className={styles.successAlert} role="status">
+            <div
+                className={styles.successAlert}
+                role="status"
+            >
+          <span
+              className={styles.successIcon}
+              aria-hidden="true"
+          >
+            ✓
+          </span>
+
               Node attached successfully.
             </div>
         )}

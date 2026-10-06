@@ -1,7 +1,10 @@
 ﻿"use client";
 
 import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  useAppDispatch,
+  useAppSelector,
+} from "@/store/hooks";
 import {
   clearNetworkError,
   createNetwork,
@@ -27,6 +30,7 @@ export default function NetworksSection() {
   useEffect(() => {
     dispatch(fetchNetworks());
   }, [dispatch]);
+
   useEffect(() => {
     if (!error) {
       return;
@@ -40,17 +44,20 @@ export default function NetworksSection() {
       clearTimeout(timeoutId);
     };
   }, [error, dispatch]);
-  const handleCreateNetwork = async (request: {
-    name: string;
-    description?: string;
-  }) => {
+
+  const handleCreateNetwork = async (
+      request: {
+        name: string;
+        description?: string;
+      },
+  ) => {
     await dispatch(createNetwork(request));
   };
 
   return (
       <section className={styles.section}>
         <div className={styles.header}>
-          <div>
+          <div className={styles.heading}>
             <p className={styles.eyebrow}>
               Infrastructure
             </p>
@@ -66,11 +73,11 @@ export default function NetworksSection() {
           </div>
 
           <span className={styles.count}>
-                    {networks.length}{" "}
+          {networks.length}{" "}
             {networks.length === 1
                 ? "network"
                 : "networks"}
-                </span>
+        </span>
         </div>
 
         <CreateNetworkForm
@@ -83,13 +90,24 @@ export default function NetworksSection() {
                 className={styles.success}
                 role="status"
             >
+          <span
+              className={styles.successIcon}
+              aria-hidden="true"
+          >
+            ✓
+          </span>
+
               {createSuccess}
             </div>
         )}
 
         {loading && (
             <div className={styles.loading}>
-              <span className={styles.spinner} />
+          <span
+              className={styles.spinner}
+              aria-hidden="true"
+          />
+
               Loading networks...
             </div>
         )}
@@ -107,7 +125,10 @@ export default function NetworksSection() {
             !error &&
             networks.length === 0 && (
                 <div className={styles.empty}>
-                  <div className={styles.emptyIcon}>
+                  <div
+                      className={styles.emptyIcon}
+                      aria-hidden="true"
+                  >
                     N
                   </div>
 

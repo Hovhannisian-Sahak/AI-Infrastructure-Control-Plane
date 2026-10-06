@@ -8,8 +8,8 @@ import CreateNetworkForm from "../CreateNetworkForm";
 
 describe("CreateNetworkForm", () => {
   const mockOnSubmit = jest
-    .fn()
-    .mockResolvedValue(undefined);
+      .fn()
+      .mockResolvedValue(undefined);
 
   beforeEach(() => {
     mockOnSubmit.mockClear();
@@ -19,60 +19,60 @@ describe("CreateNetworkForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNetworkForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNetworkForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     expect(
-      screen.getByRole("heading", {
-        name: "Create Network",
-      }),
+        screen.getByRole("heading", {
+          name: "Create Network",
+        }),
     ).toBeInTheDocument();
 
     expect(
-      screen.getByLabelText("Network name"),
+        screen.getByLabelText("Network Name"),
     ).toHaveValue("");
 
     expect(
-      screen.getByLabelText(/Description/),
+        screen.getByLabelText(/Description/),
     ).toHaveValue("");
 
     expect(
-      screen.getByRole("button", {
-        name: "Create Network",
-      }),
+        screen.getByRole("button", {
+          name: "Create Network",
+        }),
     ).toBeDisabled();
   });
 
   it("submits a trimmed network name and description", async () => {
     const user = userEvent.setup();
     const onSubmit = jest
-      .fn()
-      .mockResolvedValue(undefined);
+        .fn()
+        .mockResolvedValue(undefined);
 
     render(
-      <CreateNetworkForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNetworkForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     await user.type(
-      screen.getByLabelText("Network name"),
-      "  gpu-production  ",
+        screen.getByLabelText("Network Name"),
+        "  gpu-production  ",
     );
 
     await user.type(
-      screen.getByLabelText(/Description/),
-      "  Production GPU network  ",
+        screen.getByLabelText(/Description/),
+        "  Production GPU network  ",
     );
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Create Network",
-      }),
+        screen.getByRole("button", {
+          name: "Create Network",
+        }),
     );
 
     expect(onSubmit).toHaveBeenCalledWith({
@@ -83,14 +83,14 @@ describe("CreateNetworkForm", () => {
 
   it("shows a validation error when the name is only whitespace", () => {
     render(
-      <CreateNetworkForm
-        onSubmit={mockOnSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNetworkForm
+            onSubmit={mockOnSubmit}
+            isSubmitting={false}
+        />,
     );
 
     const nameInput =
-      screen.getByLabelText("Network name");
+        screen.getByLabelText("Network Name");
 
     fireEvent.change(nameInput, {
       target: {
@@ -103,13 +103,13 @@ describe("CreateNetworkForm", () => {
     fireEvent.submit(form!);
 
     expect(
-      screen.getByText(
-        "Network name is required.",
-      ),
+        screen.getByText(
+            "Network name is required.",
+        ),
     ).toBeInTheDocument();
 
     expect(
-      mockOnSubmit,
+        mockOnSubmit,
     ).not.toHaveBeenCalled();
   });
 
@@ -122,7 +122,7 @@ describe("CreateNetworkForm", () => {
     );
 
     expect(
-        screen.getByLabelText("Network name"),
+        screen.getByLabelText("Network Name"),
     ).toHaveAttribute("maxLength", "100");
   });
 
@@ -142,25 +142,25 @@ describe("CreateNetworkForm", () => {
   it("submits undefined description when description is empty", async () => {
     const user = userEvent.setup();
     const onSubmit = jest
-      .fn()
-      .mockResolvedValue(undefined);
+        .fn()
+        .mockResolvedValue(undefined);
 
     render(
-      <CreateNetworkForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNetworkForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     await user.type(
-      screen.getByLabelText("Network name"),
-      "gpu-production",
+        screen.getByLabelText("Network Name"),
+        "gpu-production",
     );
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Create Network",
-      }),
+        screen.getByRole("button", {
+          name: "Create Network",
+        }),
     );
 
     expect(onSubmit).toHaveBeenCalledWith({
@@ -172,36 +172,36 @@ describe("CreateNetworkForm", () => {
   it("clears the form after successful submission", async () => {
     const user = userEvent.setup();
     const onSubmit = jest
-      .fn()
-      .mockResolvedValue(undefined);
+        .fn()
+        .mockResolvedValue(undefined);
 
     render(
-      <CreateNetworkForm
-        onSubmit={onSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNetworkForm
+            onSubmit={onSubmit}
+            isSubmitting={false}
+        />,
     );
 
     const nameInput =
-      screen.getByLabelText("Network name");
+        screen.getByLabelText("Network Name");
 
     const descriptionInput =
-      screen.getByLabelText(/Description/);
+        screen.getByLabelText(/Description/);
 
     await user.type(
-      nameInput,
-      "gpu-production",
+        nameInput,
+        "gpu-production",
     );
 
     await user.type(
-      descriptionInput,
-      "Production network",
+        descriptionInput,
+        "Production network",
     );
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Create Network",
-      }),
+        screen.getByRole("button", {
+          name: "Create Network",
+        }),
     );
 
     expect(nameInput).toHaveValue("");
@@ -212,38 +212,38 @@ describe("CreateNetworkForm", () => {
     const onSubmit = jest.fn();
 
     render(
-      <CreateNetworkForm
-        onSubmit={onSubmit}
-        isSubmitting={true}
-      />,
+        <CreateNetworkForm
+            onSubmit={onSubmit}
+            isSubmitting={true}
+        />,
     );
 
     expect(
-      screen.getByRole("button", {
-        name: "Creating...",
-      }),
+        screen.getByRole("button", {
+          name: "Creating network...",
+        }),
     ).toBeDisabled();
   });
 
   it("clears the validation error when the name is changed", () => {
     render(
-      <CreateNetworkForm
-        onSubmit={mockOnSubmit}
-        isSubmitting={false}
-      />,
+        <CreateNetworkForm
+            onSubmit={mockOnSubmit}
+            isSubmitting={false}
+        />,
     );
 
     const nameInput =
-      screen.getByLabelText("Network name");
+        screen.getByLabelText("Network Name");
 
     const form = nameInput.closest("form");
 
     fireEvent.submit(form!);
 
     expect(
-      screen.getByText(
-        "Network name is required.",
-      ),
+        screen.getByText(
+            "Network name is required.",
+        ),
     ).toBeInTheDocument();
 
     fireEvent.change(nameInput, {
@@ -253,9 +253,9 @@ describe("CreateNetworkForm", () => {
     });
 
     expect(
-      screen.queryByText(
-        "Network name is required.",
-      ),
+        screen.queryByText(
+            "Network name is required.",
+        ),
     ).not.toBeInTheDocument();
   });
 });

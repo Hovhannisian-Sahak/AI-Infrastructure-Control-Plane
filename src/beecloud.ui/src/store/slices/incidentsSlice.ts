@@ -54,7 +54,7 @@ const incidentsSlice = createSlice({
             .addCase(fetchIncidents.rejected, (state, action) => {
                 state.loading = false;
                 state.error =
-                    action.error.message ??
+                    action.error.message ||
                     "Unable to load incidents. Please try again.";
             });
     },

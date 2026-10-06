@@ -1,4 +1,8 @@
-﻿import { render, screen, waitFor } from "@testing-library/react";
+﻿import {
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import NetworkCard from "../NetworkCard";
 import { networksApi } from "@/lib/api/networksApi";
@@ -146,7 +150,7 @@ describe("NetworkCard", () => {
     ).toBeInTheDocument();
 
     expect(
-        screen.getByText("0 / 4"),
+        screen.getByText(/0\s*\/\s*4/),
     ).toBeInTheDocument();
   });
 
@@ -164,9 +168,7 @@ describe("NetworkCard", () => {
 
       expect(
           store.getState().networks
-              .attachmentsByNetworkId[
-              "network-1"
-              ].loading,
+              .attachmentsByNetworkId["network-1"].loading,
       ).toBe(false);
     });
   });
@@ -183,7 +185,7 @@ describe("NetworkCard", () => {
     });
 
     expect(
-        screen.getByText("1 / 4"),
+        screen.getByText(/1\s*\/\s*4/),
     ).toBeInTheDocument();
 
     await user.click(
@@ -250,7 +252,7 @@ describe("NetworkCard", () => {
     });
 
     expect(
-        screen.getByText("2 / 4"),
+        screen.getByText(/2\s*\/\s*4/),
     ).toBeInTheDocument();
 
     expect(
@@ -310,19 +312,16 @@ describe("NetworkCard", () => {
 
     const { store } = renderNetworkCard();
 
-    await user.click(
-        screen.getByRole("button", {
-          name: /show attachments/i,
-        }),
-    );
-
     const select = screen.getByRole("combobox");
 
-    await user.selectOptions(select, "node-2");
+    await user.selectOptions(
+        select,
+        "node-2",
+    );
 
     await user.click(
         screen.getByRole("button", {
-          name: /^attach$/i,
+          name: /attach node/i,
         }),
     );
 
@@ -336,9 +335,8 @@ describe("NetworkCard", () => {
 
       expect(
           store.getState().networks
-              .attachmentsByNetworkId[
-              "network-1"
-              ].attachLoading,
+              .attachmentsByNetworkId["network-1"]
+              .attachLoading,
       ).toBe(false);
     });
   });
@@ -449,7 +447,7 @@ describe("NetworkCard", () => {
 
     expect(
         screen.queryByRole("button", {
-          name: /^attach$/i,
+          name: /attach node/i,
         }),
     ).not.toBeInTheDocument();
   });
@@ -480,7 +478,7 @@ describe("NetworkCard", () => {
 
     expect(
         screen.queryByRole("button", {
-          name: /^attach$/i,
+          name: /attach node/i,
         }),
     ).not.toBeInTheDocument();
   });
@@ -655,7 +653,7 @@ describe("NetworkCard", () => {
   it("deletes the network after confirmation", async () => {
     const user = userEvent.setup();
 
-    jest
+    const confirmSpy = jest
         .spyOn(window, "confirm")
         .mockReturnValue(true);
 
@@ -684,18 +682,16 @@ describe("NetworkCard", () => {
 
     expect(
         store.getState().networks
-            .deleteErrorByNetworkId[
-            "network-1"
-            ],
+            .deleteErrorByNetworkId["network-1"],
     ).toBeUndefined();
 
-    jest.restoreAllMocks();
+    confirmSpy.mockRestore();
   });
 
   it("shows deleting state while network deletion is in progress", async () => {
     const user = userEvent.setup();
 
-    jest
+    const confirmSpy = jest
         .spyOn(window, "confirm")
         .mockReturnValue(true);
 
@@ -737,7 +733,7 @@ describe("NetworkCard", () => {
       ).toBeNull();
     });
 
-    jest.restoreAllMocks();
+    confirmSpy.mockRestore();
   });
 
   it("shows an error when network deletion fails", () => {
