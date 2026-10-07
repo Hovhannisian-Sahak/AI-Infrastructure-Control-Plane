@@ -11,8 +11,10 @@ import {
     type HealthTimeRange,
     getHealthRangeStart,
 } from "@/lib/health/healthTimeRange";
+import { deriveHealthAlerts } from "@/lib/health/healthAlerts";
 
 import HealthSparkline from "@/components/health/HealthSparkline";
+import HealthAlerts from "@/components/health/HealthAlerts";
 
 import styles from "./HealthDashboard.module.css";
 
@@ -133,6 +135,11 @@ export default function HealthDashboard({
         };
     }, [nodesWithHealth]);
 
+    const alerts = useMemo(
+        () => deriveHealthAlerts(nodes, latestByNodeId),
+        [nodes, latestByNodeId],
+    );
+
     const visibleNodes = useMemo(
         () =>
             nodesWithHealth.filter(item => {
@@ -192,6 +199,8 @@ export default function HealthDashboard({
                     </strong>
                 </article>
             </div>
+
+            <HealthAlerts alerts={alerts} />
 
             <div className={styles.controls}>
                 <div>

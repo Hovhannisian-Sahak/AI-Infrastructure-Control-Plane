@@ -5,6 +5,7 @@
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import type { HealthCheck } from "@/lib/api/models/healthCheck";
 import HealthDashboard from "../HealthDashboard";
 
 const nodes = [
@@ -54,7 +55,15 @@ const unhealthy = {
     checkedAt: "2026-10-07T12:00:00Z",
 };
 
-function renderDashboard() {
+function renderDashboard(
+    latestByNodeId: Record<
+        string,
+        HealthCheck | null | undefined
+    > = {
+        "node-1": healthy,
+        "node-2": unhealthy,
+    },
+) {
     return render(
         <HealthDashboard
             nodes={nodes}
@@ -62,10 +71,7 @@ function renderDashboard() {
                 "node-1": [healthy],
                 "node-2": [unhealthy],
             }}
-            latestByNodeId={{
-                "node-1": healthy,
-                "node-2": unhealthy,
-            }}
+            latestByNodeId={latestByNodeId}
             loadingByNodeId={{
                 "node-1": false,
                 "node-2": false,
@@ -73,6 +79,12 @@ function renderDashboard() {
             }}
         />,
     );
+}
+
+function getNodeRow(nodeName: string) {
+    return screen.getByRole("row", {
+        name: new RegExp(nodeName),
+    });
 }
 
 describe("HealthDashboard", () => {
@@ -105,17 +117,9 @@ describe("HealthDashboard", () => {
     it("shows all nodes by default", () => {
         renderDashboard();
 
-        expect(
-            screen.getByText("gpu-node-01"),
-        ).toBeInTheDocument();
-
-        expect(
-            screen.getByText("gpu-node-02"),
-        ).toBeInTheDocument();
-
-        expect(
-            screen.getByText("gpu-node-03"),
-        ).toBeInTheDocument();
+        expect(getNodeRow("gpu-node-01")).toBeInTheDocument();
+        expect(getNodeRow("gpu-node-02")).toBeInTheDocument();
+        expect(getNodeRow("gpu-node-03")).toBeInTheDocument();
     });
 
     it("filters healthy nodes", async () => {
@@ -129,16 +133,12 @@ describe("HealthDashboard", () => {
             }),
         );
 
+        expect(getNodeRow("gpu-node-01")).toBeInTheDocument();
         expect(
-            screen.getByText("gpu-node-01"),
-        ).toBeInTheDocument();
-
-        expect(
-            screen.queryByText("gpu-node-02"),
+            screen.queryByRole("row", { name: /gpu-node-02/ }),
         ).not.toBeInTheDocument();
-
         expect(
-            screen.queryByText("gpu-node-03"),
+            screen.queryByRole("row", { name: /gpu-node-03/ }),
         ).not.toBeInTheDocument();
     });
 
@@ -153,12 +153,9 @@ describe("HealthDashboard", () => {
             }),
         );
 
+        expect(getNodeRow("gpu-node-02")).toBeInTheDocument();
         expect(
-            screen.getByText("gpu-node-02"),
-        ).toBeInTheDocument();
-
-        expect(
-            screen.queryByText("gpu-node-01"),
+            screen.queryByRole("row", { name: /gpu-node-01/ }),
         ).not.toBeInTheDocument();
     });
 
@@ -173,16 +170,12 @@ describe("HealthDashboard", () => {
             }),
         );
 
+        expect(getNodeRow("gpu-node-03")).toBeInTheDocument();
         expect(
-            screen.getByText("gpu-node-03"),
-        ).toBeInTheDocument();
-
-        expect(
-            screen.queryByText("gpu-node-01"),
+            screen.queryByRole("row", { name: /gpu-node-01/ }),
         ).not.toBeInTheDocument();
-
         expect(
-            screen.queryByText("gpu-node-02"),
+            screen.queryByRole("row", { name: /gpu-node-02/ }),
         ).not.toBeInTheDocument();
     });
 
@@ -232,6 +225,78 @@ describe("HealthDashboard", () => {
         expect(
             screen.getByText("96.0°C"),
         ).toBeInTheDocument();
+    });
+
+    it("shows unhealthy and high-usage alerts derived from latest readings", () => {
+        renderDashboard();
+
+        const alerts = screen.getByRole("region", {
+            name: "Health Alerts",
+        });
+
+        expect(alerts).toHaveTextContent(
+            "Node health check reports unhealthy.",
+        );
+        expect(alerts).toHaveTextContent(
+            "CPU usage is high (95.0%).",
+        );
+        expect(alerts).not.toHaveTextContent("GPU usage is high");
+        expect(
+            within(alerts).getAllByRole("link", {
+                name: "gpu-node-02",
+            }),
+        ).toHaveLength(2);
+        within(alerts)
+            .getAllByRole("link", {
+                name: "gpu-node-02",
+            })
+            .forEach(link => {
+                expect(link).toHaveAttribute(
+                    "href",
+                    "/nodes/node-2",
+                );
+            });
+    });
+
+    it("flags high GPU usage even when the node is otherwise healthy", () => {
+        renderDashboard({
+            "node-1": {
+                ...healthy,
+                gpuUsagePercent: 92,
+            },
+        });
+
+        const alerts = screen.getByRole("region", {
+            name: "Health Alerts",
+        });
+
+        expect(alerts).toHaveTextContent(
+            "GPU usage is high (92.0%).",
+        );
+        expect(
+            within(alerts).getByRole("link", {
+                name: "gpu-node-01",
+            }),
+        ).toHaveAttribute("href", "/nodes/node-1");
+        expect(alerts).not.toHaveTextContent(
+            "Node health check reports unhealthy.",
+        );
+    });
+
+    it("shows an empty state when there are no active alerts", () => {
+        renderDashboard({
+            "node-1": healthy,
+            "node-2": {
+                ...unhealthy,
+                isHealthy: true,
+                cpuUsagePercent: 50,
+                gpuUsagePercent: 60,
+            },
+        });
+
+        expect(
+            screen.getByRole("status"),
+        ).toHaveTextContent("No active health alerts.");
     });
 
     it("links each node to its detail page", () => {
