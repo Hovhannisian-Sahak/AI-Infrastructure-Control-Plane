@@ -115,6 +115,24 @@ describe("deriveHealthAlerts", () => {
         ).toEqual([]);
     });
 
+    it("does not alert on old readings when a node is not monitored", () => {
+        const stoppedNode = {
+            ...node,
+            status: "Stopped" as const,
+        };
+
+        expect(
+            deriveHealthAlerts([stoppedNode], {
+                [stoppedNode.id]: {
+                    ...health,
+                    isHealthy: false,
+                    cpuUsagePercent: 99,
+                    gpuUsagePercent: 99,
+                },
+            }),
+        ).toEqual([]);
+    });
+
     it("does not flag usage just below the threshold", () => {
         const alerts = deriveHealthAlerts([node], {
             [node.id]: {

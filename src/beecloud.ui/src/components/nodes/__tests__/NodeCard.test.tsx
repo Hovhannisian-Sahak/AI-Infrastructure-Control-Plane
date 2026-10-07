@@ -83,7 +83,7 @@ describe("NodeCard", () => {
     expect(screen.getByText("No health check yet")).toBeInTheDocument();
   });
 
-  it("renders healthy health information", () => {
+  it("shows the last health result and metrics for an available node", () => {
     renderWithProviders(<NodeCard node={baseNode} />, {
       preloadedState: {
         health: {
@@ -99,7 +99,8 @@ describe("NodeCard", () => {
       },
     });
 
-    expect(screen.getByText("Healthy")).toBeInTheDocument();
+    expect(screen.getByText("Last result: Healthy")).toBeInTheDocument();
+    expect(screen.getByText("Not currently monitored")).toBeInTheDocument();
     expect(screen.getByText("55.1%")).toBeInTheDocument();
     expect(screen.getByText("65.8°C")).toBeInTheDocument();
 
@@ -113,6 +114,65 @@ describe("NodeCard", () => {
         screen.getByRole("img", {
           name: "GPU temperature trend",
         }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows live health status without an unmonitored note for a running node", () => {
+    const runningNode: ComputeNode = {
+      ...baseNode,
+      status: "Running",
+    };
+
+    renderWithProviders(<NodeCard node={runningNode} />, {
+      preloadedState: {
+        health: {
+          historyByNodeId: {
+            "node-1": healthyHistory,
+          },
+          latestByNodeId: {
+            "node-1": healthyHistory[1],
+          },
+          loadingByNodeId: {},
+          errorByNodeId: {},
+        },
+      },
+    });
+
+    expect(screen.getByText("Healthy")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Not currently monitored"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("retains and displays the last unhealthy result and history after a node stops", () => {
+    const stoppedNode: ComputeNode = {
+      ...baseNode,
+      status: "Stopped",
+    };
+
+    renderWithProviders(<NodeCard node={stoppedNode} />, {
+      preloadedState: {
+        health: {
+          historyByNodeId: {
+            "node-1": unhealthyHistory,
+          },
+          latestByNodeId: {
+            "node-1": unhealthyHistory[1],
+          },
+          loadingByNodeId: {},
+          errorByNodeId: {},
+        },
+      },
+    });
+
+    expect(
+      screen.getByText("Last result: Unhealthy"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Not currently monitored")).toBeInTheDocument();
+    expect(screen.getByText("97.1%")).toBeInTheDocument();
+    expect(screen.getByText("96.2°C")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "CPU usage trend" }),
     ).toBeInTheDocument();
   });
 

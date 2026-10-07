@@ -595,7 +595,7 @@ describe("Home page", () => {
         ).toBeInTheDocument();
     });
 
-    it("does not fetch health history for an available node", async () => {
+    it("fetches health history once for an available node without monitoring it", async () => {
         mockedNodesApi.getAll.mockResolvedValue([
             {
                 id: "node-1",
@@ -616,11 +616,13 @@ describe("Home page", () => {
         await waitFor(() => {
             expect(
                 mockedNodesApi.getHealthHistory,
-            ).not.toHaveBeenCalled();
+            ).toHaveBeenCalledWith("node-1", 10);
         });
+
+        expect(mockedNodesApi.getHealthHistory).toHaveBeenCalledTimes(1);
     });
 
-    it("does not fetch health history for a stopped node", async () => {
+    it("fetches health history once for a stopped node without monitoring it", async () => {
         mockedNodesApi.getAll.mockResolvedValue([
             {
                 id: "node-1",
@@ -641,8 +643,10 @@ describe("Home page", () => {
         await waitFor(() => {
             expect(
                 mockedNodesApi.getHealthHistory,
-            ).not.toHaveBeenCalled();
+            ).toHaveBeenCalledWith("node-1", 10);
         });
+
+        expect(mockedNodesApi.getHealthHistory).toHaveBeenCalledTimes(1);
     });
 
     it("fetches health history for an unhealthy node", async () => {

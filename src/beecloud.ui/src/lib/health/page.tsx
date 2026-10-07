@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 
 import {
     useAppDispatch,
@@ -14,15 +14,9 @@ import {
 } from "@/store/slices/healthSlice";
 
 import HealthDashboard from "@/components/health/HealthDashboard";
+import { getHealthMonitoringNodeIds } from "@/lib/health/healthMonitoring";
 
 import styles from "./page.module.css";
-
-const MONITORED_STATUSES = [
-    "Running",
-    "Unhealthy",
-    "Quarantined",
-    "Remediating",
-] as const;
 
 export default function HealthPage() {
     const dispatch = useAppDispatch();
@@ -43,25 +37,34 @@ export default function HealthPage() {
         state => state.health.loadingByNodeId,
     );
 
-    const monitoredNodeIds = useMemo(
-        () =>
-            nodes
-                .filter(node =>
-                    MONITORED_STATUSES.includes(
-                        node.status as (typeof MONITORED_STATUSES)[number],
-                    ),
-                )
-                .map(node => node.id)
-                .sort(),
-        [nodes],
-    );
+    const monitoredNodeIds =
+        getHealthMonitoringNodeIds(nodes, true);
+    const unmonitoredNodeIds =
+        getHealthMonitoringNodeIds(nodes, false);
 
     const monitoredNodeKey =
         monitoredNodeIds.join(",");
+    const unmonitoredNodeKey =
+        unmonitoredNodeIds.join(",");
 
     useEffect(() => {
         dispatch(fetchNodes());
     }, [dispatch]);
+
+    useEffect(() => {
+        if (!unmonitoredNodeKey) {
+            return;
+        }
+
+        for (const nodeId of unmonitoredNodeKey.split(",")) {
+            void dispatch(
+                fetchHealthHistory({
+                    nodeId,
+                    limit: 100,
+                }),
+            );
+        }
+    }, [dispatch, unmonitoredNodeKey]);
 
     useEffect(() => {
         if (!monitoredNodeKey) {

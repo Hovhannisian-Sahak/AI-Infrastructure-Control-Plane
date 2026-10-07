@@ -1,5 +1,6 @@
 import type { ComputeNode } from "@/lib/api/models/computeNode";
 import type { HealthCheck } from "@/lib/api/models/healthCheck";
+import { isHealthMonitored } from "./healthMonitoring";
 
 export const HIGH_USAGE_THRESHOLD = 90;
 
@@ -27,6 +28,10 @@ export function deriveHealthAlerts(
     const alerts: HealthAlert[] = [];
 
     for (const node of nodes) {
+        if (!isHealthMonitored(node.status)) {
+            continue;
+        }
+
         const latest = latestByNodeId[node.id];
 
         if (!latest) {

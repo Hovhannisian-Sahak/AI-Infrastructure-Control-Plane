@@ -15,6 +15,7 @@ import {
 import {
   fetchHealthHistory,
 } from "@/store/slices/healthSlice";
+import { getHealthMonitoringNodeIds } from "@/lib/health/healthMonitoring";
 
 import NodeCard from "@/components/nodes/NodeCard";
 import CreateNodeForm from "@/components/nodes/CreateNodeForm";
@@ -68,18 +69,28 @@ export default function Home() {
    * We only depend on the IDs of nodes whose
    * health should currently be monitored.
    */
-  const monitoredNodeIds = nodes
-      .filter(
-          (node) =>
-              node.status === "Running" ||
-              node.status === "Unhealthy" ||
-              node.status === "Quarantined" ||
-              node.status === "Remediating",
-      )
-      .map((node) => node.id)
-      .sort();
+  const monitoredNodeIds =
+      getHealthMonitoringNodeIds(nodes, true);
+  const unmonitoredNodeIds =
+      getHealthMonitoringNodeIds(nodes, false);
 
   const monitoredNodeKey = monitoredNodeIds.join(",");
+  const unmonitoredNodeKey = unmonitoredNodeIds.join(",");
+
+  useEffect(() => {
+    if (!unmonitoredNodeKey) {
+      return;
+    }
+
+    for (const nodeId of unmonitoredNodeKey.split(",")) {
+      void dispatch(
+          fetchHealthHistory({
+            nodeId,
+            limit: 10,
+          }),
+      );
+    }
+  }, [dispatch, unmonitoredNodeKey]);
 
   useEffect(() => {
     if (!monitoredNodeKey) {

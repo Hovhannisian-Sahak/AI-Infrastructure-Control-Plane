@@ -13,6 +13,7 @@ import {
     stopNode,
 } from "@/store/slices/nodesSlice";
 import HealthSparkline from "@/components/health/HealthSparkline";
+import { isHealthMonitored } from "@/lib/health/healthMonitoring";
 import styles from "./NodeCard.module.css";
 
 type NodeCardProps = {
@@ -57,6 +58,7 @@ export default function NodeCard({ node }: NodeCardProps) {
     );
 
     const isProvisioning = node.status === "Provisioning";
+    const isMonitored = isHealthMonitored(node.status);
 
     const canStart =
         node.status === "Available" ||
@@ -170,12 +172,27 @@ export default function NodeCard({ node }: NodeCardProps) {
                                     : styles.healthUnhealthy
                             }`}
                         >
-              {latestHealth.isHealthy
-                  ? "Healthy"
-                  : "Unhealthy"}
-            </span>
+                            {isMonitored
+                                ? latestHealth.isHealthy
+                                    ? "Healthy"
+                                    : "Unhealthy"
+                                : (
+                                    <>
+                                        Last result:{" "}
+                                        {latestHealth.isHealthy
+                                            ? "Healthy"
+                                            : "Unhealthy"}
+                                    </>
+                                )}
+                        </span>
                     )}
                 </div>
+
+                {!isMonitored && (
+                    <p className={styles.monitoringNote}>
+                        Not currently monitored
+                    </p>
+                )}
 
                 {latestHealth ? (
                     <div className={styles.healthMetrics}>

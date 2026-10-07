@@ -245,6 +245,13 @@
   line-height: 1.3;
 }
 
+.monitoringNote {
+  margin: -6px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .healthHealthy {
   color: #166534;
   background: #dcfce7;

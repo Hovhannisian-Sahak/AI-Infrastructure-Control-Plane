@@ -299,6 +299,38 @@ describe("HealthDashboard", () => {
         ).toHaveTextContent("No active health alerts.");
     });
 
+    it("keeps historical health visible for unmonitored nodes without raising current alerts", () => {
+        const stoppedNode = {
+            ...nodes[2],
+            status: "Stopped" as const,
+        };
+        const oldHealth = {
+            ...healthy,
+            computeNodeId: stoppedNode.id,
+            cpuUsagePercent: 42,
+            gpuUsagePercent: 95,
+        };
+
+        render(
+            <HealthDashboard
+                nodes={[stoppedNode]}
+                historyByNodeId={{
+                    [stoppedNode.id]: [oldHealth],
+                }}
+                latestByNodeId={{
+                    [stoppedNode.id]: oldHealth,
+                }}
+                loadingByNodeId={{ [stoppedNode.id]: false }}
+            />,
+        );
+
+        expect(getNodeRow("gpu-node-03")).toHaveTextContent("42.0%");
+        expect(getNodeRow("gpu-node-03")).toHaveTextContent("95.0%");
+        expect(
+            screen.getByRole("status"),
+        ).toHaveTextContent("No active health alerts.");
+    });
+
     it("links each node to its detail page", () => {
         renderDashboard();
 
