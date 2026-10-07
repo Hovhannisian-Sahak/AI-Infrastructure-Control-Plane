@@ -2,6 +2,7 @@
 
 import type { ComputeNode } from "@/lib/api/models/computeNode";
 import type { HealthCheck } from "@/lib/api/models/healthCheck";
+import Link from "next/link";
 import {
     useAppDispatch,
     useAppSelector,
@@ -97,7 +98,14 @@ export default function NodeCard({ node }: NodeCardProps) {
         <article className={styles.card}>
             <div className={styles.header}>
                 <div className={styles.titleGroup}>
-                    <h2 className={styles.title}>{node.name}</h2>
+                    <h2 className={styles.title}>
+                        <Link
+                            className={styles.titleLink}
+                            href={`/nodes/${node.id}`}
+                        >
+                            {node.name}
+                        </Link>
+                    </h2>
 
                     <span className={styles.id}>
             {node.id}

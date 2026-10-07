@@ -33,7 +33,7 @@ import {
 
 import HealthHistory from "@/lib/health/HealthHistory";
 
-import styles from "./page.module.css";
+import styles from "./NodeDetailPage.module.css";
 
 export default function NodeDetailPage() {
     const params = useParams();
