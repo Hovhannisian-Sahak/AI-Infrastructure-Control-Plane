@@ -67,9 +67,23 @@ export const nodesApi = {
   getHealthHistory(
       id: string,
       limit = 10,
+      from?: string,
+      to?: string,
   ): Promise<HealthCheck[]> {
+    const query = new URLSearchParams();
+
+    if (from) {
+      query.set("from", from);
+    }
+
+    if (to) {
+      query.set("to", to);
+    }
+
+    query.set("limit", String(limit));
+
     return apiClient.get<HealthCheck[]>(
-        `/api/v1/nodes/${id}/health/history?limit=${limit}`,
+        `/api/v1/nodes/${id}/health/history?${query.toString()}`,
     );
   },
 

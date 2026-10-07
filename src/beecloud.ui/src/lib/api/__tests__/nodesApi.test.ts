@@ -1,5 +1,6 @@
 ﻿import { apiClient } from "../client";
 import { nodesApi } from "../nodesApi";
+import type { HealthCheck } from "../models/healthCheck";
 
 jest.mock("../client", () => ({
   apiClient: {
@@ -97,6 +98,37 @@ describe("nodesApi", () => {
 
     expect(result).toEqual(node);
   });
+
+  it("gets health history with a time range and limit", async () => {
+    const history: HealthCheck[] = [];
+    const from = "2026-10-07T10:00:00.000Z";
+    const to = "2026-10-07T14:00:00.000Z";
+
+    mockedApiClient.get.mockResolvedValue(history);
+
+    const result = await nodesApi.getHealthHistory(
+      "node-1",
+      100,
+      from,
+      to,
+    );
+
+    expect(mockedApiClient.get).toHaveBeenCalledWith(
+      "/api/v1/nodes/node-1/health/history?from=2026-10-07T10%3A00%3A00.000Z&to=2026-10-07T14%3A00%3A00.000Z&limit=100",
+    );
+    expect(result).toBe(history);
+  });
+
+  it("gets health history with only the limit when no time range is provided", async () => {
+    mockedApiClient.get.mockResolvedValue([]);
+
+    await nodesApi.getHealthHistory("node-1");
+
+    expect(mockedApiClient.get).toHaveBeenCalledWith(
+      "/api/v1/nodes/node-1/health/history?limit=10",
+    );
+  });
+
   it("propagates an error when starting a node fails", async () => {
     const error = new Error("POST /api/v1/nodes/node-1/start failed");
 

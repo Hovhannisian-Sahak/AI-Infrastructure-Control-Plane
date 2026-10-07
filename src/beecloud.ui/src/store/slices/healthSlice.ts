@@ -29,17 +29,24 @@ export const fetchHealthHistory = createAsyncThunk<
     {
         nodeId: string;
         limit?: number;
+        from?: string;
+        to?: string;
     },
     {
         rejectValue: string;
     }
 >(
     "health/fetchHealthHistory",
-    async ({ nodeId, limit = 10 }, { rejectWithValue }) => {
+    async (
+        { nodeId, limit = 10, from, to },
+        { rejectWithValue },
+    ) => {
         try {
             const history = await nodesApi.getHealthHistory(
                 nodeId,
                 limit,
+                from,
+                to,
             );
 
             const sortedHistory = [...history].sort(
@@ -50,7 +57,7 @@ export const fetchHealthHistory = createAsyncThunk<
 
             return {
                 nodeId,
-                history: sortedHistory.slice(-limit),
+                history: sortedHistory,
             };
         } catch (error) {
             return rejectWithValue(

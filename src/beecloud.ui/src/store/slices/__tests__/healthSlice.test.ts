@@ -97,7 +97,37 @@ describe("healthSlice", () => {
         ]);
     });
 
-    it("limits health history to the requested number of latest readings", async () => {
+    it("passes time range filters to the API and keeps the returned range intact", async () => {
+        const from = "2026-10-06T16:20:05.000Z";
+        const to = "2026-10-06T16:20:25.000Z";
+        mockedNodesApi.getHealthHistory.mockResolvedValue([
+            health2,
+            health3,
+        ]);
+
+        const store = createStore();
+
+        await store.dispatch(
+            fetchHealthHistory({
+                nodeId: "node-1",
+                limit: 100,
+                from,
+                to,
+            }),
+        );
+
+        expect(mockedNodesApi.getHealthHistory).toHaveBeenCalledWith(
+            "node-1",
+            100,
+            from,
+            to,
+        );
+        expect(
+            store.getState().health.historyByNodeId["node-1"],
+        ).toEqual([health2, health3]);
+    });
+
+    it("keeps all readings returned for a server-limited history request", async () => {
         const readings: HealthCheck[] = Array.from(
             { length: 15 },
             (_, index) => ({
@@ -132,9 +162,9 @@ describe("healthSlice", () => {
         const history =
             store.getState().health.historyByNodeId["node-1"];
 
-        expect(history).toHaveLength(10);
-        expect(history[0].id).toBe("health-6");
-        expect(history[9].id).toBe("health-15");
+        expect(history).toHaveLength(15);
+        expect(history[0].id).toBe("health-1");
+        expect(history[14].id).toBe("health-15");
     });
 
     it("sets the latest reading from history", async () => {
