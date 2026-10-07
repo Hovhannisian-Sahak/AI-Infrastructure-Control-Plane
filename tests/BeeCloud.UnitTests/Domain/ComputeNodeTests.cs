@@ -70,6 +70,31 @@ public class ComputeNodeTests
     }
 
     [Test]
+    public void Restart_WhenUnhealthy_ShouldBecomeStopping()
+    {
+        var node = CreateRunningNode();
+        node.MarkUnhealthy();
+
+        node.Restart();
+
+        Assert.That(node.Status, Is.EqualTo(NodeStatus.Stopping));
+    }
+
+    [TestCase(NodeStatus.Provisioning)]
+    [TestCase(NodeStatus.Stopping)]
+    [TestCase(NodeStatus.Quarantined)]
+    [TestCase(NodeStatus.Remediating)]
+    public void Restart_WhenIneligibleStatus_ShouldThrow(
+        NodeStatus status)
+    {
+        var node = CreateNodeForStatus(status);
+
+        Assert.Throws<InvalidNodeStateTransitionException>(
+            () => node.Restart());
+        Assert.That(node.Status, Is.EqualTo(status));
+    }
+
+    [Test]
     public void CompleteStopping_WhenStopping_ShouldBecomeStopped()
     {
         // Arrange
@@ -299,6 +324,33 @@ public class ComputeNodeTests
 
         node.MarkAvailable();
         node.Start();
+
+        return node;
+    }
+
+    private static ComputeNode CreateNodeForStatus(NodeStatus status)
+    {
+        var node = CreateRunningNode();
+
+        switch (status)
+        {
+            case NodeStatus.Provisioning:
+                return CreateNode();
+            case NodeStatus.Stopping:
+                node.Stop();
+                break;
+            case NodeStatus.Quarantined:
+                node.MarkUnhealthy();
+                node.Quarantine();
+                break;
+            case NodeStatus.Remediating:
+                node.MarkUnhealthy();
+                node.Quarantine();
+                node.StartRemediation();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(status));
+        }
 
         return node;
     }

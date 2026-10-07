@@ -392,6 +392,28 @@ describe("NodeCard", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("allows manual restart for an unhealthy node, but not quarantined nodes", () => {
+    const unhealthyNode: ComputeNode = {
+      ...baseNode,
+      status: "Unhealthy",
+    };
+    const quarantinedNode: ComputeNode = {
+      ...baseNode,
+      status: "Quarantined",
+    };
+
+    const { unmount } = renderWithProviders(
+      <NodeCard node={unhealthyNode} />,
+    );
+    expect(screen.getByRole("button", { name: "Restart" }))
+      .toBeInTheDocument();
+
+    unmount();
+    renderWithProviders(<NodeCard node={quarantinedNode} />);
+    expect(screen.queryByRole("button", { name: "Restart" }))
+      .not.toBeInTheDocument();
+  });
+
   it("does not render start, stop, or restart for a provisioning node", () => {
     const node: ComputeNode = {
       ...baseNode,

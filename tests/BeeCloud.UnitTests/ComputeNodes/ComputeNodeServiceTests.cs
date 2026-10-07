@@ -415,6 +415,60 @@ public class ComputeNodeServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Test]
+    public async Task RestartAsync_WhenNodeIsUnhealthy_ShouldStopAndEnqueueNodeForRestart()
+    {
+        var node = CreateRunningNode();
+        node.MarkUnhealthy();
+
+        _repository
+            .Setup(repository => repository.GetByIdAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+
+        var result = await _service.RestartAsync(node.Id);
+
+        Assert.That(result.Status, Is.EqualTo(NodeStatus.Stopping.ToString()));
+        Assert.That(node.Status, Is.EqualTo(NodeStatus.Stopping));
+        _restartQueue.Verify(
+            queue => queue.EnqueueAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _repository.Verify(
+            repository => repository.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Test]
+    public void RestartAsync_WhenNodeIsQuarantined_ShouldNotEnqueueRestart()
+    {
+        var node = CreateRunningNode();
+        node.MarkUnhealthy();
+        node.Quarantine();
+
+        _repository
+            .Setup(repository => repository.GetByIdAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+
+        Assert.ThrowsAsync<BeeCloud.Domain.Exceptions.InvalidNodeStateTransitionException>(
+            async () => await _service.RestartAsync(node.Id));
+
+        _restartQueue.Verify(
+            queue => queue.EnqueueAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        _repository.Verify(
+            repository => repository.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
     [Test]
     public void RestartAsync_WhenNodeDoesNotExist_ShouldThrow()
     {

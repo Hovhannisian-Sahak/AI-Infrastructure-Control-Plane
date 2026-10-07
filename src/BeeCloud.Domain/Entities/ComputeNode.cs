@@ -78,6 +78,20 @@ public class ComputeNode
         TransitionTo(NodeStatus.Stopping);
     }
 
+    public void Restart()
+    {
+        if (Status is not (NodeStatus.Running or NodeStatus.Unhealthy))
+        {
+            throw new InvalidNodeStateTransitionException(
+                Status,
+                NodeStatus.Stopping);
+        }
+
+        TransitionTo(
+            NodeStatus.Stopping,
+            allowUnhealthyRestart: true);
+    }
+
     public void CompleteStopping()
     {
         TransitionTo(NodeStatus.Stopped);
@@ -114,9 +128,14 @@ public class ComputeNode
         UpdatedAt = DateTime.UtcNow;
     }
 
-    private void TransitionTo(NodeStatus newStatus)
+    private void TransitionTo(
+        NodeStatus newStatus,
+        bool allowUnhealthyRestart = false)
     {
-        if (!IsValidTransition(Status, newStatus))
+        if (!IsValidTransition(Status, newStatus) &&
+            !(allowUnhealthyRestart &&
+              Status == NodeStatus.Unhealthy &&
+              newStatus == NodeStatus.Stopping))
         {
             throw new InvalidNodeStateTransitionException(
                 Status,

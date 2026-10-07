@@ -88,8 +88,7 @@ export default function NodeCard({ node }: NodeCardProps) {
 
     const canRestart =
         node.status === "Running" ||
-        node.status === "Unhealthy" ||
-        node.status === "Quarantined";
+        node.status === "Unhealthy";
 
     const handleStart = () => {
         void dispatch(startNode(node.id));

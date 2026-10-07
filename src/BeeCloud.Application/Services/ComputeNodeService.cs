@@ -208,7 +208,7 @@ public class ComputeNodeService : IComputeNodeService
                 $"Compute node with id '{id}' was not found.");
         }
 
-        node.Stop();
+        node.Restart();
 
         await _repository.SaveChangesAsync(
             cancellationToken);
