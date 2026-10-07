@@ -1,6 +1,8 @@
 ﻿using BeeCloud.Application.DTOs.Health;
 using BeeCloud.Application.Interfaces;
 using BeeCloud.Domain.Entities;
+using BeeCloud.Application.DTOs.Pagination;
+using BeeCloud.Application.Pagination;
 
 namespace BeeCloud.Application.Services;
 
@@ -130,6 +132,77 @@ public class HealthCheckService : IHealthCheckService
         return healthChecks
             .Select(MapToResponse)
             .ToList();
+    }
+
+    public async Task<CursorPageResponse<HealthCheckResponse>> GetHistoryPageAsync(
+        Guid computeNodeId,
+        DateTime? from,
+        DateTime? to,
+        string? cursor,
+        bool previous,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateHistoryQuery(from, to, limit);
+        await EnsureNodeExistsAsync(computeNodeId, cancellationToken);
+
+        HistoryCursor? position = cursor is null
+            ? null
+            : HistoryCursorCodec.Decode(cursor);
+        var records = await _healthCheckRepository.GetHistoryPageAsync(
+            computeNodeId,
+            from,
+            to,
+            position,
+            previous,
+            limit + 1,
+            cancellationToken);
+        var hasMore = records.Count > limit;
+        var page = records.Take(limit).ToList();
+        if (previous)
+            page.Reverse();
+
+        string? nextCursor = null;
+        string? previousCursor = null;
+        if (page.Count > 0)
+        {
+            if (previous)
+            {
+                nextCursor = HistoryCursorCodec.Encode(page[^1].CheckedAt, page[^1].Id);
+                if (hasMore)
+                    previousCursor = HistoryCursorCodec.Encode(page[0].CheckedAt, page[0].Id);
+            }
+            else
+            {
+                if (hasMore)
+                    nextCursor = HistoryCursorCodec.Encode(page[^1].CheckedAt, page[^1].Id);
+                if (cursor is not null)
+                    previousCursor = HistoryCursorCodec.Encode(page[0].CheckedAt, page[0].Id);
+            }
+        }
+
+        return new CursorPageResponse<HealthCheckResponse>
+        {
+            Items = page.Select(MapToResponse).ToList(),
+            NextCursor = nextCursor,
+            PreviousCursor = previousCursor
+        };
+    }
+
+    private async Task EnsureNodeExistsAsync(
+        Guid computeNodeId,
+        CancellationToken cancellationToken)
+    {
+        if (await _computeNodeRepository.GetByIdAsync(computeNodeId, cancellationToken) is null)
+            throw new KeyNotFoundException($"Compute node with id '{computeNodeId}' was not found.");
+    }
+
+    private static void ValidateHistoryQuery(DateTime? from, DateTime? to, int limit)
+    {
+        if (limit <= 0 || limit > 1000)
+            throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be between 1 and 1000.");
+        if (from.HasValue && to.HasValue && from > to)
+            throw new ArgumentException("'from' must be earlier than or equal to 'to'.");
     }
 
     private static HealthCheckResponse MapToResponse(

@@ -130,6 +130,22 @@ describe("nodesApi", () => {
     );
   });
 
+  it("requests a health history cursor page", async () => {
+    const page = { items: [], nextCursor: "next", previousCursor: null };
+    mockedApiClient.get.mockResolvedValue(page);
+
+    await nodesApi.getHealthHistoryPage("node-1", {
+      from: "2026-10-07T10:00:00.000Z",
+      to: "2026-10-07T14:00:00.000Z",
+      cursor: "cursor-token",
+      limit: 25,
+    });
+
+    expect(mockedApiClient.get).toHaveBeenCalledWith(
+      "/api/v1/nodes/node-1/health/history/page?from=2026-10-07T10%3A00%3A00.000Z&to=2026-10-07T14%3A00%3A00.000Z&cursor=cursor-token&limit=25",
+    );
+  });
+
   it("gets node metrics with backend time filters and limit", async () => {
     const metrics: NodeMetric[] = [];
     mockedApiClient.get.mockResolvedValue(metrics);
@@ -145,6 +161,24 @@ describe("nodesApi", () => {
       "/api/v1/nodes/node-1/metrics?from=2026-10-07T10%3A00%3A00.000Z&to=2026-10-07T14%3A00%3A00.000Z&limit=100",
     );
     expect(result).toBe(metrics);
+  });
+
+  it("requests a metrics cursor page in the previous direction", async () => {
+    mockedApiClient.get.mockResolvedValue({
+      items: [],
+      nextCursor: "older",
+      previousCursor: "newer",
+    });
+
+    await nodesApi.getNodeMetricsPage("node-1", {
+      cursor: "newer",
+      previous: true,
+      limit: 25,
+    });
+
+    expect(mockedApiClient.get).toHaveBeenCalledWith(
+      "/api/v1/nodes/node-1/metrics/page?cursor=newer&previous=true&limit=25",
+    );
   });
 
   it("propagates an error when starting a node fails", async () => {

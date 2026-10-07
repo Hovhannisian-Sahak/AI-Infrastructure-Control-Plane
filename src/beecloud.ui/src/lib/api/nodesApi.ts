@@ -3,6 +3,15 @@ import type { ComputeNode } from "./models/computeNode";
 import type { CreateComputeNodeRequest } from "./models/createComputeNodeRequest";
 import type { HealthCheck } from "./models/healthCheck";
 import type { NodeMetric } from "./models/nodeMetric";
+import type { CursorPageResponse } from "./models/pageResponse";
+
+type HistoryPageParams = {
+  from?: string;
+  to?: string;
+  cursor?: string | null;
+  previous?: boolean;
+  limit?: number;
+};
 
 export const nodesApi = {
   getAll(): Promise<ComputeNode[]> {
@@ -88,6 +97,22 @@ export const nodesApi = {
     );
   },
 
+  getHealthHistoryPage(
+      id: string,
+      params: HistoryPageParams,
+  ): Promise<CursorPageResponse<HealthCheck>> {
+    const query = new URLSearchParams();
+    if (params.from) query.set("from", params.from);
+    if (params.to) query.set("to", params.to);
+    if (params.cursor) query.set("cursor", params.cursor);
+    if (params.previous) query.set("previous", "true");
+    query.set("limit", String(params.limit ?? 25));
+
+    return apiClient.get<CursorPageResponse<HealthCheck>>(
+        `/api/v1/nodes/${id}/health/history/page?${query.toString()}`,
+    );
+  },
+
   getLatestHealth(
       id: string,
   ): Promise<HealthCheck | null> {
@@ -116,6 +141,22 @@ export const nodesApi = {
 
     return apiClient.get<NodeMetric[]>(
         `/api/v1/nodes/${id}/metrics?${query.toString()}`,
+    );
+  },
+
+  getNodeMetricsPage(
+      id: string,
+      params: HistoryPageParams,
+  ): Promise<CursorPageResponse<NodeMetric>> {
+    const query = new URLSearchParams();
+    if (params.from) query.set("from", params.from);
+    if (params.to) query.set("to", params.to);
+    if (params.cursor) query.set("cursor", params.cursor);
+    if (params.previous) query.set("previous", "true");
+    query.set("limit", String(params.limit ?? 25));
+
+    return apiClient.get<CursorPageResponse<NodeMetric>>(
+        `/api/v1/nodes/${id}/metrics/page?${query.toString()}`,
     );
   },
 };

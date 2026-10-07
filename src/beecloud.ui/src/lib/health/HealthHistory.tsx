@@ -3,12 +3,19 @@
 import type { HealthCheck } from "@/lib/api/models/healthCheck";
 
 import HealthSparkline from "@/components/health/HealthSparkline";
+import CursorPagination from "@/components/common/CursorPagination";
 
 import styles from "./HealthHistory.module.css";
 
 type HealthHistoryProps = {
     history: HealthCheck[];
+    tableHistory?: HealthCheck[];
     loading?: boolean;
+    tableLoading?: boolean;
+    tableError?: string | null;
+    nextCursor?: string | null;
+    previousCursor?: string | null;
+    onTableNavigate?: (cursor: string, previous: boolean) => void;
 };
 
 function formatTimestamp(value: string) {
@@ -26,9 +33,20 @@ function formatValue(
 
 export default function HealthHistory({
                                           history,
+                                          tableHistory,
                                           loading = false,
+                                          tableLoading = false,
+                                          tableError = null,
+                                          nextCursor = null,
+                                          previousCursor = null,
+                                          onTableNavigate,
                                       }: HealthHistoryProps) {
-    if (loading && history.length === 0) {
+    const tableItems = tableHistory ?? history;
+    const newestFirstItems = tableHistory
+        ? tableItems
+        : [...tableItems].reverse();
+
+    if (loading && history.length === 0 && tableItems.length === 0) {
         return (
             <section className={styles.section}>
                 <h2 className={styles.title}>
@@ -42,7 +60,7 @@ export default function HealthHistory({
         );
     }
 
-    if (history.length === 0) {
+    if (history.length === 0 && tableItems.length === 0) {
         return (
             <section className={styles.section}>
                 <h2 className={styles.title}>
@@ -56,8 +74,7 @@ export default function HealthHistory({
         );
     }
 
-    const latest =
-        history[history.length - 1];
+    const latest = history[history.length - 1] ?? tableItems[0];
 
     const cpuHistory = history.map(
         item => item.cpuUsagePercent,
@@ -80,7 +97,7 @@ export default function HealthHistory({
                     </h2>
 
                     <p className={styles.subtitle}>
-                        {history.length} recent health checks
+                        {history.length || tableItems.length} displayed health checks
                     </p>
                 </div>
 
@@ -157,6 +174,7 @@ export default function HealthHistory({
             </div>
 
             <div className={styles.tableWrapper}>
+                {tableError && <p role="alert">{tableError}</p>}
                 <table className={styles.table}>
                     <thead>
                     <tr>
@@ -169,8 +187,7 @@ export default function HealthHistory({
                     </thead>
 
                     <tbody>
-                    {[...history]
-                        .reverse()
+                    {newestFirstItems
                         .map(item => (
                             <tr key={item.id}>
                                 <td>
@@ -218,6 +235,15 @@ export default function HealthHistory({
                     </tbody>
                 </table>
             </div>
+            {onTableNavigate && (
+                <CursorPagination
+                    nextCursor={nextCursor}
+                    previousCursor={previousCursor}
+                    loading={tableLoading}
+                    ariaLabel="Health history pages"
+                    onNavigate={onTableNavigate}
+                />
+            )}
         </section>
     );
 }

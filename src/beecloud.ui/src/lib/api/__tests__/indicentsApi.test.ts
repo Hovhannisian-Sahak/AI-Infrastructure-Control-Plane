@@ -78,6 +78,29 @@ describe("incidentsApi", () => {
         );
     });
 
+    it("requests server-paged incidents with all supported filters", async () => {
+        mockedApiClient.get.mockResolvedValue({
+            items: [],
+            page: 2,
+            pageSize: 12,
+            totalCount: 24,
+        });
+
+        await incidentsApi.search({
+            page: 2,
+            pageSize: 12,
+            severity: "Critical",
+            status: "Investigating",
+            computeNodeId: "node-1",
+            from: "2026-10-01T00:00:00.000Z",
+            to: "2026-10-02T23:59:59.999Z",
+        });
+
+        expect(mockedApiClient.get).toHaveBeenCalledWith(
+            "/api/v1/incidents/search?page=2&pageSize=12&severity=Critical&status=Investigating&computeNodeId=node-1&from=2026-10-01T00%3A00%3A00.000Z&to=2026-10-02T23%3A59%3A59.999Z",
+        );
+    });
+
     it("gets an incident by id", async () => {
         const incident = {
             id: "incident-1",

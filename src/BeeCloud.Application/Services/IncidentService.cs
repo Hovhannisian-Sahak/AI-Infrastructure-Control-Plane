@@ -2,6 +2,7 @@
 using BeeCloud.Application.Interfaces;
 using BeeCloud.Domain.Entities;
 using BeeCloud.Domain.Enums;
+using BeeCloud.Application.DTOs.Pagination;
 
 namespace BeeCloud.Application.Services;
 
@@ -88,6 +89,37 @@ public class IncidentService : IIncidentService
         return incidents
             .Select(MapToResponse)
             .ToList();
+    }
+
+    public async Task<PageResponse<IncidentResponse>> GetPageAsync(
+        IncidentSeverity? severity,
+        IncidentStatus? status,
+        Guid? computeNodeId,
+        DateTime? from,
+        DateTime? to,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        if (page < 1)
+            throw new ArgumentOutOfRangeException(nameof(page), "Page must be greater than zero.");
+        if (pageSize is < 1 or > 100)
+            throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be between 1 and 100.");
+        if (computeNodeId == Guid.Empty)
+            throw new ArgumentException("Compute node ID cannot be empty.", nameof(computeNodeId));
+        if (from.HasValue && to.HasValue && from > to)
+            throw new ArgumentException("'from' must be earlier than or equal to 'to'.");
+
+        var result = await _incidentRepository.GetPageAsync(
+            severity, status, computeNodeId, from, to, page, pageSize, cancellationToken);
+
+        return new PageResponse<IncidentResponse>
+        {
+            Items = result.Items.Select(MapToResponse).ToList(),
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = result.TotalCount
+        };
     }
 
     public async Task<IncidentResponse> StartInvestigationAsync(

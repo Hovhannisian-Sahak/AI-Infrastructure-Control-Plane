@@ -4,6 +4,7 @@
     waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { within } from "@testing-library/react";
 import { Provider } from "react-redux";
 
 import NodeDetailPage from "../NodeDetailPage";
@@ -109,6 +110,16 @@ beforeEach(() => {
         health2,
     ]);
     mockedNodesApi.getNodeMetrics.mockResolvedValue(metrics);
+    mockedNodesApi.getHealthHistoryPage.mockResolvedValue({
+        items: [health2, health1],
+        nextCursor: null,
+        previousCursor: null,
+    });
+    mockedNodesApi.getNodeMetricsPage.mockResolvedValue({
+        items: metrics,
+        nextCursor: null,
+        previousCursor: null,
+    });
 });
 
 describe("NodeDetailPage", () => {
@@ -172,7 +183,7 @@ describe("NodeDetailPage", () => {
 
         expect(
             screen.getByText(
-                "2 recent health checks",
+                "2 displayed health checks",
             ),
         ).toBeInTheDocument();
     });
@@ -287,6 +298,32 @@ describe("NodeDetailPage", () => {
                 100,
                 expect.any(String),
                 expect.any(String),
+            );
+        });
+    });
+
+    it("requests the next health table cursor page", async () => {
+        const user = userEvent.setup();
+        mockedNodesApi.getHealthHistoryPage.mockResolvedValue({
+            items: [health2],
+            nextCursor: "health-next",
+            previousCursor: null,
+        });
+        renderPage();
+
+        const navigation = await screen.findByRole("navigation", {
+            name: "Health history pages",
+        });
+        await user.click(within(navigation).getByRole("button", { name: "Older" }));
+
+        await waitFor(() => {
+            expect(mockedNodesApi.getHealthHistoryPage).toHaveBeenLastCalledWith(
+                "node-1",
+                expect.objectContaining({
+                    cursor: "health-next",
+                    previous: false,
+                    limit: 25,
+                }),
             );
         });
     });

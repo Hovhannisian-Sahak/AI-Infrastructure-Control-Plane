@@ -1,12 +1,13 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
     clearIncidentError,
     fetchIncidents,
 } from "@/store/slices/incidentsSlice";
 import IncidentCard from "./IncidentCard";
+import Pagination from "@/components/common/Pagination";
 import styles from "./IncidentsSection.module.css";
 
 type SeverityFilter =
@@ -16,7 +17,7 @@ type SeverityFilter =
     | "High"
     | "Critical";
 
-type StatusFilter = "All" | "Open" | "Resolved";
+type StatusFilter = "All" | "Open" | "Investigating" | "Resolved";
 
 export default function IncidentsSection() {
     const dispatch = useAppDispatch();
@@ -25,6 +26,7 @@ export default function IncidentsSection() {
         incidents,
         loading,
         error,
+        totalCount,
     } = useAppSelector(
         (state) => state.incidents,
     );
@@ -48,9 +50,28 @@ export default function IncidentsSection() {
     const [toDate, setToDate] =
         useState("");
 
+    const [page, setPage] = useState(1);
+    const pageSize = 12;
+
     useEffect(() => {
-        dispatch(fetchIncidents());
-    }, [dispatch]);
+        dispatch(fetchIncidents({
+            page,
+            pageSize,
+            ...(severityFilter !== "All" && { severity: severityFilter }),
+            ...(statusFilter !== "All" && { status: statusFilter }),
+            ...(nodeFilter !== "All" && { computeNodeId: nodeFilter }),
+            ...(fromDate && { from: `${fromDate}T00:00:00.000Z` }),
+            ...(toDate && { to: `${toDate}T23:59:59.999Z` }),
+        }));
+    }, [
+        dispatch,
+        page,
+        severityFilter,
+        statusFilter,
+        nodeFilter,
+        fromDate,
+        toDate,
+    ]);
 
     useEffect(() => {
         if (!error) {
@@ -66,69 +87,7 @@ export default function IncidentsSection() {
         };
     }, [error, dispatch]);
 
-    const nodeOptions = useMemo(() => {
-        const nodeIds = new Set(
-            incidents.map(
-                (incident) => incident.computeNodeId,
-            ),
-        );
-
-        return Array.from(nodeIds).map((nodeId) => {
-            const node = nodes.find(
-                (item) => item.id === nodeId,
-            );
-
-            return {
-                id: nodeId,
-                name: node?.name ?? nodeId,
-            };
-        });
-    }, [incidents, nodes]);
-
-    const filteredIncidents = useMemo(() => {
-        return incidents.filter((incident) => {
-            const matchesSeverity =
-                severityFilter === "All" ||
-                incident.severity === severityFilter;
-
-            const matchesStatus =
-                statusFilter === "All" ||
-                incident.status === statusFilter;
-
-            const matchesNode =
-                nodeFilter === "All" ||
-                incident.computeNodeId === nodeFilter;
-
-            const incidentDate = new Date(
-                incident.createdAt,
-            );
-
-            const matchesFromDate =
-                !fromDate ||
-                incidentDate >=
-                new Date(`${fromDate}T00:00:00`);
-
-            const matchesToDate =
-                !toDate ||
-                incidentDate <=
-                new Date(`${toDate}T23:59:59.999`);
-
-            return (
-                matchesSeverity &&
-                matchesStatus &&
-                matchesNode &&
-                matchesFromDate &&
-                matchesToDate
-            );
-        });
-    }, [
-        incidents,
-        severityFilter,
-        statusFilter,
-        nodeFilter,
-        fromDate,
-        toDate,
-    ]);
+    const resultCount = totalCount || incidents.length;
 
     const hasActiveFilters =
         severityFilter !== "All" ||
@@ -143,6 +102,7 @@ export default function IncidentsSection() {
         setNodeFilter("All");
         setFromDate("");
         setToDate("");
+        setPage(1);
     };
 
     return (
@@ -164,15 +124,14 @@ export default function IncidentsSection() {
                 </div>
 
                 <span className={styles.count}>
-                    {filteredIncidents.length}{" "}
-                    {filteredIncidents.length === 1
+                    {resultCount}{" "}
+                    {resultCount === 1
                         ? "incident"
                         : "incidents"}
                 </span>
             </div>
 
-            {!loading && incidents.length > 0 && (
-                <div className={styles.filters}>
+            <div className={styles.filters}>
                     <div className={styles.filterGroup}>
                         <label
                             htmlFor="incident-severity"
@@ -186,9 +145,10 @@ export default function IncidentsSection() {
                             className={styles.select}
                             value={severityFilter}
                             onChange={(event) =>
-                                setSeverityFilter(
-                                    event.target.value as SeverityFilter,
-                                )
+                                {
+                                    setSeverityFilter(event.target.value as SeverityFilter);
+                                    setPage(1);
+                                }
                             }
                         >
                             <option value="All">
@@ -226,9 +186,10 @@ export default function IncidentsSection() {
                             className={styles.select}
                             value={statusFilter}
                             onChange={(event) =>
-                                setStatusFilter(
-                                    event.target.value as StatusFilter,
-                                )
+                                {
+                                    setStatusFilter(event.target.value as StatusFilter);
+                                    setPage(1);
+                                }
                             }
                         >
                             <option value="All">
@@ -237,6 +198,10 @@ export default function IncidentsSection() {
 
                             <option value="Open">
                                 Open
+                            </option>
+
+                            <option value="Investigating">
+                                Investigating
                             </option>
 
                             <option value="Resolved">
@@ -258,16 +223,17 @@ export default function IncidentsSection() {
                             className={styles.select}
                             value={nodeFilter}
                             onChange={(event) =>
-                                setNodeFilter(
-                                    event.target.value,
-                                )
+                                {
+                                    setNodeFilter(event.target.value);
+                                    setPage(1);
+                                }
                             }
                         >
                             <option value="All">
                                 All nodes
                             </option>
 
-                            {nodeOptions.map((node) => (
+                            {nodes.map((node) => (
                                 <option
                                     key={node.id}
                                     value={node.id}
@@ -293,9 +259,10 @@ export default function IncidentsSection() {
                             value={fromDate}
                             max={toDate || undefined}
                             onChange={(event) =>
-                                setFromDate(
-                                    event.target.value,
-                                )
+                                {
+                                    setFromDate(event.target.value);
+                                    setPage(1);
+                                }
                             }
                         />
                     </div>
@@ -315,15 +282,15 @@ export default function IncidentsSection() {
                             value={toDate}
                             min={fromDate || undefined}
                             onChange={(event) =>
-                                setToDate(
-                                    event.target.value,
-                                )
+                                {
+                                    setToDate(event.target.value);
+                                    setPage(1);
+                                }
                             }
                         />
                     </div>
 
-                    {hasActiveFilters &&
-                        filteredIncidents.length > 0 && (
+                    {hasActiveFilters && (
                             <button
                                 type="button"
                                 className={styles.clearButton}
@@ -332,8 +299,7 @@ export default function IncidentsSection() {
                                 Clear filters
                             </button>
                         )}
-                </div>
-            )}
+            </div>
 
             {loading && (
                 <div className={styles.loading}>
@@ -355,8 +321,9 @@ export default function IncidentsSection() {
             )}
 
             {!loading &&
-                incidents.length > 0 &&
-                filteredIncidents.length === 0 && (
+                !error &&
+                resultCount === 0 &&
+                hasActiveFilters && (
                     <div className={styles.empty}>
                         <div
                             className={styles.emptyIcon}
@@ -384,7 +351,9 @@ export default function IncidentsSection() {
                 )}
 
             {!loading &&
-                incidents.length === 0 && (
+                !error &&
+                resultCount === 0 &&
+                !hasActiveFilters && (
                     <div className={styles.empty}>
                         <div
                             className={styles.emptyIcon}
@@ -402,9 +371,9 @@ export default function IncidentsSection() {
                 )}
 
             {!loading &&
-                filteredIncidents.length > 0 && (
+                incidents.length > 0 && (
                     <div className={styles.grid}>
-                        {filteredIncidents.map(
+                        {incidents.map(
                             (incident) => (
                                 <IncidentCard
                                     key={incident.id}
@@ -414,6 +383,15 @@ export default function IncidentsSection() {
                         )}
                     </div>
                 )}
+            {!loading && resultCount > 0 && (
+                <Pagination
+                    page={page}
+                    pageSize={pageSize}
+                    totalItems={resultCount}
+                    ariaLabel="Incident pages"
+                    onPageChange={setPage}
+                />
+            )}
         </section>
     );
 }

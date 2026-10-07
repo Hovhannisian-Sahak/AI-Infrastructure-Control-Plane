@@ -1,4 +1,5 @@
 ﻿using BeeCloud.Domain.Entities;
+using BeeCloud.Application.Pagination;
 
 namespace BeeCloud.Application.Interfaces;
 
@@ -13,6 +14,15 @@ public interface IHealthCheckRepository
         DateTime? from = null,
         DateTime? to = null,
         int limit = 100,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<HealthCheck>> GetHistoryPageAsync(
+        Guid computeNodeId,
+        DateTime? from,
+        DateTime? to,
+        HistoryCursor? cursor,
+        bool previous,
+        int limit,
         CancellationToken cancellationToken = default);
 
     Task AddAsync(

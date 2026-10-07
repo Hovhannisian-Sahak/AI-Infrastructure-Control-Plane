@@ -1,5 +1,6 @@
 ﻿using BeeCloud.Application.Interfaces;
 using BeeCloud.Domain.Entities;
+using BeeCloud.Application.Pagination;
 using Microsoft.EntityFrameworkCore;
 
 namespace BeeCloud.Infrastructure.Persistence.Repositories;
@@ -60,6 +61,48 @@ public class NodeMetricRepository : INodeMetricRepository
             .OrderByDescending(metric => metric.RecordedAt)
             .Take(limit)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<NodeMetric>> GetHistoryPageAsync(
+        Guid computeNodeId,
+        DateTime? from,
+        DateTime? to,
+        HistoryCursor? cursor,
+        bool previous,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.NodeMetrics
+            .AsNoTracking()
+            .Where(item => item.ComputeNodeId == computeNodeId);
+
+        if (from.HasValue)
+            query = query.Where(item => item.RecordedAt >= from.Value);
+        if (to.HasValue)
+            query = query.Where(item => item.RecordedAt <= to.Value);
+        if (cursor.HasValue)
+        {
+            var position = cursor.Value;
+            query = previous
+                ? query.Where(item =>
+                    item.RecordedAt > position.RecordedAt ||
+                    (item.RecordedAt == position.RecordedAt && item.Id.CompareTo(position.Id) > 0))
+                : query.Where(item =>
+                    item.RecordedAt < position.RecordedAt ||
+                    (item.RecordedAt == position.RecordedAt && item.Id.CompareTo(position.Id) < 0));
+        }
+
+        return previous
+            ? await query
+                .OrderBy(item => item.RecordedAt)
+                .ThenBy(item => item.Id)
+                .Take(limit)
+                .ToListAsync(cancellationToken)
+            : await query
+                .OrderByDescending(item => item.RecordedAt)
+                .ThenByDescending(item => item.Id)
+                .Take(limit)
+                .ToListAsync(cancellationToken);
     }
 
     public async Task AddAsync(

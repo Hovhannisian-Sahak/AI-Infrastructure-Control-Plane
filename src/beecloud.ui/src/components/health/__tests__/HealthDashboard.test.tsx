@@ -553,4 +553,43 @@ describe("HealthDashboard", () => {
 
         expect(nodeRow).toBeInTheDocument();
     });
+
+    it("paginates the displayed rows while keeping fleet summaries and comparisons global", async () => {
+        const user = userEvent.setup();
+        const fleet = Array.from({ length: 12 }, (_, index) => ({
+            ...nodes[0],
+            id: `node-${index + 1}`,
+            name: `gpu-node-${String(index + 1).padStart(2, "0")}`,
+        }));
+        const latestById = Object.fromEntries(
+            fleet.map((node, index) => [
+                node.id,
+                index === 11 ? unhealthy : healthy,
+            ]),
+        );
+
+        render(
+            <HealthDashboard
+                nodes={fleet}
+                historyByNodeId={{}}
+                latestByNodeId={latestById}
+            />,
+        );
+
+        expect(screen.getByText("12", { selector: "strong" })).toBeInTheDocument();
+        expect(getNodeRow("gpu-node-10")).toBeInTheDocument();
+        expect(screen.queryByRole("row", { name: /gpu-node-11/ })).not.toBeInTheDocument();
+
+        await user.click(screen.getByRole("checkbox", {
+            name: "Compare gpu-node-01",
+        }));
+        await user.click(screen.getByRole("button", { name: "Next" }));
+
+        expect(getNodeRow("gpu-node-11")).toBeInTheDocument();
+        expect(getNodeRow("gpu-node-12")).toBeInTheDocument();
+        expect(screen.getByRole("table", { name: "Node comparison" }))
+            .toHaveTextContent("gpu-node-01");
+        expect(screen.getByRole("region", { name: "Health Alerts" }))
+            .toHaveTextContent("gpu-node-12");
+    });
 });

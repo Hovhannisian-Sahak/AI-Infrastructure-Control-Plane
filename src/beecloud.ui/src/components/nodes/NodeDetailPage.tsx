@@ -17,6 +17,10 @@ import {
     fetchHealthHistory,
 } from "@/store/slices/healthSlice";
 import { fetchNodeMetrics } from "@/store/slices/metricsSlice";
+import { nodesApi } from "@/lib/api/nodesApi";
+import type { CursorPageResponse } from "@/lib/api/models/pageResponse";
+import type { HealthCheck } from "@/lib/api/models/healthCheck";
+import type { NodeMetric } from "@/lib/api/models/nodeMetric";
 
 import {
     selectHealthErrorByNodeId,
@@ -95,6 +99,32 @@ export default function NodeDetailPage() {
 
     const [range, setRange] =
         useState<HealthTimeRange>("24h");
+    const [healthTablePage, setHealthTablePage] =
+        useState<CursorPageResponse<HealthCheck>>({
+            items: [],
+            nextCursor: null,
+            previousCursor: null,
+        });
+    const [metricsTablePage, setMetricsTablePage] =
+        useState<CursorPageResponse<NodeMetric>>({
+            items: [],
+            nextCursor: null,
+            previousCursor: null,
+        });
+    const [healthTableRequest, setHealthTableRequest] =
+        useState<{ cursor: string | null; previous: boolean }>({
+            cursor: null,
+            previous: false,
+        });
+    const [metricsTableRequest, setMetricsTableRequest] =
+        useState<{ cursor: string | null; previous: boolean }>({
+            cursor: null,
+            previous: false,
+        });
+    const [healthTableLoading, setHealthTableLoading] = useState(true);
+    const [metricsTableLoading, setMetricsTableLoading] = useState(true);
+    const [healthTableError, setHealthTableError] = useState<string | null>(null);
+    const [metricsTableError, setMetricsTableError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!nodeId) {
@@ -132,10 +162,73 @@ export default function NodeDetailPage() {
     }, [dispatch, nodeId, range]);
 
     useEffect(() => {
+        if (!nodeId) return;
+
+        let active = true;
+        const { from, to } = getHealthRangeBounds(range);
+
+        nodesApi.getHealthHistoryPage(nodeId, {
+            from: from.toISOString(),
+            to: to.toISOString(),
+            cursor: healthTableRequest.cursor,
+            previous: healthTableRequest.previous,
+            limit: 25,
+        }).then(result => {
+            if (active) setHealthTablePage(result);
+        }).catch(fetchError => {
+            if (active) {
+                setHealthTableError(
+                    fetchError instanceof Error
+                        ? fetchError.message
+                        : "Failed to fetch health history page.",
+                );
+            }
+        }).finally(() => {
+            if (active) setHealthTableLoading(false);
+        });
+
+        return () => {
+            active = false;
+        };
+    }, [nodeId, range, healthTableRequest]);
+
+    useEffect(() => {
+        if (!nodeId) return;
+
+        let active = true;
+        const { from, to } = getHealthRangeBounds(range);
+
+        nodesApi.getNodeMetricsPage(nodeId, {
+            from: from.toISOString(),
+            to: to.toISOString(),
+            cursor: metricsTableRequest.cursor,
+            previous: metricsTableRequest.previous,
+            limit: 25,
+        }).then(result => {
+            if (active) setMetricsTablePage(result);
+        }).catch(fetchError => {
+            if (active) {
+                setMetricsTableError(
+                    fetchError instanceof Error
+                        ? fetchError.message
+                        : "Failed to fetch metrics history page.",
+                );
+            }
+        }).finally(() => {
+            if (active) setMetricsTableLoading(false);
+        });
+
+        return () => {
+            active = false;
+        };
+    }, [nodeId, range, metricsTableRequest]);
+
+    useEffect(() => {
         if (!nodeId || !node || !isHealthMonitored(node.status)) {
             return;
         }
 
+        let active = true;
         const loadMetrics = () => {
             const { from, to } = getHealthRangeBounds(range);
             void dispatch(
@@ -146,11 +239,33 @@ export default function NodeDetailPage() {
                     to: to.toISOString(),
                 }),
             );
+            if (metricsTableRequest.cursor === null) {
+                void nodesApi.getNodeMetricsPage(nodeId, {
+                    from: from.toISOString(),
+                    to: to.toISOString(),
+                    limit: 25,
+                }).then(result => {
+                    if (!active) return;
+                    setMetricsTablePage(result);
+                    setMetricsTableError(null);
+                }).catch(fetchError => {
+                    if (active) {
+                        setMetricsTableError(
+                            fetchError instanceof Error
+                                ? fetchError.message
+                                : "Failed to refresh metrics history.",
+                        );
+                    }
+                });
+            }
         };
 
         const intervalId = setInterval(loadMetrics, 10_000);
-        return () => clearInterval(intervalId);
-    }, [dispatch, node, nodeId, range]);
+        return () => {
+            active = false;
+            clearInterval(intervalId);
+        };
+    }, [dispatch, metricsTableRequest.cursor, node, nodeId, range]);
 
     if (!node) {
         return (
@@ -280,7 +395,21 @@ export default function NodeDetailPage() {
                                         range === option.value
                                     }
                                     onClick={() =>
-                                        setRange(option.value)
+                                        {
+                                            setRange(option.value);
+                                            setHealthTableLoading(true);
+                                            setMetricsTableLoading(true);
+                                            setHealthTableError(null);
+                                            setMetricsTableError(null);
+                                            setHealthTableRequest({
+                                                cursor: null,
+                                                previous: false,
+                                            });
+                                            setMetricsTableRequest({
+                                                cursor: null,
+                                                previous: false,
+                                            });
+                                        }
                                     }
                                 >
                                     {option.label}
@@ -302,11 +431,35 @@ export default function NodeDetailPage() {
                 <HealthHistory
                     history={history}
                     loading={loading}
+                    tableHistory={healthTablePage.items}
+                    tableLoading={healthTableLoading}
+                    tableError={healthTableError}
+                    nextCursor={healthTablePage.nextCursor}
+                    previousCursor={healthTablePage.previousCursor}
+                    onTableNavigate={(cursor, previous) =>
+                        {
+                            setHealthTableLoading(true);
+                            setHealthTableError(null);
+                            setHealthTableRequest({ cursor, previous });
+                        }
+                    }
                 />
                 <MetricsHistory
                     history={metrics}
                     loading={metricsLoading}
                     error={metricsError}
+                    tableHistory={metricsTablePage.items}
+                    tableLoading={metricsTableLoading}
+                    tableError={metricsTableError}
+                    nextCursor={metricsTablePage.nextCursor}
+                    previousCursor={metricsTablePage.previousCursor}
+                    onTableNavigate={(cursor, previous) =>
+                        {
+                            setMetricsTableLoading(true);
+                            setMetricsTableError(null);
+                            setMetricsTableRequest({ cursor, previous });
+                        }
+                    }
                 />
             </div>
         </main>

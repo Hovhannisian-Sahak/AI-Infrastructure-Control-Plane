@@ -6,6 +6,7 @@
 
 export type IncidentStatus =
     | "Open"
+    | "Investigating"
     | "Resolved";
 
 export type Incident = {

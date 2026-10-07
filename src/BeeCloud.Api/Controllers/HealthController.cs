@@ -1,4 +1,5 @@
 ﻿using BeeCloud.Application.DTOs.Health;
+using BeeCloud.Application.DTOs.Pagination;
 using BeeCloud.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -65,6 +66,22 @@ public class HealthController : ControllerBase
             limit,
             cancellationToken);
 
+        return Ok(response);
+    }
+
+    [HttpGet("history/page")]
+    public async Task<ActionResult<CursorPageResponse<HealthCheckResponse>>>
+        GetHistoryPage(
+            Guid nodeId,
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] string? cursor,
+            [FromQuery] bool previous = false,
+            [FromQuery] int limit = 25,
+            CancellationToken cancellationToken = default)
+    {
+        var response = await _service.GetHistoryPageAsync(
+            nodeId, from, to, cursor, previous, limit, cancellationToken);
         return Ok(response);
     }
 }

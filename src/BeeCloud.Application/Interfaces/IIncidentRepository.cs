@@ -17,6 +17,16 @@ public interface IIncidentRepository
         IncidentStatus? status = null,
         CancellationToken cancellationToken = default);
 
+    Task<(IReadOnlyList<Incident> Items, int TotalCount)> GetPageAsync(
+        IncidentSeverity? severity,
+        IncidentStatus? status,
+        Guid? computeNodeId,
+        DateTime? from,
+        DateTime? to,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     Task AddAsync(
         Incident incident,
         CancellationToken cancellationToken = default);

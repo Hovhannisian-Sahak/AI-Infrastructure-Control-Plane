@@ -61,6 +61,12 @@ describe("Home page", () => {
         jest.resetAllMocks();
 
         mockedIncidentsApi.getAll.mockResolvedValue([]);
+        mockedIncidentsApi.search.mockResolvedValue({
+            items: [],
+            page: 1,
+            pageSize: 12,
+            totalCount: 0,
+        });
         mockedNetworksApi.getAll.mockResolvedValue([]);
 
         mockedNodesApi.getHealthHistory.mockResolvedValue([]);

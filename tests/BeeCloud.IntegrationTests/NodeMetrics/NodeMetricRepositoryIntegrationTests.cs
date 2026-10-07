@@ -1,6 +1,7 @@
 ﻿using BeeCloud.Domain.Entities;
 using BeeCloud.Infrastructure.Persistence;
 using BeeCloud.Infrastructure.Persistence.Repositories;
+using BeeCloud.Application.Pagination;
 using BeeCloud.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -278,6 +279,64 @@ public class NodeMetricRepositoryIntegrationTests
 
         Assert.That(result, Has.Count.EqualTo(1));
         Assert.That(result[0].Id, Is.EqualTo(metrics[2].Id));
+    }
+
+    [Test]
+    public async Task GetHistoryPageAsync_UsesStableKeysetForOlderAndNewerPages()
+    {
+        await using var dbContext = CreateDbContext();
+        var node = CreateNode();
+        dbContext.ComputeNodes.Add(node);
+
+        var metrics = new List<NodeMetric>();
+        for (var index = 0; index < 5; index++)
+        {
+            var metric = new NodeMetric(node.Id, 10 + index, 20 + index, 50 + index);
+            metrics.Add(metric);
+            dbContext.NodeMetrics.Add(metric);
+            await dbContext.SaveChangesAsync();
+            await Task.Delay(15);
+        }
+
+        var repository = new NodeMetricRepository(dbContext);
+        var firstPage = await repository.GetHistoryPageAsync(
+            node.Id, null, null, null, false, 3);
+        Assert.That(firstPage.Select(item => item.Id), Is.EqualTo(new[]
+        {
+            metrics[4].Id,
+            metrics[3].Id,
+            metrics[2].Id
+        }));
+
+        var olderCursor = HistoryCursorCodec.Encode(
+            firstPage[^1].RecordedAt,
+            firstPage[^1].Id);
+        var olderPage = await repository.GetHistoryPageAsync(
+            node.Id,
+            null,
+            null,
+            HistoryCursorCodec.Decode(olderCursor),
+            false,
+            3);
+        Assert.That(olderPage.Select(item => item.Id), Is.EqualTo(new[]
+        {
+            metrics[1].Id,
+            metrics[0].Id
+        }));
+
+        var newerPage = await repository.GetHistoryPageAsync(
+            node.Id,
+            null,
+            null,
+            new HistoryCursor(olderPage[0].RecordedAt, olderPage[0].Id),
+            true,
+            3);
+        Assert.That(newerPage.Select(item => item.Id), Is.EqualTo(new[]
+        {
+            metrics[2].Id,
+            metrics[3].Id,
+            metrics[4].Id
+        }));
     }
 
     private ApplicationDbContext CreateDbContext()

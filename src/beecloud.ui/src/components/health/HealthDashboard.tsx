@@ -15,6 +15,7 @@ import { deriveHealthAlerts } from "@/lib/health/healthAlerts";
 
 import HealthSparkline from "@/components/health/HealthSparkline";
 import HealthAlerts from "@/components/health/HealthAlerts";
+import Pagination from "@/components/common/Pagination";
 
 import styles from "./HealthDashboard.module.css";
 
@@ -74,6 +75,8 @@ export default function HealthDashboard({
                                             metricsErrorByNodeId = {},
                                             onRangeChange,
                                         }: HealthDashboardProps) {
+    const [nodePage, setNodePage] = useState(1);
+    const nodePageSize = 10;
     const [filter, setFilter] =
         useState<HealthFilter>("all");
 
@@ -151,6 +154,17 @@ export default function HealthDashboard({
                 return item.status === filter;
             }),
         [filter, nodesWithHealth],
+    );
+    const currentNodePage = Math.min(
+        nodePage,
+        Math.max(1, Math.ceil(visibleNodes.length / nodePageSize)),
+    );
+    const visiblePageNodes = useMemo(
+        () => visibleNodes.slice(
+            (currentNodePage - 1) * nodePageSize,
+            currentNodePage * nodePageSize,
+        ),
+        [currentNodePage, nodePageSize, visibleNodes],
     );
 
     const selectedNodes = nodesWithHealth.filter(
@@ -247,9 +261,10 @@ export default function HealthDashboard({
                                 aria-pressed={
                                     filter === value
                                 }
-                                onClick={() =>
-                                    setFilter(value)
-                                }
+                                onClick={() => {
+                                    setFilter(value);
+                                    setNodePage(1);
+                                }}
                             >
                                 {label}
                             </button>
@@ -329,7 +344,7 @@ export default function HealthDashboard({
                             </thead>
 
                             <tbody>
-                            {visibleNodes.map(
+                            {visiblePageNodes.map(
                                 ({
                                      node,
                                       metrics,
@@ -454,6 +469,15 @@ export default function HealthDashboard({
                             </tbody>
                         </table>
                     </div>
+                )}
+                {visibleNodes.length > 0 && (
+                    <Pagination
+                        page={currentNodePage}
+                        pageSize={nodePageSize}
+                        totalItems={visibleNodes.length}
+                        ariaLabel="Node health pages"
+                        onPageChange={setNodePage}
+                    />
                 )}
             </section>
 

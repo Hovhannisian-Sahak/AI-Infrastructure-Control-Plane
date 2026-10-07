@@ -1,4 +1,4 @@
-﻿import { configureStore } from "@reduxjs/toolkit";
+import { configureStore } from "@reduxjs/toolkit";
 import incidentsReducer, {
     fetchIncidents,
     clearIncidentError,
@@ -8,198 +8,99 @@ import { incidentsApi } from "@/lib/api/incidentsApi";
 jest.mock("@/lib/api/incidentsApi");
 
 const mockedIncidentsApi = jest.mocked(incidentsApi);
+const incident = {
+    id: "incident-1",
+    computeNodeId: "node-1",
+    title: "GPU failure",
+    description: "GPU failure detected.",
+    severity: "Critical" as const,
+    status: "Open" as const,
+    createdAt: "2026-10-05T10:00:00Z",
+    updatedAt: "2026-10-05T10:00:00Z",
+};
+const result = {
+    items: [incident],
+    page: 2,
+    pageSize: 12,
+    totalCount: 25,
+};
+
+function createStore() {
+    return configureStore({
+        reducer: { incidents: incidentsReducer },
+    });
+}
 
 describe("incidentsSlice", () => {
-    it("stores incidents when fetchIncidents succeeds", async () => {
-        const incidents = [
-            {
-                id: "incident-1",
-                computeNodeId: "node-1",
-                title: "GPU failure",
-                description: "GPU failure detected.",
-                severity: "Critical" as const,
-                status: "Open" as const,
-                createdAt: "2026-10-05T10:00:00Z",
-                updatedAt: "2026-10-03T12:00:00Z",
-            },
-        ];
+    beforeEach(() => jest.resetAllMocks());
 
-        mockedIncidentsApi.getAll.mockResolvedValue(incidents);
+    it("stores a server-paged incident response", async () => {
+        mockedIncidentsApi.search.mockResolvedValue(result);
+        const store = createStore();
 
-        const store = configureStore({
-            reducer: {
-                incidents: incidentsReducer,
-            },
+        await store.dispatch(fetchIncidents({
+            page: 2,
+            pageSize: 12,
+            severity: "Critical",
+        }));
+
+        expect(store.getState().incidents).toMatchObject({
+            incidents: result.items,
+            page: 2,
+            pageSize: 12,
+            totalCount: 25,
+            loading: false,
+            error: null,
         });
-
-        await store.dispatch(fetchIncidents());
-
-        const state = store.getState().incidents;
-
-        expect(state.loading).toBe(false);
-        expect(state.error).toBeNull();
-        expect(state.incidents).toEqual(incidents);
+        expect(mockedIncidentsApi.search).toHaveBeenCalledWith({
+            page: 2,
+            pageSize: 12,
+            severity: "Critical",
+        });
     });
 
-    it("stores an error when fetchIncidents fails", async () => {
-        mockedIncidentsApi.getAll.mockRejectedValue(
-            new Error("API unavailable"),
-        );
+    it("tracks loading state while the request is pending", async () => {
+        let resolveRequest!: (value: typeof result) => void;
+        mockedIncidentsApi.search.mockReturnValue(new Promise(resolve => {
+            resolveRequest = resolve;
+        }));
+        const store = createStore();
 
-        const store = configureStore({
-            reducer: {
-                incidents: incidentsReducer,
-            },
-        });
-
-        await store.dispatch(fetchIncidents());
-
-        const state = store.getState().incidents;
-
-        expect(state.loading).toBe(false);
-        expect(state.error).toBe("API unavailable");
-        expect(state.incidents).toEqual([]);
-    });
-
-    it("passes severity and status filters to the API", async () => {
-        const incidents = [
-            {
-                id: "incident-1",
-                computeNodeId: "node-1",
-                title: "GPU failure",
-                description: "GPU failure detected.",
-                severity: "High" as const,
-                status: "Open" as const,
-                createdAt: "2026-10-05T10:00:00Z",
-                updatedAt: "2026-10-03T12:00:00Z",
-            },
-        ];
-
-        mockedIncidentsApi.getAll.mockResolvedValue(incidents);
-
-        const store = configureStore({
-            reducer: {
-                incidents: incidentsReducer,
-            },
-        });
-
-        await store.dispatch(
-            fetchIncidents({
-                severity: "High",
-                status: "Open",
-            }),
-        );
-
-        expect(mockedIncidentsApi.getAll).toHaveBeenCalledWith({
-            severity: "High",
-            status: "Open",
-        });
-
-        expect(store.getState().incidents.incidents).toEqual(
-            incidents,
-        );
-    });
-
-    it("tracks loading state when fetching incidents", async () => {
-        let resolveFetch: (
-            value: {
-                id: string;
-                computeNodeId: string;
-                title: string;
-                description: string;
-                severity: "Critical";
-                status: "Open";
-                createdAt: string;
-                updatedAt: string;
-            }[],
-        ) => void;
-
-        const fetchPromise = new Promise<
-            {
-                id: string;
-                computeNodeId: string;
-                title: string;
-                description: string;
-                severity: "Critical";
-                status: "Open";
-                createdAt: string;
-                updatedAt: string;
-            }[]
-        >((resolve) => {
-            resolveFetch = resolve;
-        });
-
-        mockedIncidentsApi.getAll.mockReturnValue(fetchPromise);
-
-        const store = configureStore({
-            reducer: {
-                incidents: incidentsReducer,
-            },
-        });
-
-        const promise = store.dispatch(fetchIncidents());
-
+        const request = store.dispatch(fetchIncidents({
+            page: 1,
+            pageSize: 12,
+        }));
         expect(store.getState().incidents.loading).toBe(true);
 
-        resolveFetch!([
-            {
-                id: "incident-1",
-                computeNodeId: "node-1",
-                title: "GPU failure",
-                description: "GPU failure detected.",
-                severity: "Critical",
-                status: "Open",
-                createdAt: "2026-10-05T10:00:00Z",
-                updatedAt: "2026-10-03T12:00:00Z",
-            },
-        ]);
-
-        await promise;
-
+        resolveRequest(result);
+        await request;
         expect(store.getState().incidents.loading).toBe(false);
     });
 
-    it("clears the incident error", () => {
-        const store = configureStore({
-            reducer: {
-                incidents: incidentsReducer,
-            },
-        });
+    it("reports server errors and clears them on demand", async () => {
+        mockedIncidentsApi.search.mockRejectedValue(new Error("API unavailable"));
+        const store = createStore();
 
-        store.dispatch({
-            type: "incidents/fetchIncidents/rejected",
-            error: {
-                message: "API unavailable",
-            },
-        });
-
-        expect(store.getState().incidents.error).toBe(
-            "API unavailable",
-        );
+        await store.dispatch(fetchIncidents({ page: 1, pageSize: 12 }));
+        expect(store.getState().incidents.error).toBe("API unavailable");
 
         store.dispatch(clearIncidentError());
-
         expect(store.getState().incidents.error).toBeNull();
     });
 
-    it("uses the fallback error message when fetchIncidents fails without a message", async () => {
-        mockedIncidentsApi.getAll.mockRejectedValue(
-            new Error(),
-        );
+    it("ignores an older response after a newer query has started", async () => {
+        let resolveFirst!: (value: typeof result) => void;
+        mockedIncidentsApi.search
+            .mockReturnValueOnce(new Promise(resolve => { resolveFirst = resolve; }))
+            .mockResolvedValueOnce({ ...result, items: [], page: 1, totalCount: 0 });
+        const store = createStore();
 
-        const store = configureStore({
-            reducer: {
-                incidents: incidentsReducer,
-            },
-        });
+        const first = store.dispatch(fetchIncidents({ page: 1, pageSize: 12 }));
+        await store.dispatch(fetchIncidents({ page: 1, pageSize: 12, status: "Resolved" }));
+        resolveFirst(result);
+        await first;
 
-        await store.dispatch(fetchIncidents());
-
-        const state = store.getState().incidents;
-
-        expect(state.loading).toBe(false);
-        expect(state.error).toBe(
-            "Unable to load incidents. Please try again.",
-        );
+        expect(store.getState().incidents.incidents).toEqual([]);
+        expect(store.getState().incidents.totalCount).toBe(0);
     });
 });

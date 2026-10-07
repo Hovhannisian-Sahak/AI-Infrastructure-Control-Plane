@@ -2,6 +2,7 @@
 
 import type { NodeMetric } from "@/lib/api/models/nodeMetric";
 import HealthSparkline from "@/components/health/HealthSparkline";
+import CursorPagination from "@/components/common/CursorPagination";
 
 import styles from "./MetricsHistory.module.css";
 
@@ -9,6 +10,12 @@ type MetricsHistoryProps = {
     history: NodeMetric[];
     loading?: boolean;
     error?: string | null;
+    tableHistory?: NodeMetric[];
+    tableLoading?: boolean;
+    tableError?: string | null;
+    nextCursor?: string | null;
+    previousCursor?: string | null;
+    onTableNavigate?: (cursor: string, previous: boolean) => void;
 };
 
 function formatTimestamp(value: string) {
@@ -19,8 +26,18 @@ export default function MetricsHistory({
     history,
     loading = false,
     error = null,
+    tableHistory,
+    tableLoading = false,
+    tableError = null,
+    nextCursor = null,
+    previousCursor = null,
+    onTableNavigate,
 }: MetricsHistoryProps) {
-    const latest = history[history.length - 1];
+    const tableItems = tableHistory ?? history;
+    const latest = history[history.length - 1] ?? tableItems[0];
+    const newestFirstItems = tableHistory
+        ? tableItems
+        : [...tableItems].reverse();
 
     return (
         <section className={styles.section} aria-labelledby="node-metrics-title">
@@ -38,41 +55,48 @@ export default function MetricsHistory({
                 )}
             </header>
 
-            {error && <p className={styles.error} role="alert">{error}</p>}
+            {(error || tableError) && (
+                <p className={styles.error} role="alert">
+                    {error || tableError}
+                </p>
+            )}
 
-            {loading && history.length === 0 ? (
+            {loading && history.length === 0 && tableItems.length === 0 ? (
                 <p className={styles.message}>Loading node metrics...</p>
-            ) : history.length === 0 ? (
+            ) : history.length === 0 && tableItems.length === 0 ? (
                 <p className={styles.message}>
                     No resource metrics available for this time range.
                 </p>
             ) : (
                 <>
-                    <div className={styles.metrics}>
-                        <Metric
-                            label="CPU Usage"
-                            value={`${latest.cpuUsagePercent.toFixed(1)}%`}
-                            values={history.map(item => item.cpuUsagePercent)}
-                            ariaLabel="CPU usage metrics history"
-                        />
-                        <Metric
-                            label="GPU Usage"
-                            value={`${latest.gpuUsagePercent.toFixed(1)}%`}
-                            values={history.map(item => item.gpuUsagePercent)}
-                            ariaLabel="GPU usage metrics history"
-                        />
-                        <Metric
-                            label="GPU Temperature"
-                            value={`${latest.gpuTemperatureCelsius.toFixed(1)}°C`}
-                            values={history.map(item => item.gpuTemperatureCelsius)}
-                            min={0}
-                            max={120}
-                            ariaLabel="GPU temperature metrics history"
-                        />
-                    </div>
+                    {history.length > 0 && latest && (
+                        <div className={styles.metrics}>
+                            <Metric
+                                label="CPU Usage"
+                                value={`${latest.cpuUsagePercent.toFixed(1)}%`}
+                                values={history.map(item => item.cpuUsagePercent)}
+                                ariaLabel="CPU usage metrics history"
+                            />
+                            <Metric
+                                label="GPU Usage"
+                                value={`${latest.gpuUsagePercent.toFixed(1)}%`}
+                                values={history.map(item => item.gpuUsagePercent)}
+                                ariaLabel="GPU usage metrics history"
+                            />
+                            <Metric
+                                label="GPU Temperature"
+                                value={`${latest.gpuTemperatureCelsius.toFixed(1)}°C`}
+                                values={history.map(item => item.gpuTemperatureCelsius)}
+                                min={0}
+                                max={120}
+                                ariaLabel="GPU temperature metrics history"
+                            />
+                        </div>
+                    )}
 
-                    <div className={styles.tableWrapper}>
-                        <table className={styles.table}>
+                    {tableItems.length > 0 && (
+                        <div className={styles.tableWrapper}>
+                            <table className={styles.table}>
                             <thead>
                                 <tr>
                                     <th>Recorded At</th>
@@ -82,7 +106,7 @@ export default function MetricsHistory({
                                 </tr>
                             </thead>
                             <tbody>
-                                {[...history].reverse().map(metric => (
+                                {newestFirstItems.map(metric => (
                                     <tr key={metric.id}>
                                         <td>{formatTimestamp(metric.recordedAt)}</td>
                                         <td>{metric.cpuUsagePercent.toFixed(1)}%</td>
@@ -91,8 +115,24 @@ export default function MetricsHistory({
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
-                    </div>
+                            </table>
+                        </div>
+                    )}
+                    {tableItems.length === 0 && tableLoading && (
+                        <p className={styles.message}>Loading metrics history...</p>
+                    )}
+                    {tableItems.length === 0 && !tableLoading && (
+                        <p className={styles.message}>No metric readings in this time range.</p>
+                    )}
+                    {onTableNavigate && (
+                        <CursorPagination
+                            nextCursor={nextCursor}
+                            previousCursor={previousCursor}
+                            loading={tableLoading}
+                            ariaLabel="Metrics history pages"
+                            onNavigate={onTableNavigate}
+                        />
+                    )}
                 </>
             )}
         </section>

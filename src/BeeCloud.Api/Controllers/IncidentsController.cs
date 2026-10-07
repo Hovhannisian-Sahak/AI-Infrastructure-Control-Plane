@@ -1,4 +1,5 @@
 ﻿using BeeCloud.Application.DTOs.Incidents;
+using BeeCloud.Application.DTOs.Pagination;
 using BeeCloud.Application.Interfaces;
 using BeeCloud.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
@@ -58,6 +59,22 @@ public class IncidentsController : ControllerBase
             status,
             cancellationToken);
 
+        return Ok(response);
+    }
+
+    [HttpGet("search")]
+    public async Task<ActionResult<PageResponse<IncidentResponse>>> Search(
+        [FromQuery] IncidentSeverity? severity,
+        [FromQuery] IncidentStatus? status,
+        [FromQuery] Guid? computeNodeId,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await _service.GetPageAsync(
+            severity, status, computeNodeId, from, to, page, pageSize, cancellationToken);
         return Ok(response);
     }
 

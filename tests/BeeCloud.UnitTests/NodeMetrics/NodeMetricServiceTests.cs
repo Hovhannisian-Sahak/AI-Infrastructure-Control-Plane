@@ -1,6 +1,7 @@
 ﻿using BeeCloud.Application.Interfaces;
 using BeeCloud.Application.Services;
 using BeeCloud.Domain.Entities;
+using BeeCloud.Application.Pagination;
 using Moq;
 
 namespace BeeCloud.UnitTests.NodeMetrics;
@@ -236,6 +237,40 @@ public class NodeMetricServiceTests
                 25,
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Test]
+    public async Task GetHistoryPageAsync_ReturnsCursorWhenAnotherOlderPageExists()
+    {
+        var node = CreateNode();
+        var newest = new NodeMetric(node.Id, 10, 20, 40);
+        var older = new NodeMetric(node.Id, 11, 21, 41);
+
+        _nodeRepository
+            .Setup(repository => repository.GetByIdAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+        _metricRepository
+            .Setup(repository => repository.GetHistoryPageAsync(
+                node.Id,
+                null,
+                null,
+                null,
+                false,
+                2,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { newest, older });
+
+        var page = await _service.GetHistoryPageAsync(
+            node.Id, null, null, null, false, 1);
+
+        Assert.That(page.Items, Has.Count.EqualTo(1));
+        Assert.That(page.Items[0].Id, Is.EqualTo(newest.Id));
+        Assert.That(page.PreviousCursor, Is.Null);
+        Assert.That(page.NextCursor, Is.Not.Null);
+        var position = HistoryCursorCodec.Decode(page.NextCursor!);
+        Assert.That(position.Id, Is.EqualTo(newest.Id));
     }
 
     [Test]

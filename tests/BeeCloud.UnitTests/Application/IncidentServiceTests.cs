@@ -261,6 +261,47 @@ public class IncidentServiceTests
             Times.Never);
     }
 
+    [Test]
+    public async Task GetPageAsync_ShouldApplyAllServerFiltersAndReturnTotalCount()
+    {
+        var nodeId = Guid.NewGuid();
+        var incident = CreateIncident(nodeId, IncidentStatus.Open);
+        _incidentRepository
+            .Setup(repository => repository.GetPageAsync(
+                IncidentSeverity.High,
+                IncidentStatus.Open,
+                nodeId,
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                2,
+                15,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(((IReadOnlyList<Incident>)new[] { incident }, 21));
+        var from = DateTime.UtcNow.AddDays(-2);
+        var to = DateTime.UtcNow;
+
+        var result = await _service.GetPageAsync(
+            IncidentSeverity.High,
+            IncidentStatus.Open,
+            nodeId,
+            from,
+            to,
+            2,
+            15);
+
+        Assert.That(result.Items, Has.Count.EqualTo(1));
+        Assert.That(result.TotalCount, Is.EqualTo(21));
+        _incidentRepository.Verify(repository => repository.GetPageAsync(
+            IncidentSeverity.High,
+            IncidentStatus.Open,
+            nodeId,
+            from,
+            to,
+            2,
+            15,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static ComputeNode CreateNode()
     {
         return new ComputeNode(

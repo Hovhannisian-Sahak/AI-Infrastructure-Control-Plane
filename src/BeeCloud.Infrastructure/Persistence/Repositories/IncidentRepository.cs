@@ -51,6 +51,53 @@ public class IncidentRepository : IIncidentRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<(IReadOnlyList<Incident> Items, int TotalCount)> GetPageAsync(
+        IncidentSeverity? severity,
+        IncidentStatus? status,
+        Guid? computeNodeId,
+        DateTime? from,
+        DateTime? to,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = BuildQuery(severity, status, computeNodeId, from, to);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var offset = (long)(page - 1) * pageSize;
+        if (offset > int.MaxValue)
+            return (Array.Empty<Incident>(), totalCount);
+
+        var items = await query
+            .OrderByDescending(incident => incident.CreatedAt)
+            .ThenByDescending(incident => incident.Id)
+            .Skip((int)offset)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
+    private IQueryable<Incident> BuildQuery(
+        IncidentSeverity? severity,
+        IncidentStatus? status,
+        Guid? computeNodeId,
+        DateTime? from,
+        DateTime? to)
+    {
+        var query = _dbContext.Incidents.AsNoTracking().AsQueryable();
+        if (severity.HasValue)
+            query = query.Where(incident => incident.Severity == severity.Value);
+        if (status.HasValue)
+            query = query.Where(incident => incident.Status == status.Value);
+        if (computeNodeId.HasValue)
+            query = query.Where(incident => incident.ComputeNodeId == computeNodeId.Value);
+        if (from.HasValue)
+            query = query.Where(incident => incident.CreatedAt >= from.Value);
+        if (to.HasValue)
+            query = query.Where(incident => incident.CreatedAt <= to.Value);
+        return query;
+    }
+
     public async Task<Incident?> GetActiveForNodeAsync(
         Guid computeNodeId,
         CancellationToken cancellationToken = default)
