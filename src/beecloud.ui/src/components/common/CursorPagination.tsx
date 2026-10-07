@@ -1,5 +1,6 @@
 "use client";
 
+import { usePaginationViewportAnchor } from "./usePaginationViewportAnchor";
 import styles from "./Pagination.module.css";
 
 type CursorPaginationProps = {
@@ -17,10 +18,21 @@ export default function CursorPagination({
     ariaLabel,
     onNavigate,
 }: CursorPaginationProps) {
+    const { element, preservePosition } = usePaginationViewportAnchor(
+        `${nextCursor ?? ""}:${previousCursor ?? ""}`,
+        loading,
+        true,
+    );
+
     if (!nextCursor && !previousCursor) return null;
 
+    const navigate = (cursor: string, previous: boolean) => {
+        preservePosition();
+        onNavigate(cursor, previous);
+    };
+
     return (
-        <nav className={styles.pagination} aria-label={ariaLabel}>
+        <nav ref={element} className={styles.pagination} aria-label={ariaLabel}>
             <span className={styles.summary}>
                 Browse history records
             </span>
@@ -29,7 +41,7 @@ export default function CursorPagination({
                     type="button"
                     className={styles.button}
                     disabled={loading || !previousCursor}
-                    onClick={() => previousCursor && onNavigate(previousCursor, true)}
+                    onClick={() => previousCursor && navigate(previousCursor, true)}
                 >
                     Newer
                 </button>
@@ -37,7 +49,7 @@ export default function CursorPagination({
                     type="button"
                     className={styles.button}
                     disabled={loading || !nextCursor}
-                    onClick={() => nextCursor && onNavigate(nextCursor, false)}
+                    onClick={() => nextCursor && navigate(nextCursor, false)}
                 >
                     Older
                 </button>

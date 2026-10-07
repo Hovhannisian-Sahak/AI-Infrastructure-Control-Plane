@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import IncidentsSection from "../IncidentsSection";
@@ -141,6 +141,36 @@ describe("IncidentsSection", () => {
         expect(await screen.findByRole("heading", {
             name: secondIncident.title,
         })).toBeInTheDocument();
+    });
+
+    it("keeps the incident list and pagination mounted while a page loads", async () => {
+        const scrollTo = jest.spyOn(window, "scrollTo").mockImplementation(() => {});
+        let resolvePage!: (value: ReturnType<typeof page>) => void;
+        mockedIncidentsApi.search
+            .mockResolvedValueOnce(page([incident], 25))
+            .mockReturnValueOnce(new Promise(resolve => {
+                resolvePage = resolve;
+            }));
+        renderSection();
+
+        await screen.findByRole("heading", { name: incident.title });
+        await userEvent.setup().click(screen.getByRole("button", { name: "Next" }));
+
+        expect(screen.getByRole("heading", { name: incident.title }))
+            .toBeInTheDocument();
+        expect(screen.getByRole("navigation", { name: "Incident pages" }))
+            .toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+        expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+
+        await act(async () => {
+            resolvePage(page([secondIncident], 25, 2));
+        });
+
+        expect(await screen.findByRole("heading", { name: secondIncident.title }))
+            .toBeInTheDocument();
+        expect(scrollTo).toHaveBeenCalled();
+        scrollTo.mockRestore();
     });
 
     it("shows an empty state for no matching incidents", async () => {

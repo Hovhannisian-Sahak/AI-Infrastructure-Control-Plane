@@ -301,7 +301,7 @@ export default function IncidentsSection() {
                         )}
             </div>
 
-            {loading && (
+            {loading && incidents.length === 0 && (
                 <div className={styles.loading}>
                     <span
                         className={styles.spinner}
@@ -370,9 +370,8 @@ export default function IncidentsSection() {
                     </div>
                 )}
 
-            {!loading &&
-                incidents.length > 0 && (
-                    <div className={styles.grid}>
+            {incidents.length > 0 && (
+                    <div className={styles.grid} aria-busy={loading}>
                         {incidents.map(
                             (incident) => (
                                 <IncidentCard
@@ -386,13 +385,15 @@ export default function IncidentsSection() {
                         )}
                     </div>
                 )}
-            {!loading && resultCount > 0 && (
+            {resultCount > 0 && (
                 <Pagination
                     page={page}
                     pageSize={pageSize}
                     totalItems={resultCount}
                     ariaLabel="Incident pages"
                     onPageChange={setPage}
+                    disabled={loading}
+                    waitForLoading
                 />
             )}
         </section>

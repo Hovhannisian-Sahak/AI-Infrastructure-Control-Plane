@@ -1,5 +1,6 @@
 "use client";
 
+import { usePaginationViewportAnchor } from "./usePaginationViewportAnchor";
 import styles from "./Pagination.module.css";
 
 type PaginationProps = {
@@ -8,6 +9,8 @@ type PaginationProps = {
     totalItems: number;
     ariaLabel: string;
     onPageChange: (page: number) => void;
+    disabled?: boolean;
+    waitForLoading?: boolean;
 };
 
 export default function Pagination({
@@ -16,20 +19,32 @@ export default function Pagination({
     totalItems,
     ariaLabel,
     onPageChange,
+    disabled = false,
+    waitForLoading = false,
 }: PaginationProps) {
     const safePageSize = Math.max(1, pageSize);
     const pageCount = Math.ceil(totalItems / safePageSize);
+    const currentPage = Math.min(Math.max(1, page), pageCount);
+    const { element, preservePosition } = usePaginationViewportAnchor(
+        currentPage,
+        disabled,
+        waitForLoading,
+    );
 
     if (pageCount <= 1) {
         return null;
     }
 
-    const currentPage = Math.min(Math.max(1, page), pageCount);
     const firstItem = (currentPage - 1) * safePageSize + 1;
     const lastItem = Math.min(currentPage * safePageSize, totalItems);
 
+    const changePage = (nextPage: number) => {
+        preservePosition();
+        onPageChange(nextPage);
+    };
+
     return (
-        <nav className={styles.pagination} aria-label={ariaLabel}>
+        <nav ref={element} className={styles.pagination} aria-label={ariaLabel}>
             <span className={styles.summary} aria-live="polite">
                 Showing {firstItem}–{lastItem} of {totalItems}
             </span>
@@ -37,8 +52,8 @@ export default function Pagination({
                 <button
                     type="button"
                     className={styles.button}
-                    disabled={currentPage === 1}
-                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={disabled || currentPage === 1}
+                    onClick={() => changePage(currentPage - 1)}
                 >
                     Previous
                 </button>
@@ -48,8 +63,8 @@ export default function Pagination({
                 <button
                     type="button"
                     className={styles.button}
-                    disabled={currentPage === pageCount}
-                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={disabled || currentPage === pageCount}
+                    onClick={() => changePage(currentPage + 1)}
                 >
                     Next
                 </button>
