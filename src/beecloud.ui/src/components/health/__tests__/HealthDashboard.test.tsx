@@ -442,6 +442,59 @@ describe("HealthDashboard", () => {
         ).toHaveAttribute("href", "/nodes/node-1");
     });
 
+    it("paginates historical alerts without changing the total count", async () => {
+        const user = userEvent.setup();
+        const fleet = Array.from({ length: 11 }, (_, index) => {
+            const node = {
+                ...nodes[0],
+                id: `history-node-${index}`,
+                name: `history-node-${String(index + 1).padStart(2, "0")}`,
+            };
+            const current = {
+                ...healthy,
+                id: `current-${index}`,
+                computeNodeId: node.id,
+                checkedAt: new Date().toISOString(),
+            };
+            const old = {
+                ...unhealthy,
+                id: `old-${index}`,
+                computeNodeId: node.id,
+                cpuUsagePercent: null,
+                gpuUsagePercent: null,
+                gpuTemperatureCelsius: null,
+                checkedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            };
+            return { node, current, old };
+        });
+
+        render(
+            <HealthDashboard
+                nodes={fleet.map(item => item.node)}
+                historyByNodeId={Object.fromEntries(
+                    fleet.map(item => [item.node.id, [item.old, item.current]]),
+                )}
+                latestByNodeId={Object.fromEntries(
+                    fleet.map(item => [item.node.id, item.current]),
+                )}
+            />,
+        );
+
+        const alerts = screen.getByRole("region", { name: "Health Alerts" });
+        const history = within(alerts).getByRole("region", { name: "History" });
+        expect(within(alerts).getByLabelText("11 alerts")).toBeInTheDocument();
+        const firstPageLinks = within(history).getAllByRole("link");
+        expect(firstPageLinks).toHaveLength(10);
+        const firstPageNames = firstPageLinks.map(link => link.textContent);
+
+        await user.click(within(history).getByRole("button", { name: "Next" }));
+
+        const secondPageLinks = within(history).getAllByRole("link");
+        expect(secondPageLinks).toHaveLength(1);
+        expect(firstPageNames).not.toContain(secondPageLinks[0].textContent);
+        expect(within(alerts).getByLabelText("11 alerts")).toBeInTheDocument();
+    });
+
     it("flags high GPU usage even when the node is otherwise healthy", () => {
         renderDashboard({
             "node-1": {

@@ -1,5 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 
+import Pagination from "@/components/common/Pagination";
 import {
     formatAlertAge,
     type DerivedHealthAlerts,
@@ -32,6 +36,14 @@ function AlertList({
     alerts: HealthAlert[];
     historical?: boolean;
 }) {
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
+    const pageCount = Math.ceil(alerts.length / pageSize);
+    const currentPage = Math.min(page, Math.max(1, pageCount));
+    const visibleAlerts = historical
+        ? alerts.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+        : alerts;
+
     if (alerts.length === 0) {
         return (
             <p className={styles.empty} role="status">
@@ -43,44 +55,55 @@ function AlertList({
     }
 
     return (
-        <ul className={styles.list}>
-            {alerts.map(alert => (
-                <li
-                    className={`${styles.alert} ${
-                        historical ? styles.historicalAlert : ""
-                    }`}
-                    key={alert.id}
-                >
-                    <span
-                        className={`${styles.indicator} ${
-                            historical
-                                ? styles.historicalIndicator
-                                : styles[alert.type]
+        <div>
+            <ul className={styles.list}>
+                {visibleAlerts.map(alert => (
+                    <li
+                        className={`${styles.alert} ${
+                            historical ? styles.historicalAlert : ""
                         }`}
-                        aria-hidden="true"
-                    />
-                    <div className={styles.content}>
-                        <div className={styles.alertHeader}>
-                            <Link
-                                href={`/nodes/${alert.nodeId}`}
-                                className={styles.nodeLink}
-                            >
-                                {alert.nodeName}
-                            </Link>
-                            <span className={styles.type}>
-                                {getAlertLabel(alert.type)}
+                        key={alert.id}
+                    >
+                        <span
+                            className={`${styles.indicator} ${
+                                historical
+                                    ? styles.historicalIndicator
+                                    : styles[alert.type]
+                            }`}
+                            aria-hidden="true"
+                        />
+                        <div className={styles.content}>
+                            <div className={styles.alertHeader}>
+                                <Link
+                                    href={`/nodes/${alert.nodeId}`}
+                                    className={styles.nodeLink}
+                                >
+                                    {alert.nodeName}
+                                </Link>
+                                <span className={styles.type}>
+                                    {getAlertLabel(alert.type)}
+                                </span>
+                            </div>
+                            <p>{alert.message}</p>
+                            <span className={styles.context}>
+                                {historical
+                                    ? formatAlertAge(alert.checkedAt)
+                                    : "Node currently affected"}
                             </span>
                         </div>
-                        <p>{alert.message}</p>
-                        <span className={styles.context}>
-                            {historical
-                                ? formatAlertAge(alert.checkedAt)
-                                : "Node currently affected"}
-                        </span>
-                    </div>
-                </li>
-            ))}
-        </ul>
+                    </li>
+                ))}
+            </ul>
+            {historical && (
+                <Pagination
+                    page={currentPage}
+                    pageSize={pageSize}
+                    totalItems={alerts.length}
+                    ariaLabel="Historical health alert pages"
+                    onPageChange={setPage}
+                />
+            )}
+        </div>
     );
 }
 
