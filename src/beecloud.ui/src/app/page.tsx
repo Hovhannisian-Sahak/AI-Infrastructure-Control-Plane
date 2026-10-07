@@ -15,6 +15,7 @@ import {
 import {
   fetchHealthHistory,
 } from "@/store/slices/healthSlice";
+import { fetchNodeMetrics } from "@/store/slices/metricsSlice";
 import { getHealthMonitoringNodeIds } from "@/lib/health/healthMonitoring";
 
 import NodeCard from "@/components/nodes/NodeCard";
@@ -89,6 +90,10 @@ export default function Home() {
             limit: 10,
           }),
       );
+      void dispatch(fetchNodeMetrics({
+        nodeId,
+        limit: 10,
+      }));
     }
   }, [dispatch, unmonitoredNodeKey]);
 
@@ -108,6 +113,10 @@ export default function Home() {
               limit: 10,
             }),
         );
+        void dispatch(fetchNodeMetrics({
+          nodeId,
+          limit: 10,
+        }));
       }
     };
 

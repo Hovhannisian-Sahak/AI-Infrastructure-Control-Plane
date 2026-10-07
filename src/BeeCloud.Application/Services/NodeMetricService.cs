@@ -48,6 +48,46 @@ public class NodeMetricService : INodeMetricService
             computeNodeId,
             cancellationToken);
 
+        return metrics.Select(MapToResponse).ToList();
+    }
+
+    public async Task<IReadOnlyList<NodeMetricResponse>> GetHistoryAsync(
+        Guid computeNodeId,
+        DateTime? from = null,
+        DateTime? to = null,
+        int limit = 100,
+        CancellationToken cancellationToken = default)
+    {
+        if (limit <= 0 || limit > 1000)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(limit),
+                "Limit must be between 1 and 1000.");
+        }
+
+        if (from.HasValue && to.HasValue && from > to)
+        {
+            throw new ArgumentException(
+                "'from' must be earlier than or equal to 'to'.");
+        }
+
+        var node = await _computeNodeRepository.GetByIdAsync(
+            computeNodeId,
+            cancellationToken);
+
+        if (node is null)
+        {
+            throw new KeyNotFoundException(
+                $"Compute node with id '{computeNodeId}' was not found.");
+        }
+
+        var metrics = await _nodeMetricRepository.GetHistoryAsync(
+            computeNodeId,
+            from,
+            to,
+            limit,
+            cancellationToken);
+
         return metrics
             .Select(MapToResponse)
             .ToList();

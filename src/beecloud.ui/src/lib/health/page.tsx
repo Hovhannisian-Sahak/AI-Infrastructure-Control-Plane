@@ -12,6 +12,7 @@ import { fetchNodes } from "@/store/slices/nodesSlice";
 import {
     fetchHealthHistory,
 } from "@/store/slices/healthSlice";
+import { fetchNodeMetrics } from "@/store/slices/metricsSlice";
 
 import HealthDashboard from "@/components/health/HealthDashboard";
 import { getHealthMonitoringNodeIds } from "@/lib/health/healthMonitoring";
@@ -39,8 +40,14 @@ export default function HealthPage() {
         state => state.health.latestByNodeId,
     );
 
-    const loadingByNodeId = useAppSelector(
-        state => state.health.loadingByNodeId,
+    const metricsByNodeId = useAppSelector(
+        state => state.metrics.historyByNodeId,
+    );
+    const metricsLoadingByNodeId = useAppSelector(
+        state => state.metrics.loadingByNodeId,
+    );
+    const metricsErrorByNodeId = useAppSelector(
+        state => state.metrics.errorByNodeId,
     );
 
     const monitoredNodeIds =
@@ -72,6 +79,14 @@ export default function HealthPage() {
                     to: to.toISOString(),
                 }),
             );
+            void dispatch(
+                fetchNodeMetrics({
+                    nodeId,
+                    limit: 100,
+                    from: from.toISOString(),
+                    to: to.toISOString(),
+                }),
+            );
         }
     }, [dispatch, allNodeKey, range]);
 
@@ -89,6 +104,14 @@ export default function HealthPage() {
             for (const nodeId of nodeIds) {
                 void dispatch(
                     fetchHealthHistory({
+                        nodeId,
+                        limit: 100,
+                        from: from.toISOString(),
+                        to: to.toISOString(),
+                    }),
+                );
+                void dispatch(
+                    fetchNodeMetrics({
                         nodeId,
                         limit: 100,
                         from: from.toISOString(),
@@ -134,7 +157,9 @@ export default function HealthPage() {
                     nodes={nodes}
                     historyByNodeId={historyByNodeId}
                     latestByNodeId={latestByNodeId}
-                    loadingByNodeId={loadingByNodeId}
+                    metricsByNodeId={metricsByNodeId}
+                    metricsLoadingByNodeId={metricsLoadingByNodeId}
+                    metricsErrorByNodeId={metricsErrorByNodeId}
                     onRangeChange={setRange}
                 />
             </div>

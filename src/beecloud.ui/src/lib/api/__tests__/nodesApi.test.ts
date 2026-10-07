@@ -1,6 +1,7 @@
 ﻿import { apiClient } from "../client";
 import { nodesApi } from "../nodesApi";
 import type { HealthCheck } from "../models/healthCheck";
+import type { NodeMetric } from "../models/nodeMetric";
 
 jest.mock("../client", () => ({
   apiClient: {
@@ -127,6 +128,23 @@ describe("nodesApi", () => {
     expect(mockedApiClient.get).toHaveBeenCalledWith(
       "/api/v1/nodes/node-1/health/history?limit=10",
     );
+  });
+
+  it("gets node metrics with backend time filters and limit", async () => {
+    const metrics: NodeMetric[] = [];
+    mockedApiClient.get.mockResolvedValue(metrics);
+
+    const result = await nodesApi.getNodeMetrics(
+      "node-1",
+      100,
+      "2026-10-07T10:00:00.000Z",
+      "2026-10-07T14:00:00.000Z",
+    );
+
+    expect(mockedApiClient.get).toHaveBeenCalledWith(
+      "/api/v1/nodes/node-1/metrics?from=2026-10-07T10%3A00%3A00.000Z&to=2026-10-07T14%3A00%3A00.000Z&limit=100",
+    );
+    expect(result).toBe(metrics);
   });
 
   it("propagates an error when starting a node fails", async () => {

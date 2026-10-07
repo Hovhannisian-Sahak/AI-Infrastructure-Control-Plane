@@ -251,6 +251,35 @@ public class NodeMetricRepositoryIntegrationTests
         Assert.That(result, Is.Empty);
     }
 
+    [Test]
+    public async Task GetHistoryAsync_FiltersBoundsAndLimitsNewestFirst()
+    {
+        await using var dbContext = CreateDbContext();
+        var node = CreateNode();
+        dbContext.ComputeNodes.Add(node);
+
+        var metrics = Enumerable.Range(0, 3)
+            .Select(index => new NodeMetric(
+                node.Id,
+                10 + index,
+                20 + index,
+                50 + index))
+            .ToArray();
+        dbContext.NodeMetrics.AddRange(metrics);
+        await dbContext.SaveChangesAsync();
+
+        var repository = new NodeMetricRepository(dbContext);
+        var from = metrics[1].RecordedAt;
+        var result = await repository.GetHistoryAsync(
+            node.Id,
+            from,
+            metrics[2].RecordedAt,
+            1);
+
+        Assert.That(result, Has.Count.EqualTo(1));
+        Assert.That(result[0].Id, Is.EqualTo(metrics[2].Id));
+    }
+
     private ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()

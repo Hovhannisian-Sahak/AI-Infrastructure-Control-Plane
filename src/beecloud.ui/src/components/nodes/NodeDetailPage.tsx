@@ -16,6 +16,7 @@ import {
 import {
     fetchHealthHistory,
 } from "@/store/slices/healthSlice";
+import { fetchNodeMetrics } from "@/store/slices/metricsSlice";
 
 import {
     selectHealthErrorByNodeId,
@@ -31,6 +32,8 @@ import {
 } from "@/lib/health/healthTimeRange";
 
 import HealthHistory from "@/lib/health/HealthHistory";
+import MetricsHistory from "@/components/health/MetricsHistory";
+import { isHealthMonitored } from "@/lib/health/healthMonitoring";
 
 import styles from "./NodeDetailPage.module.css";
 
@@ -80,6 +83,15 @@ export default function NodeDetailPage() {
                 nodeId,
             ),
         );
+    const metrics = useAppSelector(
+        state => state.metrics.historyByNodeId[nodeId] ?? [],
+    );
+    const metricsLoading = useAppSelector(
+        state => state.metrics.loadingByNodeId[nodeId] ?? false,
+    );
+    const metricsError = useAppSelector(
+        state => state.metrics.errorByNodeId[nodeId] ?? null,
+    );
 
     const [range, setRange] =
         useState<HealthTimeRange>("24h");
@@ -109,7 +121,36 @@ export default function NodeDetailPage() {
                 to: to.toISOString(),
             }),
         );
+        dispatch(
+            fetchNodeMetrics({
+                nodeId,
+                limit: 100,
+                from: from.toISOString(),
+                to: to.toISOString(),
+            }),
+        );
     }, [dispatch, nodeId, range]);
+
+    useEffect(() => {
+        if (!nodeId || !node || !isHealthMonitored(node.status)) {
+            return;
+        }
+
+        const loadMetrics = () => {
+            const { from, to } = getHealthRangeBounds(range);
+            void dispatch(
+                fetchNodeMetrics({
+                    nodeId,
+                    limit: 100,
+                    from: from.toISOString(),
+                    to: to.toISOString(),
+                }),
+            );
+        };
+
+        const intervalId = setInterval(loadMetrics, 10_000);
+        return () => clearInterval(intervalId);
+    }, [dispatch, node, nodeId, range]);
 
     if (!node) {
         return (
@@ -261,6 +302,11 @@ export default function NodeDetailPage() {
                 <HealthHistory
                     history={history}
                     loading={loading}
+                />
+                <MetricsHistory
+                    history={metrics}
+                    loading={metricsLoading}
+                    error={metricsError}
                 />
             </div>
         </main>

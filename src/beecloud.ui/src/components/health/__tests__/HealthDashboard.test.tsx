@@ -6,6 +6,7 @@
 import userEvent from "@testing-library/user-event";
 
 import type { HealthCheck } from "@/lib/api/models/healthCheck";
+import type { NodeMetric } from "@/lib/api/models/nodeMetric";
 import HealthDashboard from "../HealthDashboard";
 
 const nodes = [
@@ -55,6 +56,25 @@ const unhealthy = {
     checkedAt: "2026-10-07T12:00:00Z",
 };
 
+const metricsByNodeId: Record<string, NodeMetric[]> = {
+    "node-1": [{
+        id: "metric-1",
+        computeNodeId: "node-1",
+        cpuUsagePercent: 50,
+        gpuUsagePercent: 60,
+        gpuTemperatureCelsius: 65,
+        recordedAt: "2026-10-07T12:00:00Z",
+    }],
+    "node-2": [{
+        id: "metric-2",
+        computeNodeId: "node-2",
+        cpuUsagePercent: 95,
+        gpuUsagePercent: 80,
+        gpuTemperatureCelsius: 96,
+        recordedAt: "2026-10-07T12:00:00Z",
+    }],
+};
+
 function renderDashboard(
     latestByNodeId: Record<
         string,
@@ -73,11 +93,7 @@ function renderDashboard(
             nodes={nodes}
             historyByNodeId={historyByNodeId}
             latestByNodeId={latestByNodeId}
-            loadingByNodeId={{
-                "node-1": false,
-                "node-2": false,
-                "node-3": false,
-            }}
+            metricsByNodeId={metricsByNodeId}
         />,
     );
 }
@@ -223,7 +239,7 @@ describe("HealthDashboard", () => {
                     "node-1": healthy,
                     "node-2": unhealthy,
                 }}
-                loadingByNodeId={{}}
+                metricsByNodeId={metricsByNodeId}
                 onRangeChange={onRangeChange}
             />,
         );
@@ -253,6 +269,41 @@ describe("HealthDashboard", () => {
         expect(
             screen.getByText("96.0°C"),
         ).toBeInTheDocument();
+    });
+
+    it("uses node metric telemetry for resource values and health checks for status", () => {
+        const metric: NodeMetric = {
+            id: "independent-metric",
+            computeNodeId: "node-1",
+            cpuUsagePercent: 82,
+            gpuUsagePercent: 77,
+            gpuTemperatureCelsius: 71,
+            recordedAt: "2026-10-07T12:01:00Z",
+        };
+
+        render(
+            <HealthDashboard
+                nodes={[nodes[0]]}
+                historyByNodeId={{
+                    "node-1": [{
+                        ...healthy,
+                        cpuUsagePercent: 12,
+                    }],
+                }}
+                latestByNodeId={{
+                    "node-1": {
+                        ...healthy,
+                        cpuUsagePercent: 12,
+                    },
+                }}
+                metricsByNodeId={{ "node-1": [metric] }}
+            />,
+        );
+
+        const row = getNodeRow("gpu-node-01");
+        expect(row).toHaveTextContent("82.0%");
+        expect(row).not.toHaveTextContent("12.0%");
+        expect(row).toHaveTextContent("Healthy");
     });
 
     it("compares metrics side by side for multiple selected nodes", async () => {
@@ -456,7 +507,16 @@ describe("HealthDashboard", () => {
                 latestByNodeId={{
                     [stoppedNode.id]: oldHealth,
                 }}
-                loadingByNodeId={{ [stoppedNode.id]: false }}
+                metricsByNodeId={{
+                    [stoppedNode.id]: [{
+                        id: "metric-stopped",
+                        computeNodeId: stoppedNode.id,
+                        cpuUsagePercent: 42,
+                        gpuUsagePercent: 95,
+                        gpuTemperatureCelsius: 75,
+                        recordedAt: oldHealth.checkedAt,
+                    }],
+                }}
             />,
         );
 

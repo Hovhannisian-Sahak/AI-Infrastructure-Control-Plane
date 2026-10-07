@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import type { ComputeNode } from "@/lib/api/models/computeNode";
 import type { HealthCheck } from "@/lib/api/models/healthCheck";
+import type { NodeMetric } from "@/lib/api/models/nodeMetric";
 
 import {
     HEALTH_TIME_RANGES,
@@ -30,7 +31,9 @@ type HealthDashboardProps = {
         string,
         HealthCheck | null | undefined
     >;
-    loadingByNodeId: Record<string, boolean>;
+    metricsByNodeId?: Record<string, NodeMetric[]>;
+    metricsLoadingByNodeId?: Record<string, boolean>;
+    metricsErrorByNodeId?: Record<string, string | null>;
     onRangeChange?: (range: HealthTimeRange) => void;
 };
 
@@ -66,7 +69,9 @@ export default function HealthDashboard({
                                             nodes,
                                             historyByNodeId,
                                             latestByNodeId,
-                                            loadingByNodeId,
+                                            metricsByNodeId = {},
+                                            metricsLoadingByNodeId = {},
+                                            metricsErrorByNodeId = {},
                                             onRangeChange,
                                         }: HealthDashboardProps) {
     const [filter, setFilter] =
@@ -84,21 +89,21 @@ export default function HealthDashboard({
                 const latest =
                     latestByNodeId[node.id] ?? null;
 
-                const history =
-                    historyByNodeId[node.id] ?? [];
+                const metrics =
+                    metricsByNodeId[node.id] ?? [];
 
                 return {
                     node,
                     latest,
-                    history,
+                    metrics,
                     status:
                         getNodeHealthStatus(latest),
                 };
             }),
         [
             nodes,
-            historyByNodeId,
             latestByNodeId,
+            metricsByNodeId,
         ],
     );
 
@@ -327,14 +332,15 @@ export default function HealthDashboard({
                             {visibleNodes.map(
                                 ({
                                      node,
-                                     latest,
-                                     history,
-                                     status,
+                                      metrics,
+                                      status,
                                  }) => {
-                                    const loading =
-                                        loadingByNodeId[
-                                            node.id
-                                            ] ?? false;
+                                     const loading =
+                                         metricsLoadingByNodeId[node.id] ?? false;
+                                    const latestMetric =
+                                        metrics[metrics.length - 1];
+                                    const metricsError =
+                                        metricsErrorByNodeId[node.id];
 
                                     return (
                                         <tr key={node.id}>
@@ -384,35 +390,27 @@ export default function HealthDashboard({
                                             </td>
 
                                             <td>
-                                                {latest
-                                                    ? formatValue(
-                                                        latest.cpuUsagePercent,
-                                                        "%",
-                                                    )
-                                                    : "—"}
+                                                {formatValue(latestMetric?.cpuUsagePercent, "%")}
                                             </td>
 
                                             <td>
-                                                {latest
-                                                    ? formatValue(
-                                                        latest.gpuUsagePercent,
-                                                        "%",
-                                                    )
-                                                    : "—"}
+                                                {formatValue(latestMetric?.gpuUsagePercent, "%")}
                                             </td>
 
                                             <td>
-                                                {latest
-                                                    ? formatValue(
-                                                        latest.gpuTemperatureCelsius,
-                                                        "°C",
-                                                    )
-                                                    : "—"}
+                                                {formatValue(latestMetric?.gpuTemperatureCelsius, "°C")}
                                             </td>
 
                                             <td>
-                                                {loading &&
-                                                history.length ===
+                                                {metricsError ? (
+                                                    <span
+                                                        className={styles.loading}
+                                                        role="alert"
+                                                    >
+                                                        Metrics unavailable
+                                                    </span>
+                                                ) : loading &&
+                                                metrics.length ===
                                                 0 ? (
                                                     <span
                                                         className={
@@ -428,9 +426,8 @@ export default function HealthDashboard({
                                                         }
                                                     >
                                                         <HealthSparkline
-                                                            values={history.map(
-                                                                item =>
-                                                                    item.cpuUsagePercent,
+                                                            values={metrics.map(
+                                                                item => item.cpuUsagePercent,
                                                             )}
                                                             min={0}
                                                             max={100}
@@ -502,10 +499,10 @@ export default function HealthDashboard({
                             <tbody>
                                 <tr>
                                     <th scope="row">CPU</th>
-                                    {selectedNodes.map(({ node, latest }) => (
+                                    {selectedNodes.map(({ node, metrics }) => (
                                         <td key={node.id}>
                                             {formatValue(
-                                                latest?.cpuUsagePercent,
+                                                metrics[metrics.length - 1]?.cpuUsagePercent,
                                                 "%",
                                             )}
                                         </td>
@@ -513,10 +510,10 @@ export default function HealthDashboard({
                                 </tr>
                                 <tr>
                                     <th scope="row">GPU</th>
-                                    {selectedNodes.map(({ node, latest }) => (
+                                    {selectedNodes.map(({ node, metrics }) => (
                                         <td key={node.id}>
                                             {formatValue(
-                                                latest?.gpuUsagePercent,
+                                                metrics[metrics.length - 1]?.gpuUsagePercent,
                                                 "%",
                                             )}
                                         </td>
@@ -524,10 +521,10 @@ export default function HealthDashboard({
                                 </tr>
                                 <tr>
                                     <th scope="row">Temperature</th>
-                                    {selectedNodes.map(({ node, latest }) => (
+                                    {selectedNodes.map(({ node, metrics }) => (
                                         <td key={node.id}>
                                             {formatValue(
-                                                latest?.gpuTemperatureCelsius,
+                                                metrics[metrics.length - 1]?.gpuTemperatureCelsius,
                                                 "°C",
                                             )}
                                         </td>

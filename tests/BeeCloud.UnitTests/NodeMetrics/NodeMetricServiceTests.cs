@@ -205,6 +205,51 @@ public class NodeMetricServiceTests
             Times.Once);
     }
 
+    [Test]
+    public async Task GetHistoryAsync_ShouldPassTimeBoundsAndLimitToRepository()
+    {
+        var node = CreateNode();
+        var from = DateTime.UtcNow.AddHours(-1);
+        var to = DateTime.UtcNow;
+
+        _nodeRepository
+            .Setup(repository => repository.GetByIdAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+        _metricRepository
+            .Setup(repository => repository.GetHistoryAsync(
+                node.Id,
+                from,
+                to,
+                25,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<NodeMetric>());
+
+        await _service.GetHistoryAsync(node.Id, from, to, 25);
+
+        _metricRepository.Verify(repository =>
+            repository.GetHistoryAsync(
+                node.Id,
+                from,
+                to,
+                25,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Test]
+    public void GetHistoryAsync_WhenTimeBoundsAreReversed_ShouldThrow()
+    {
+        var exception = Assert.ThrowsAsync<ArgumentException>(
+            async () => await _service.GetHistoryAsync(
+                Guid.NewGuid(),
+                DateTime.UtcNow,
+                DateTime.UtcNow.AddHours(-1)));
+
+        Assert.That(exception!.Message, Does.Contain("'from'"));
+    }
+
     private static ComputeNode CreateNode()
     {
         return new ComputeNode(

@@ -51,6 +51,17 @@ const health2 = {
     checkedAt: "2026-10-07T11:00:00Z",
 };
 
+const metrics = [
+    {
+        id: "metric-1",
+        computeNodeId: "node-1",
+        cpuUsagePercent: 35,
+        gpuUsagePercent: 70,
+        gpuTemperatureCelsius: 66,
+        recordedAt: "2026-10-07T10:00:00Z",
+    },
+];
+
 function renderPage() {
     const store = createTestStore({
         nodes: {
@@ -73,6 +84,11 @@ function renderPage() {
                 "node-1": null,
             },
         },
+        metrics: {
+            historyByNodeId: {
+                "node-1": metrics,
+            },
+        },
     });
 
     return {
@@ -92,6 +108,7 @@ beforeEach(() => {
         health1,
         health2,
     ]);
+    mockedNodesApi.getNodeMetrics.mockResolvedValue(metrics);
 });
 
 describe("NodeDetailPage", () => {
@@ -132,16 +149,16 @@ describe("NodeDetailPage", () => {
         renderPage();
 
         expect(
-            screen.getByText("CPU Usage"),
-        ).toBeInTheDocument();
+            screen.getAllByText("CPU Usage").length,
+        ).toBeGreaterThan(0);
 
         expect(
-            screen.getByText("GPU Usage"),
-        ).toBeInTheDocument();
+            screen.getAllByText("GPU Usage").length,
+        ).toBeGreaterThan(0);
 
         expect(
-            screen.getByText("GPU Temperature"),
-        ).toBeInTheDocument();
+            screen.getAllByText("GPU Temperature").length,
+        ).toBeGreaterThan(0);
     });
 
     it("renders health history", () => {
@@ -157,6 +174,18 @@ describe("NodeDetailPage", () => {
             screen.getByText(
                 "2 recent health checks",
             ),
+        ).toBeInTheDocument();
+    });
+
+    it("renders metric history separately from health status history", () => {
+        renderPage();
+
+        expect(
+            screen.getByRole("heading", { name: "Node Metrics" }),
+        ).toBeInTheDocument();
+        expect(screen.getAllByText("35.0%").length).toBeGreaterThan(0);
+        expect(
+            screen.getByRole("heading", { name: "Health History" }),
         ).toBeInTheDocument();
     });
 
@@ -241,6 +270,19 @@ describe("NodeDetailPage", () => {
             expect(
                 mockedNodesApi.getHealthHistory,
             ).toHaveBeenCalledWith(
+                "node-1",
+                100,
+                expect.any(String),
+                expect.any(String),
+            );
+        });
+    });
+
+    it("requests node metrics with the selected backend range", async () => {
+        renderPage();
+
+        await waitFor(() => {
+            expect(mockedNodesApi.getNodeMetrics).toHaveBeenCalledWith(
                 "node-1",
                 100,
                 expect.any(String),

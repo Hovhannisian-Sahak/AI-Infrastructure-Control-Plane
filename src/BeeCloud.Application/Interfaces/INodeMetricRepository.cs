@@ -12,6 +12,13 @@ public interface INodeMetricRepository
         Guid computeNodeId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<NodeMetric>> GetHistoryAsync(
+        Guid computeNodeId,
+        DateTime? from = null,
+        DateTime? to = null,
+        int limit = 100,
+        CancellationToken cancellationToken = default);
+
     Task AddAsync(
         NodeMetric metric,
         CancellationToken cancellationToken = default);

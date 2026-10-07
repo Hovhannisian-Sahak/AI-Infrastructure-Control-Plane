@@ -2,6 +2,7 @@
 import type { ComputeNode } from "./models/computeNode";
 import type { CreateComputeNodeRequest } from "./models/createComputeNodeRequest";
 import type { HealthCheck } from "./models/healthCheck";
+import type { NodeMetric } from "./models/nodeMetric";
 
 export const nodesApi = {
   getAll(): Promise<ComputeNode[]> {
@@ -92,6 +93,29 @@ export const nodesApi = {
   ): Promise<HealthCheck | null> {
     return apiClient.get<HealthCheck>(
         `/api/v1/nodes/${id}/health`,
+    );
+  },
+
+  getNodeMetrics(
+      id: string,
+      limit = 100,
+      from?: string,
+      to?: string,
+  ): Promise<NodeMetric[]> {
+    const query = new URLSearchParams();
+
+    if (from) {
+      query.set("from", from);
+    }
+
+    if (to) {
+      query.set("to", to);
+    }
+
+    query.set("limit", String(limit));
+
+    return apiClient.get<NodeMetric[]>(
+        `/api/v1/nodes/${id}/metrics?${query.toString()}`,
     );
   },
 };

@@ -34,6 +34,7 @@ describe("HealthPage", () => {
         jest.resetAllMocks();
         mockedNodesApi.getAll.mockResolvedValue(nodes);
         mockedNodesApi.getHealthHistory.mockResolvedValue([]);
+        mockedNodesApi.getNodeMetrics.mockResolvedValue([]);
     });
 
     it("requests the selected backend range for every dashboard node", async () => {
@@ -84,6 +85,41 @@ describe("HealthPage", () => {
         ]);
         for (const request of selectedRequests) {
             expect(request[1]).toBe(100);
+            expect(Date.parse(request[3]!) - Date.parse(request[2]!))
+                .toBe(60 * 60 * 1000);
+        }
+    });
+
+    it("requests backend-filtered metrics for each displayed node and range", async () => {
+        const user = userEvent.setup();
+        const store = createTestStore({ nodes: { nodes } });
+
+        render(
+            <Provider store={store}>
+                <HealthPage />
+            </Provider>,
+        );
+
+        await waitFor(() => {
+            expect(mockedNodesApi.getNodeMetrics).toHaveBeenCalledTimes(2);
+        });
+
+        expect(mockedNodesApi.getNodeMetrics).toHaveBeenCalledWith(
+            "node-running",
+            100,
+            expect.any(String),
+            expect.any(String),
+        );
+
+        await user.click(screen.getByRole("button", { name: "1 hour" }));
+
+        await waitFor(() => {
+            expect(mockedNodesApi.getNodeMetrics).toHaveBeenCalledTimes(4);
+        });
+
+        const selectedRangeRequests =
+            mockedNodesApi.getNodeMetrics.mock.calls.slice(2);
+        for (const request of selectedRangeRequests) {
             expect(Date.parse(request[3]!) - Date.parse(request[2]!))
                 .toBe(60 * 60 * 1000);
         }

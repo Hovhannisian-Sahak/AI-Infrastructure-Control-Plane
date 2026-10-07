@@ -3,6 +3,7 @@ import { renderWithProviders } from "@/test-utils";
 import NodeCard from "../NodeCard";
 import type { ComputeNode } from "@/lib/api/models/computeNode";
 import type { HealthCheck } from "@/lib/api/models/healthCheck";
+import type { NodeMetric } from "@/lib/api/models/nodeMetric";
 
 const baseNode: ComputeNode = {
   id: "node-1",
@@ -55,6 +56,24 @@ const unhealthyHistory: HealthCheck[] = [
   },
 ];
 
+const healthyMetrics: NodeMetric[] = healthyHistory.map((health, index) => ({
+  id: `metric-${index + 1}`,
+  computeNodeId: "node-1",
+  cpuUsagePercent: health.cpuUsagePercent ?? 0,
+  gpuUsagePercent: health.gpuUsagePercent ?? 0,
+  gpuTemperatureCelsius: health.gpuTemperatureCelsius ?? 0,
+  recordedAt: health.checkedAt,
+}));
+
+const unhealthyMetrics: NodeMetric[] = unhealthyHistory.map((health, index) => ({
+  id: `unhealthy-metric-${index + 1}`,
+  computeNodeId: "node-1",
+  cpuUsagePercent: health.cpuUsagePercent ?? 0,
+  gpuUsagePercent: health.gpuUsagePercent ?? 0,
+  gpuTemperatureCelsius: health.gpuTemperatureCelsius ?? 0,
+  recordedAt: health.checkedAt,
+}));
+
 describe("NodeCard", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -99,6 +118,9 @@ describe("NodeCard", () => {
           loadingByNodeId: {},
           errorByNodeId: {},
         },
+        metrics: {
+          historyByNodeId: { "node-1": healthyMetrics },
+        },
       },
     });
 
@@ -138,6 +160,9 @@ describe("NodeCard", () => {
           loadingByNodeId: {},
           errorByNodeId: {},
         },
+        metrics: {
+          historyByNodeId: { "node-1": healthyMetrics },
+        },
       },
     });
 
@@ -164,6 +189,9 @@ describe("NodeCard", () => {
           },
           loadingByNodeId: {},
           errorByNodeId: {},
+        },
+        metrics: {
+          historyByNodeId: { "node-1": unhealthyMetrics },
         },
       },
     });
@@ -198,6 +226,9 @@ describe("NodeCard", () => {
           loadingByNodeId: {},
           errorByNodeId: {},
         },
+        metrics: {
+          historyByNodeId: { "node-1": unhealthyMetrics },
+        },
       },
     });
 
@@ -210,7 +241,7 @@ describe("NodeCard", () => {
     expect(screen.getByText("96.2°C")).toBeInTheDocument();
   });
 
-  it("uses the latest item from health history as the displayed health", () => {
+  it("uses health history for status and does not treat it as resource metrics", () => {
     renderWithProviders(<NodeCard node={baseNode} />, {
       preloadedState: {
         health: {
@@ -230,11 +261,8 @@ describe("NodeCard", () => {
       },
     });
 
-    expect(screen.getByText("55.1%")).toBeInTheDocument();
-    expect(screen.getByText("65.8°C")).toBeInTheDocument();
-
-    expect(screen.queryByText("42.5%")).not.toBeInTheDocument();
-    expect(screen.queryByText("61.4°C")).not.toBeInTheDocument();
+    expect(screen.getByText("Last result: Healthy")).toBeInTheDocument();
+    expect(screen.getByText("No resource metrics available")).toBeInTheDocument();
   });
 
   it("renders N/A when the latest health metric is null", () => {
@@ -265,7 +293,7 @@ describe("NodeCard", () => {
       },
     });
 
-    expect(screen.getAllByText("N/A")).toHaveLength(2);
+    expect(screen.getByText("No resource metrics available")).toBeInTheDocument();
   });
 
   it("renders the CPU and temperature sparklines", () => {
@@ -280,6 +308,9 @@ describe("NodeCard", () => {
           },
           loadingByNodeId: {},
           errorByNodeId: {},
+        },
+        metrics: {
+          historyByNodeId: { "node-1": healthyMetrics },
         },
       },
     });

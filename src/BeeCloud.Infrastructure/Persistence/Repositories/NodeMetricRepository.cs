@@ -35,6 +35,33 @@ public class NodeMetricRepository : INodeMetricRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<NodeMetric>> GetHistoryAsync(
+        Guid computeNodeId,
+        DateTime? from = null,
+        DateTime? to = null,
+        int limit = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.NodeMetrics
+            .AsNoTracking()
+            .Where(metric => metric.ComputeNodeId == computeNodeId);
+
+        if (from.HasValue)
+        {
+            query = query.Where(metric => metric.RecordedAt >= from.Value);
+        }
+
+        if (to.HasValue)
+        {
+            query = query.Where(metric => metric.RecordedAt <= to.Value);
+        }
+
+        return await query
+            .OrderByDescending(metric => metric.RecordedAt)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(
         NodeMetric metric,
         CancellationToken cancellationToken = default)

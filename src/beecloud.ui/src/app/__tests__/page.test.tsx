@@ -16,6 +16,7 @@ import { incidentsApi } from "@/lib/api/incidentsApi";
 
 import type { ComputeNode } from "@/lib/api/models/computeNode";
 import type { HealthCheck } from "@/lib/api/models/healthCheck";
+import type { NodeMetric } from "@/lib/api/models/nodeMetric";
 
 jest.mock("@/lib/api/incidentsApi");
 jest.mock("@/lib/api/nodesApi");
@@ -46,6 +47,15 @@ const healthHistory: HealthCheck[] = [
     },
 ];
 
+const nodeMetrics: NodeMetric[] = healthHistory.map((health, index) => ({
+    id: `metric-${index + 1}`,
+    computeNodeId: health.computeNodeId,
+    cpuUsagePercent: health.cpuUsagePercent ?? 0,
+    gpuUsagePercent: health.gpuUsagePercent ?? 0,
+    gpuTemperatureCelsius: health.gpuTemperatureCelsius ?? 0,
+    recordedAt: health.checkedAt,
+}));
+
 describe("Home page", () => {
     beforeEach(() => {
         jest.resetAllMocks();
@@ -54,6 +64,7 @@ describe("Home page", () => {
         mockedNetworksApi.getAll.mockResolvedValue([]);
 
         mockedNodesApi.getHealthHistory.mockResolvedValue([]);
+        mockedNodesApi.getNodeMetrics.mockResolvedValue([]);
     });
 
     it("renders the page heading", async () => {
@@ -539,6 +550,7 @@ describe("Home page", () => {
         mockedNodesApi.getHealthHistory.mockResolvedValue(
             healthHistory,
         );
+        mockedNodesApi.getNodeMetrics.mockResolvedValue(nodeMetrics);
 
         renderWithProviders(<Home />);
 
@@ -567,6 +579,7 @@ describe("Home page", () => {
         mockedNodesApi.getHealthHistory.mockResolvedValue(
             healthHistory,
         );
+        mockedNodesApi.getNodeMetrics.mockResolvedValue(nodeMetrics);
 
         renderWithProviders(<Home />);
 
@@ -587,6 +600,13 @@ describe("Home page", () => {
                 name: "CPU usage trend",
             }),
         ).toBeInTheDocument();
+
+        expect(mockedNodesApi.getNodeMetrics).toHaveBeenCalledWith(
+            "node-1",
+            10,
+            undefined,
+            undefined,
+        );
 
         expect(
             screen.getByRole("img", {

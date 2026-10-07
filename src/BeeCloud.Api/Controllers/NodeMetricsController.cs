@@ -34,10 +34,16 @@ public class NodeMetricsController : ControllerBase
     [HttpGet("nodes/{nodeId:guid}/metrics")]
     public async Task<ActionResult<IReadOnlyList<NodeMetricResponse>>> GetByNodeId(
         Guid nodeId,
-        CancellationToken cancellationToken)
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromQuery] int limit = 100,
+        CancellationToken cancellationToken = default)
     {
-        var response = await _service.GetByNodeIdAsync(
+        var response = await _service.GetHistoryAsync(
             nodeId,
+            from,
+            to,
+            limit,
             cancellationToken);
 
         return Ok(response);

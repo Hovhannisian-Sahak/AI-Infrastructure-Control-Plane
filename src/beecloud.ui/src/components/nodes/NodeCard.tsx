@@ -2,6 +2,7 @@
 
 import type { ComputeNode } from "@/lib/api/models/computeNode";
 import type { HealthCheck } from "@/lib/api/models/healthCheck";
+import type { NodeMetric } from "@/lib/api/models/nodeMetric";
 import Link from "next/link";
 import {
     useAppDispatch,
@@ -22,6 +23,7 @@ type NodeCardProps = {
 };
 
 const EMPTY_HEALTH_HISTORY: HealthCheck[] = [];
+const EMPTY_METRICS_HISTORY: NodeMetric[] = [];
 
 export default function NodeCard({ node }: NodeCardProps) {
     const dispatch = useAppDispatch();
@@ -50,12 +52,29 @@ export default function NodeCard({ node }: NodeCardProps) {
             ? healthHistory[healthHistory.length - 1]
             : null;
 
-    const cpuHistory = healthHistory.map(
-        (health) => health.cpuUsagePercent,
+    const metricsHistory = useAppSelector(
+        (state) =>
+            state.metrics.historyByNodeId[node.id] ??
+            EMPTY_METRICS_HISTORY,
+    );
+    const metricsError = useAppSelector(
+        (state) => state.metrics.errorByNodeId[node.id] ?? null,
+    );
+    const latestMetric =
+        metricsHistory.length > 0
+            ? metricsHistory[metricsHistory.length - 1]
+            : null;
+
+    const cpuHistory = metricsHistory.map(
+        (metric) => metric.cpuUsagePercent,
     );
 
-    const temperatureHistory = healthHistory.map(
-        (health) => health.gpuTemperatureCelsius,
+    const gpuHistory = metricsHistory.map(
+        (metric) => metric.gpuUsagePercent,
+    );
+
+    const temperatureHistory = metricsHistory.map(
+        (metric) => metric.gpuTemperatureCelsius,
     );
 
     const isProvisioning = node.status === "Provisioning";
@@ -202,53 +221,45 @@ export default function NodeCard({ node }: NodeCardProps) {
                     </p>
                 )}
 
-                {latestHealth ? (
-                    <div className={styles.healthMetrics}>
-                        <div className={styles.healthMetric}>
-                            <div className={styles.healthMetricHeader}>
-                <span className={styles.label}>
-                  CPU Usage
-                </span>
+                {!latestHealth && (
+                    <p className={styles.noHealthData}>
+                        No health check yet
+                    </p>
+                )}
+            </section>
 
-                                <strong className={styles.value}>
-                                    {latestHealth.cpuUsagePercent !== null
-                                        ? `${latestHealth.cpuUsagePercent.toFixed(1)}%`
-                                        : "N/A"}
-                                </strong>
-                            </div>
-
-                            <HealthSparkline
-                                values={cpuHistory}
-                                min={0}
-                                max={100}
-                                ariaLabel="CPU usage trend"
-                            />
-                        </div>
-
-                        <div className={styles.healthMetric}>
-                            <div className={styles.healthMetricHeader}>
-                <span className={styles.label}>
-                  GPU Temperature
-                </span>
-
-                                <strong className={styles.value}>
-                                    {latestHealth.gpuTemperatureCelsius !== null
-                                        ? `${latestHealth.gpuTemperatureCelsius.toFixed(1)}°C`
-                                        : "N/A"}
-                                </strong>
-                            </div>
-
-                            <HealthSparkline
-                                values={temperatureHistory}
-                                min={50}
-                                max={100}
-                                ariaLabel="GPU temperature trend"
-                            />
-                        </div>
+            <section className={styles.healthSection}>
+                <div className={styles.healthHeader}>
+                    <h3 className={styles.healthTitle}>Resource Metrics</h3>
+                </div>
+                {latestMetric ? (
+                    <div className={styles.resourceMetrics}>
+                        <Metric
+                            label="CPU Usage"
+                            value={`${latestMetric.cpuUsagePercent.toFixed(1)}%`}
+                            values={cpuHistory}
+                            ariaLabel="CPU usage trend"
+                        />
+                        <Metric
+                            label="GPU Usage"
+                            value={`${latestMetric.gpuUsagePercent.toFixed(1)}%`}
+                            values={gpuHistory}
+                            ariaLabel="GPU usage trend"
+                        />
+                        <Metric
+                            label="GPU Temperature"
+                            value={`${latestMetric.gpuTemperatureCelsius.toFixed(1)}°C`}
+                            values={temperatureHistory}
+                            min={0}
+                            max={120}
+                            ariaLabel="GPU temperature trend"
+                        />
                     </div>
                 ) : (
                     <p className={styles.noHealthData}>
-                        No health check yet
+                        {metricsError
+                            ? `Resource metrics unavailable: ${metricsError}`
+                            : "No resource metrics available"}
                     </p>
                 )}
             </section>
@@ -303,6 +314,39 @@ export default function NodeCard({ node }: NodeCardProps) {
                 </button>
             </div>
         </article>
+    );
+}
+
+type MetricProps = {
+    label: string;
+    value: string;
+    values: number[];
+    ariaLabel: string;
+    min?: number;
+    max?: number;
+};
+
+function Metric({
+    label,
+    value,
+    values,
+    ariaLabel,
+    min = 0,
+    max = 100,
+}: MetricProps) {
+    return (
+        <div className={styles.healthMetric}>
+            <div className={styles.healthMetricHeader}>
+                <span className={styles.label}>{label}</span>
+                <strong className={styles.value}>{value}</strong>
+            </div>
+            <HealthSparkline
+                values={values}
+                min={min}
+                max={max}
+                ariaLabel={ariaLabel}
+            />
+        </div>
     );
 }
 
