@@ -259,15 +259,19 @@ public class NodeMetricRepositoryIntegrationTests
         var node = CreateNode();
         dbContext.ComputeNodes.Add(node);
 
-        var metrics = Enumerable.Range(0, 3)
-            .Select(index => new NodeMetric(
+        var metrics = new List<NodeMetric>();
+        for (var index = 0; index < 3; index++)
+        {
+            var metric = new NodeMetric(
                 node.Id,
                 10 + index,
                 20 + index,
-                50 + index))
-            .ToArray();
-        dbContext.NodeMetrics.AddRange(metrics);
-        await dbContext.SaveChangesAsync();
+                50 + index);
+            metrics.Add(metric);
+            dbContext.NodeMetrics.Add(metric);
+            await dbContext.SaveChangesAsync();
+            await Task.Delay(15);
+        }
 
         var repository = new NodeMetricRepository(dbContext);
         var from = metrics[1].RecordedAt;
