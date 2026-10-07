@@ -188,10 +188,23 @@ describe("NodeDetailPage", () => {
         ).toBeInTheDocument();
     });
 
-    it("changes selected time range", async () => {
+    it("requests the selected time range from the backend", async () => {
         const user = userEvent.setup();
 
         renderPage();
+
+        await waitFor(() => {
+            expect(
+                mockedNodesApi.getHealthHistory,
+            ).toHaveBeenCalledTimes(1);
+        });
+
+        const initialRequest =
+            mockedNodesApi.getHealthHistory.mock.calls[0];
+        expect(initialRequest[0]).toBe("node-1");
+        expect(initialRequest[1]).toBe(100);
+        expect(Date.parse(initialRequest[3]!) - Date.parse(initialRequest[2]!))
+            .toBe(24 * 60 * 60 * 1000);
 
         const button =
             screen.getByRole("button", {
@@ -200,21 +213,25 @@ describe("NodeDetailPage", () => {
 
         await user.click(button);
 
-        expect(
-            button,
-        ).toHaveAttribute(
-            "aria-pressed",
-            "true",
-        );
+        await waitFor(() => {
+            expect(
+                mockedNodesApi.getHealthHistory,
+            ).toHaveBeenCalledTimes(2);
+        });
 
+        expect(button).toHaveAttribute("aria-pressed", "true");
         expect(
             screen.getByRole("button", {
                 name: "24 hours",
             }),
-        ).toHaveAttribute(
-            "aria-pressed",
-            "false",
-        );
+        ).toHaveAttribute("aria-pressed", "false");
+
+        const selectedRequest =
+            mockedNodesApi.getHealthHistory.mock.calls[1];
+        expect(selectedRequest[0]).toBe("node-1");
+        expect(selectedRequest[1]).toBe(100);
+        expect(Date.parse(selectedRequest[3]!) - Date.parse(selectedRequest[2]!))
+            .toBe(60 * 60 * 1000);
     });
 
     it("fetches health history for the node", async () => {
@@ -226,6 +243,8 @@ describe("NodeDetailPage", () => {
             ).toHaveBeenCalledWith(
                 "node-1",
                 100,
+                expect.any(String),
+                expect.any(String),
             );
         });
     });

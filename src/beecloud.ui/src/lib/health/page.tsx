@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import {
     useAppDispatch,
@@ -15,11 +15,17 @@ import {
 
 import HealthDashboard from "@/components/health/HealthDashboard";
 import { getHealthMonitoringNodeIds } from "@/lib/health/healthMonitoring";
+import {
+    type HealthTimeRange,
+    getHealthRangeBounds,
+} from "@/lib/health/healthTimeRange";
 
 import styles from "./page.module.css";
 
 export default function HealthPage() {
     const dispatch = useAppDispatch();
+    const [range, setRange] =
+        useState<HealthTimeRange>("24h");
 
     const nodes = useAppSelector(
         state => state.nodes.nodes,
@@ -39,32 +45,35 @@ export default function HealthPage() {
 
     const monitoredNodeIds =
         getHealthMonitoringNodeIds(nodes, true);
-    const unmonitoredNodeIds =
-        getHealthMonitoringNodeIds(nodes, false);
-
     const monitoredNodeKey =
         monitoredNodeIds.join(",");
-    const unmonitoredNodeKey =
-        unmonitoredNodeIds.join(",");
+    const allNodeKey = nodes
+        .map(node => node.id)
+        .sort()
+        .join(",");
 
     useEffect(() => {
         dispatch(fetchNodes());
     }, [dispatch]);
 
     useEffect(() => {
-        if (!unmonitoredNodeKey) {
+        if (!allNodeKey) {
             return;
         }
 
-        for (const nodeId of unmonitoredNodeKey.split(",")) {
+        const { from, to } = getHealthRangeBounds(range);
+
+        for (const nodeId of allNodeKey.split(",")) {
             void dispatch(
                 fetchHealthHistory({
                     nodeId,
                     limit: 100,
+                    from: from.toISOString(),
+                    to: to.toISOString(),
                 }),
             );
         }
-    }, [dispatch, unmonitoredNodeKey]);
+    }, [dispatch, allNodeKey, range]);
 
     useEffect(() => {
         if (!monitoredNodeKey) {
@@ -75,17 +84,19 @@ export default function HealthPage() {
             monitoredNodeKey.split(",");
 
         const loadHealth = () => {
+            const { from, to } = getHealthRangeBounds(range);
+
             for (const nodeId of nodeIds) {
                 void dispatch(
                     fetchHealthHistory({
                         nodeId,
                         limit: 100,
+                        from: from.toISOString(),
+                        to: to.toISOString(),
                     }),
                 );
             }
         };
-
-        loadHealth();
 
         const intervalId = setInterval(
             loadHealth,
@@ -98,6 +109,7 @@ export default function HealthPage() {
     }, [
         dispatch,
         monitoredNodeKey,
+        range,
     ]);
 
     return (
@@ -123,6 +135,7 @@ export default function HealthPage() {
                     historyByNodeId={historyByNodeId}
                     latestByNodeId={latestByNodeId}
                     loadingByNodeId={loadingByNodeId}
+                    onRangeChange={setRange}
                 />
             </div>
         </main>

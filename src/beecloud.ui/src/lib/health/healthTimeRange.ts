@@ -50,3 +50,13 @@ export function getHealthRangeStart(
         option.hours * 60 * 60 * 1000,
     );
 }
+
+export function getHealthRangeBounds(
+    range: HealthTimeRange,
+    now = new Date(),
+): { from: Date; to: Date } {
+    return {
+        from: getHealthRangeStart(range, now),
+        to: new Date(now),
+    };
+}

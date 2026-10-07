@@ -1,5 +1,6 @@
 ﻿import {
     HEALTH_TIME_RANGES,
+    getHealthRangeBounds,
     getHealthRangeStart,
 } from "../healthTimeRange";
 
@@ -60,6 +61,18 @@ describe("healthTimeRange", () => {
             getHealthRangeStart("7d", now).toISOString(),
         ).toBe(
             "2026-09-30T13:00:00.000Z",
+        );
+    });
+
+    it("returns inclusive from and to bounds for an API request", () => {
+        const now = new Date("2026-10-07T13:00:00Z");
+        const bounds = getHealthRangeBounds("6h", now);
+
+        expect(bounds.from.toISOString()).toBe(
+            "2026-10-07T07:00:00.000Z",
+        );
+        expect(bounds.to.toISOString()).toBe(
+            "2026-10-07T13:00:00.000Z",
         );
     });
 });

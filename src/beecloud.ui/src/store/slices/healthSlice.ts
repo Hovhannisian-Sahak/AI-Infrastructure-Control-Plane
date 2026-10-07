@@ -42,12 +42,15 @@ export const fetchHealthHistory = createAsyncThunk<
         { rejectWithValue },
     ) => {
         try {
-            const history = await nodesApi.getHealthHistory(
-                nodeId,
-                limit,
-                from,
-                to,
-            );
+            const history =
+                from === undefined && to === undefined
+                    ? await nodesApi.getHealthHistory(nodeId, limit)
+                    : await nodesApi.getHealthHistory(
+                        nodeId,
+                        limit,
+                        from,
+                        to,
+                    );
 
             const sortedHistory = [...history].sort(
                 (a, b) =>

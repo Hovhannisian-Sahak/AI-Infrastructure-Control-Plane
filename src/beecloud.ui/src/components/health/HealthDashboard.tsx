@@ -9,7 +9,6 @@ import type { HealthCheck } from "@/lib/api/models/healthCheck";
 import {
     HEALTH_TIME_RANGES,
     type HealthTimeRange,
-    getHealthRangeStart,
 } from "@/lib/health/healthTimeRange";
 import { deriveHealthAlerts } from "@/lib/health/healthAlerts";
 
@@ -32,6 +31,7 @@ type HealthDashboardProps = {
         HealthCheck | null | undefined
     >;
     loadingByNodeId: Record<string, boolean>;
+    onRangeChange?: (range: HealthTimeRange) => void;
 };
 
 type NodeHealthStatus =
@@ -67,6 +67,7 @@ export default function HealthDashboard({
                                             historyByNodeId,
                                             latestByNodeId,
                                             loadingByNodeId,
+                                            onRangeChange,
                                         }: HealthDashboardProps) {
     const [filter, setFilter] =
         useState<HealthFilter>("all");
@@ -83,21 +84,10 @@ export default function HealthDashboard({
                 const history =
                     historyByNodeId[node.id] ?? [];
 
-                const filteredHistory =
-                    history.filter(
-                        item =>
-                            new Date(
-                                item.checkedAt,
-                            ).getTime() >=
-                            getHealthRangeStart(
-                                range,
-                            ).getTime(),
-                    );
-
                 return {
                     node,
                     latest,
-                    history: filteredHistory,
+                    history,
                     status:
                         getNodeHealthStatus(latest),
                 };
@@ -106,7 +96,6 @@ export default function HealthDashboard({
             nodes,
             historyByNodeId,
             latestByNodeId,
-            range,
         ],
     );
 
@@ -257,9 +246,10 @@ export default function HealthDashboard({
                                     aria-pressed={
                                         range === option.value
                                     }
-                                    onClick={() =>
-                                        setRange(option.value)
-                                    }
+                                    onClick={() => {
+                                        setRange(option.value);
+                                        onRangeChange?.(option.value);
+                                    }}
                                 >
                                     {option.label}
                                 </button>

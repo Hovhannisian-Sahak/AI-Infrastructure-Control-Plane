@@ -207,6 +207,33 @@ describe("HealthDashboard", () => {
         ).toBeInTheDocument();
     });
 
+    it("notifies the page when the selected time range changes", async () => {
+        const user = userEvent.setup();
+        const onRangeChange = jest.fn();
+
+        render(
+            <HealthDashboard
+                nodes={nodes}
+                historyByNodeId={{
+                    "node-1": [healthy],
+                    "node-2": [unhealthy],
+                }}
+                latestByNodeId={{
+                    "node-1": healthy,
+                    "node-2": unhealthy,
+                }}
+                loadingByNodeId={{}}
+                onRangeChange={onRangeChange}
+            />,
+        );
+
+        await user.click(
+            screen.getByRole("button", { name: "1 hour" }),
+        );
+
+        expect(onRangeChange).toHaveBeenCalledWith("1h");
+    });
+
     it("shows node health metrics", () => {
         renderDashboard();
 

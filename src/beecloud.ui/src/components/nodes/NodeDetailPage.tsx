@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import {
@@ -22,13 +22,12 @@ import {
     selectHealthHistoryByNodeId,
     selectHealthLoadingByNodeId,
     selectLatestHealthByNodeId,
-    selectHealthHistorySince,
 } from "@/store/selectors/healthSelectors";
 
 import {
     HEALTH_TIME_RANGES,
     type HealthTimeRange,
-    getHealthRangeStart,
+    getHealthRangeBounds,
 } from "@/lib/health/healthTimeRange";
 
 import HealthHistory from "@/lib/health/HealthHistory";
@@ -100,22 +99,17 @@ export default function NodeDetailPage() {
             return;
         }
 
+        const { from, to } = getHealthRangeBounds(range);
+
         dispatch(
             fetchHealthHistory({
                 nodeId,
                 limit: 100,
+                from: from.toISOString(),
+                to: to.toISOString(),
             }),
         );
-    }, [dispatch, nodeId]);
-
-    const filteredHistory = useMemo(() => {
-        const start = getHealthRangeStart(range);
-
-        return selectHealthHistorySince(
-            history,
-            start,
-        );
-    }, [history, range]);
+    }, [dispatch, nodeId, range]);
 
     if (!node) {
         return (
@@ -265,7 +259,7 @@ export default function NodeDetailPage() {
                 )}
 
                 <HealthHistory
-                    history={filteredHistory}
+                    history={history}
                     loading={loading}
                 />
             </div>
