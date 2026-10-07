@@ -18,7 +18,11 @@ export default function CursorPagination({
     ariaLabel,
     onNavigate,
 }: CursorPaginationProps) {
-    const { element, preservePosition } = usePaginationViewportAnchor(
+    const {
+        element,
+        preservePosition,
+        onPointerDownCapture,
+    } = usePaginationViewportAnchor(
         `${nextCursor ?? ""}:${previousCursor ?? ""}`,
         loading,
         true,
@@ -32,7 +36,12 @@ export default function CursorPagination({
     };
 
     return (
-        <nav ref={element} className={styles.pagination} aria-label={ariaLabel}>
+        <nav
+            ref={element}
+            className={styles.pagination}
+            aria-label={ariaLabel}
+            onPointerDownCapture={onPointerDownCapture}
+        >
             <span className={styles.summary}>
                 Browse history records
             </span>

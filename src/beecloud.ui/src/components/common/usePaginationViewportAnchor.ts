@@ -12,6 +12,10 @@ export function usePaginationViewportAnchor(
     const sawBusy = useRef(false);
 
     const preservePosition = useCallback(() => {
+        if (anchorTop.current !== null) {
+            return;
+        }
+
         anchorTop.current = element.current?.getBoundingClientRect().top ?? null;
         sawBusy.current = false;
     }, []);
@@ -47,5 +51,9 @@ export function usePaginationViewportAnchor(
         return () => window.cancelAnimationFrame(frame);
     }, [busy, pageKey, waitForBusy]);
 
-    return { element, preservePosition };
+    return {
+        element,
+        preservePosition,
+        onPointerDownCapture: preservePosition,
+    };
 }

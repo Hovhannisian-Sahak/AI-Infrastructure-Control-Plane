@@ -25,7 +25,11 @@ export default function Pagination({
     const safePageSize = Math.max(1, pageSize);
     const pageCount = Math.ceil(totalItems / safePageSize);
     const currentPage = Math.min(Math.max(1, page), pageCount);
-    const { element, preservePosition } = usePaginationViewportAnchor(
+    const {
+        element,
+        preservePosition,
+        onPointerDownCapture,
+    } = usePaginationViewportAnchor(
         currentPage,
         disabled,
         waitForLoading,
@@ -44,7 +48,12 @@ export default function Pagination({
     };
 
     return (
-        <nav ref={element} className={styles.pagination} aria-label={ariaLabel}>
+        <nav
+            ref={element}
+            className={styles.pagination}
+            aria-label={ariaLabel}
+            onPointerDownCapture={onPointerDownCapture}
+        >
             <span className={styles.summary} aria-live="polite">
                 Showing {firstItem}–{lastItem} of {totalItems}
             </span>

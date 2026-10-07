@@ -32,10 +32,16 @@ describe("Pagination", () => {
 
         render(<PaginatedContent />);
 
+        const navigation = screen.getByRole("navigation", { name: "Test pages" });
+        jest.spyOn(navigation, "getBoundingClientRect")
+            .mockReturnValueOnce({ top: 300 } as DOMRect)
+            .mockReturnValueOnce({ top: 500 } as DOMRect);
+        fireEvent.pointerDown(navigation);
+        Object.defineProperty(window, "scrollY", { configurable: true, value: 700 });
         fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
         expect(screen.getByText("Rows for page 2")).toBeInTheDocument();
-        expect(scrollTo).toHaveBeenCalledWith(12, 540);
+        expect(scrollTo).toHaveBeenCalledWith(12, 900);
 
         scrollTo.mockRestore();
         requestAnimationFrame.mockRestore();
