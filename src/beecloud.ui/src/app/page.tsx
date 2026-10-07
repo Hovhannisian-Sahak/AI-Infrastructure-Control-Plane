@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import {
   useAppDispatch,
@@ -22,11 +22,15 @@ import NodeCard from "@/components/nodes/NodeCard";
 import CreateNodeForm from "@/components/nodes/CreateNodeForm";
 import NetworksSection from "@/components/networks/NetworksSection";
 import IncidentsSection from "@/components/incidents/IncidentsSection";
+import Pagination from "@/components/common/Pagination";
 
 import styles from "./page.module.css";
 
+const NODE_PAGE_SIZE = 8;
+
 export default function Home() {
   const dispatch = useAppDispatch();
+  const [nodePage, setNodePage] = useState(1);
 
   const {
     nodes,
@@ -146,6 +150,12 @@ export default function Home() {
         createNode(request),
     );
   };
+  const nodePageCount = Math.ceil(nodes.length / NODE_PAGE_SIZE);
+  const currentNodePage = Math.min(nodePage, Math.max(1, nodePageCount));
+  const visibleNodes = nodes.slice(
+      (currentNodePage - 1) * NODE_PAGE_SIZE,
+      currentNodePage * NODE_PAGE_SIZE,
+  );
 
   return (
       <div className={styles.page}>
@@ -251,7 +261,7 @@ export default function Home() {
                   <section
                       className={styles.nodes}
                   >
-                    {nodes.map((node) => (
+                    {visibleNodes.map((node) => (
                         <NodeCard
                             key={node.id}
                             node={node}
@@ -259,6 +269,15 @@ export default function Home() {
                     ))}
                   </section>
               )}
+          {!loading && nodes.length > 0 && (
+              <Pagination
+                  page={currentNodePage}
+                  pageSize={NODE_PAGE_SIZE}
+                  totalItems={nodes.length}
+                  ariaLabel="Compute node pages"
+                  onPageChange={setNodePage}
+              />
+          )}
 
           <NetworksSection />
           <IncidentsSection />

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   useAppDispatch,
   useAppSelector,
@@ -12,10 +12,14 @@ import {
 } from "@/store/slices/networksSlice";
 import NetworkCard from "./NetworkCard";
 import CreateNetworkForm from "./CreateNetworkForm";
+import Pagination from "@/components/common/Pagination";
 import styles from "./NetworksSection.module.css";
+
+const NETWORK_PAGE_SIZE = 6;
 
 export default function NetworksSection() {
   const dispatch = useAppDispatch();
+  const [networkPage, setNetworkPage] = useState(1);
 
   const {
     networks,
@@ -53,6 +57,12 @@ export default function NetworksSection() {
   ) => {
     await dispatch(createNetwork(request));
   };
+  const pageCount = Math.ceil(networks.length / NETWORK_PAGE_SIZE);
+  const currentPage = Math.min(networkPage, Math.max(1, pageCount));
+  const visibleNetworks = networks.slice(
+      (currentPage - 1) * NETWORK_PAGE_SIZE,
+      currentPage * NETWORK_PAGE_SIZE,
+  );
 
   return (
       <section className={styles.section}>
@@ -144,7 +154,7 @@ export default function NetworksSection() {
         {!loading &&
             networks.length > 0 && (
                 <div className={styles.grid}>
-                  {networks.map((network) => (
+                  {visibleNetworks.map((network) => (
                       <NetworkCard
                           key={network.id}
                           network={network}
@@ -152,6 +162,15 @@ export default function NetworksSection() {
                   ))}
                 </div>
             )}
+        {!loading && networks.length > 0 && (
+            <Pagination
+                page={currentPage}
+                pageSize={NETWORK_PAGE_SIZE}
+                totalItems={networks.length}
+                ariaLabel="Network pages"
+                onPageChange={setNetworkPage}
+            />
+        )}
       </section>
   );
 }

@@ -125,22 +125,20 @@ export default function NodeCard({ node }: NodeCardProps) {
                         </Link>
                     </h2>
 
-                    <span className={styles.id}>
-            {node.id}
-          </span>
                 </div>
 
                 <span
-                    className={`${styles.status} ${
-                        styles[`status${node.status}`] ?? ""
-                    }`}
+                    className={`${styles.status} ${styles[node.status.toLowerCase()] ?? ""}`}
+                    aria-label={`Node status: ${node.status}`}
                 >
           {node.status}
         </span>
             </div>
 
             <div className={styles.details}>
-                <div className={styles.detail}>
+                <div className={`${styles.detail} ${
+                    node.activeFault !== "None" ? styles.faultDetail : ""
+                }`}>
           <span className={styles.label}>
             GPU Model
           </span>
@@ -273,7 +271,7 @@ export default function NodeCard({ node }: NodeCardProps) {
                 {canStart && (
                     <button
                         type="button"
-                        className={styles.actionButton}
+                        className={`${styles.actionButton} ${styles.startButton}`}
                         disabled={actionLoading || deleting}
                         onClick={handleStart}
                     >
@@ -284,7 +282,7 @@ export default function NodeCard({ node }: NodeCardProps) {
                 {canStop && (
                     <button
                         type="button"
-                        className={styles.actionButton}
+                        className={`${styles.actionButton} ${styles.stopButton}`}
                         disabled={actionLoading || deleting}
                         onClick={handleStop}
                     >
@@ -295,7 +293,7 @@ export default function NodeCard({ node }: NodeCardProps) {
                 {canRestart && (
                     <button
                         type="button"
-                        className={styles.actionButton}
+                        className={`${styles.actionButton} ${styles.restartButton}`}
                         disabled={actionLoading || deleting}
                         onClick={handleRestart}
                     >

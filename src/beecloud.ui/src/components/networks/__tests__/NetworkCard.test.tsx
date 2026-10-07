@@ -205,6 +205,34 @@ describe("NetworkCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("paginates attached nodes", async () => {
+    const user = userEvent.setup();
+    const attachments = Array.from({ length: 4 }, (_, index) => ({
+      id: `attachment-${index + 1}`,
+      computeNodeId: `node-${index + 1}`,
+      networkId: network.id,
+      attachedAt: `2026-10-03T12:0${index}:00Z`,
+    }));
+    mockedNetworksApi.getNetworkNodes.mockResolvedValue(attachments);
+
+    renderNetworkCard({ attachments });
+
+    await user.click(
+        screen.getByRole("button", { name: /show attachments/i }),
+    );
+
+    expect(await screen.findByText("GPU Node 1")).toBeInTheDocument();
+    expect(screen.getByText("GPU Node 3")).toBeInTheDocument();
+    expect(screen.queryByText("node-4")).not.toBeInTheDocument();
+
+    await user.click(
+        screen.getByRole("button", { name: "Next" }),
+    );
+
+    expect(screen.getByText("node-4")).toBeInTheDocument();
+    expect(screen.getByText(/Showing\s*4–4\s*of\s*4/)).toBeInTheDocument();
+  });
+
   it("hides attachments when Hide attachments is clicked", async () => {
     const user = userEvent.setup();
 

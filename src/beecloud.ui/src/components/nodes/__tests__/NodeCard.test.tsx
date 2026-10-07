@@ -91,7 +91,7 @@ describe("NodeCard", () => {
     expect(
       screen.getByRole("link", { name: "gpu-node-01" }),
     ).toHaveAttribute("href", "/nodes/node-1");
-    expect(screen.getByText("node-1")).toBeInTheDocument();
+    expect(screen.queryByText("node-1")).not.toBeInTheDocument();
     expect(screen.getByText("NVIDIA H100")).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
     expect(screen.getByText("None")).toBeInTheDocument();

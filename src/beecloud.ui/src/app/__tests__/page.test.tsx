@@ -124,6 +124,41 @@ describe("Home page", () => {
         ).toBeInTheDocument();
     });
 
+    it("paginates node cards and displays the next set", async () => {
+        const user = userEvent.setup();
+        const manyNodes: ComputeNode[] = Array.from(
+            { length: 13 },
+            (_, index) => ({
+                id: `node-${index + 1}`,
+                name: `GPU Node ${index + 1}`,
+                gpuModel: "NVIDIA A100",
+                gpuCount: 4,
+                status: "Available",
+                activeFault: "None",
+            }),
+        );
+        mockedNodesApi.getAll.mockResolvedValue(manyNodes);
+
+        renderWithProviders(<Home />);
+
+        expect(
+            await screen.findByRole("heading", { name: "GPU Node 1" }),
+        ).toBeInTheDocument();
+        expect(screen.queryByRole("heading", { name: "GPU Node 9" }))
+            .not.toBeInTheDocument();
+
+        await user.click(
+            screen.getByRole("button", { name: "Next" }),
+        );
+
+        expect(
+            screen.getByRole("heading", { name: "GPU Node 13" }),
+        ).toBeInTheDocument();
+        expect(screen.queryByRole("heading", { name: "GPU Node 1" }))
+            .not.toBeInTheDocument();
+        expect(screen.getByText("Showing 9–13 of 13")).toBeInTheDocument();
+    });
+
     it("renders an error when the API request fails", async () => {
         mockedNodesApi.getAll.mockRejectedValue(
             new Error("API unavailable"),

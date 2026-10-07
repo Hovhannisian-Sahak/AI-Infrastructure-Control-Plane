@@ -183,6 +183,37 @@ describe("NetworksSection", () => {
     ).toBeInTheDocument();
   });
 
+  it("paginates network cards", async () => {
+    const user = userEvent.setup();
+    const manyNetworks: Network[] = Array.from(
+        { length: 7 },
+        (_, index) => ({
+          ...network,
+          id: `network-${index + 1}`,
+          name: `gpu-network-${index + 1}`,
+        }),
+    );
+    mockedNetworksApi.getAll.mockResolvedValue(manyNetworks);
+
+    renderNetworksSection(manyNetworks);
+
+    expect(
+        await screen.findByRole("heading", { name: "gpu-network-1" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "gpu-network-7" }))
+        .not.toBeInTheDocument();
+
+    await user.click(
+        screen.getByRole("button", { name: "Next" }),
+    );
+
+    expect(
+        screen.getByRole("heading", { name: "gpu-network-7" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "gpu-network-1" }))
+        .not.toBeInTheDocument();
+  });
+
   it("does not show the empty state when networks exist", async () => {
     mockedNetworksApi.getAll.mockResolvedValue([
       network,

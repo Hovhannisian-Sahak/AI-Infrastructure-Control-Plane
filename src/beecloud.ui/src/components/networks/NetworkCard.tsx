@@ -16,6 +16,9 @@ import {
   fetchNetworkAttachments,
 } from "@/store/slices/networksSlice";
 import styles from "./NetworkCard.module.css";
+import Pagination from "@/components/common/Pagination";
+
+const ATTACHMENT_PAGE_SIZE = 3;
 
 type NetworkCardProps = {
   network: Network;
@@ -31,6 +34,7 @@ export default function NetworkCard({
 
   const [selectedNodeId, setSelectedNodeId] =
       useState("");
+  const [attachmentPage, setAttachmentPage] = useState(1);
 
   const nodes = useAppSelector(
       (state) => state.nodes.nodes,
@@ -86,6 +90,16 @@ export default function NetworkCard({
   const maximumReached =
       attachments.length >=
       network.maxAttachments;
+  const attachmentPageCount =
+      Math.ceil(attachments.length / ATTACHMENT_PAGE_SIZE);
+  const currentAttachmentPage = Math.min(
+      attachmentPage,
+      Math.max(1, attachmentPageCount),
+  );
+  const visibleAttachments = attachments.slice(
+      (currentAttachmentPage - 1) * ATTACHMENT_PAGE_SIZE,
+      currentAttachmentPage * ATTACHMENT_PAGE_SIZE,
+  );
 
   useEffect(() => {
     dispatch(
@@ -345,7 +359,7 @@ export default function NetworkCard({
                             styles.attachmentList
                           }
                       >
-                        {attachments.map(
+                        {visibleAttachments.map(
                             (attachment) => (
                                 <li
                                     key={attachment.id}
@@ -406,6 +420,17 @@ export default function NetworkCard({
                             ),
                         )}
                       </ul>
+                  )}
+              {!attachmentsLoading &&
+                  !attachmentsError &&
+                  attachments.length > 0 && (
+                      <Pagination
+                          page={currentAttachmentPage}
+                          pageSize={ATTACHMENT_PAGE_SIZE}
+                          totalItems={attachments.length}
+                          ariaLabel={`Attachments for ${network.name}`}
+                          onPageChange={setAttachmentPage}
+                      />
                   )}
             </div>
         )}
