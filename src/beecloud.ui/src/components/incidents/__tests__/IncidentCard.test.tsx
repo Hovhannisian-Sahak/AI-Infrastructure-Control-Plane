@@ -26,12 +26,19 @@ describe("IncidentCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the compute node id", () => {
+  it("links the affected node to its detail page", () => {
     render(<IncidentCard incident={incident} />);
 
-    expect(
-      screen.getByText("Node: node-1"),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Affected node node-1/ }))
+      .toHaveAttribute("href", "/nodes/node-1");
+  });
+
+  it("shows a friendly node name when provided", () => {
+    render(<IncidentCard incident={incident} nodeName="GPU Worker 01" />);
+
+    expect(screen.getByRole("link", { name: /Affected node GPU Worker 01/ }))
+      .toHaveAttribute("href", "/nodes/node-1");
+    expect(screen.queryByText("node-1")).not.toBeInTheDocument();
   });
 
   it("renders the incident severity", () => {
@@ -88,6 +95,45 @@ describe("IncidentCard", () => {
       "dateTime",
       "2026-10-05T10:00:00Z",
     );
+  });
+
+  it("shows the latest activity time when the incident has been updated", () => {
+    render(
+      <IncidentCard
+        incident={{
+          ...incident,
+          updatedAt: "2026-10-05T11:00:00Z",
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/Updated/)).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("time").some(
+        time => time.getAttribute("dateTime") === "2026-10-05T11:00:00Z",
+      ),
+    ).toBe(true);
+  });
+
+  it("labels resolved activity using the resolution timestamp", () => {
+    render(
+      <IncidentCard
+        incident={{
+          ...incident,
+          status: "Resolved",
+          resolvedAt: "2026-10-05T12:00:00Z",
+          updatedAt: "2026-10-05T12:00:00Z",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Resolved", { selector: "span.status" }))
+      .toBeInTheDocument();
+    expect(
+      screen.getAllByRole("time").some(
+        time => time.getAttribute("dateTime") === "2026-10-05T12:00:00Z",
+      ),
+    ).toBe(true);
   });
 
   it("renders critical severity", () => {

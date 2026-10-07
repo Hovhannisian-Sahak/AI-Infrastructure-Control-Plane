@@ -378,6 +378,9 @@ export default function IncidentsSection() {
                                 <IncidentCard
                                     key={incident.id}
                                     incident={incident}
+                                    nodeName={nodes.find(
+                                        (node) => node.id === incident.computeNodeId,
+                                    )?.name}
                                 />
                             ),
                         )}

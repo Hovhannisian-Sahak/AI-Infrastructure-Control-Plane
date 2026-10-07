@@ -1,102 +1,202 @@
-﻿.card {
+.card {
+    position: relative;
+    display: flex;
     min-width: 0;
+    flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
     padding: 20px;
     border: 1px solid #e2e8f0;
+    border-left: 4px solid #cbd5e1;
     border-radius: 14px;
     background: #ffffff;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.15s ease;
+}
+
+.card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
+.critical {
+    border-left-color: #dc2626;
+}
+
+.high {
+    border-left-color: #ea580c;
+}
+
+.medium {
+    border-left-color: #d97706;
+}
+
+.low {
+    border-left-color: #16a34a;
 }
 
 .header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
+    gap: 14px;
     min-width: 0;
 }
 
 .titleGroup {
+    display: flex;
     min-width: 0;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .title {
     margin: 0;
     color: #0f172a;
-    font-size: 17px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 750;
+    line-height: 1.4;
     overflow-wrap: anywhere;
-    word-break: break-word;
 }
 
-.nodeId {
-    margin: 6px 0 0;
+.nodeLink {
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    flex-direction: column;
+    gap: 2px;
+    text-decoration: none;
+}
+
+.nodeLabel {
     color: #64748b;
-    font-size: 12px;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.nodeName {
+    overflow: hidden;
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nodeLink:hover .nodeName {
+    text-decoration: underline;
+}
+
+.nodeLink:focus-visible {
+    border-radius: 3px;
+    outline: 3px solid rgba(29, 78, 216, 0.25);
+    outline-offset: 3px;
 }
 
 .severity {
     flex-shrink: 0;
     padding: 5px 9px;
+    border: 1px solid transparent;
     border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1;
 }
 
-.low {
-    border: 1px solid #bbf7d0;
+.low.severity {
+    border-color: #bbf7d0;
     background: #f0fdf4;
     color: #166534;
 }
 
-.medium {
-    border: 1px solid #fde68a;
+.medium.severity {
+    border-color: #fde68a;
     background: #fffbeb;
     color: #92400e;
 }
 
-.high {
-    border: 1px solid #fed7aa;
+.high.severity {
+    border-color: #fed7aa;
     background: #fff7ed;
     color: #c2410c;
 }
 
-.critical {
-    border: 1px solid #fecaca;
+.critical.severity {
+    border-color: #fecaca;
     background: #fef2f2;
     color: #b91c1c;
 }
 
 .description {
-    margin: 16px 0 0;
+    margin: 0;
     color: #475569;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.6;
     overflow-wrap: anywhere;
-    word-break: break-word;
 }
 
 .footer {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
-    gap: 12px;
-    margin-top: 18px;
+    gap: 14px;
+    margin-top: auto;
     padding-top: 14px;
     border-top: 1px solid #f1f5f9;
 }
 
 .status {
-    color: #334155;
-    font-size: 13px;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 11px;
     font-weight: 700;
 }
 
-.date {
-    color: #94a3b8;
-    font-size: 12px;
+.statusDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.open {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.investigating {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.resolved {
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.timestamps {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.4;
     text-align: right;
+}
+
+.timestamps time {
+    color: #334155;
+    font-weight: 600;
 }
 
 @media (max-width: 480px) {
@@ -105,11 +205,8 @@
     }
 
     .header {
-        flex-direction: column;
-    }
-
-    .severity {
-        align-self: flex-start;
+        flex-direction: column-reverse;
+        gap: 10px;
     }
 
     .footer {
@@ -117,7 +214,7 @@
         flex-direction: column;
     }
 
-    .date {
+    .timestamps {
         text-align: left;
     }
 }
