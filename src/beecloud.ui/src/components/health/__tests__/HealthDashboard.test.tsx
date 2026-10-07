@@ -63,14 +63,15 @@ function renderDashboard(
         "node-1": healthy,
         "node-2": unhealthy,
     },
+    historyByNodeId: Record<string, HealthCheck[]> = {
+        "node-1": [healthy],
+        "node-2": [unhealthy],
+    },
 ) {
     return render(
         <HealthDashboard
             nodes={nodes}
-            historyByNodeId={{
-                "node-1": [healthy],
-                "node-2": [unhealthy],
-            }}
+            historyByNodeId={historyByNodeId}
             latestByNodeId={latestByNodeId}
             loadingByNodeId={{
                 "node-1": false,
@@ -254,7 +255,7 @@ describe("HealthDashboard", () => {
         ).toBeInTheDocument();
     });
 
-    it("shows unhealthy and high-usage alerts derived from latest readings", () => {
+    it("shows active unhealthy and high-usage alerts derived from latest readings", () => {
         renderDashboard();
 
         const alerts = screen.getByRole("region", {
@@ -267,12 +268,15 @@ describe("HealthDashboard", () => {
         expect(alerts).toHaveTextContent(
             "CPU usage is high (95.0%).",
         );
+        expect(alerts).toHaveTextContent(
+            "GPU temperature is high (96.0°C).",
+        );
         expect(alerts).not.toHaveTextContent("GPU usage is high");
         expect(
             within(alerts).getAllByRole("link", {
                 name: "gpu-node-02",
             }),
-        ).toHaveLength(2);
+        ).toHaveLength(3);
         within(alerts)
             .getAllByRole("link", {
                 name: "gpu-node-02",
@@ -283,6 +287,48 @@ describe("HealthDashboard", () => {
                     "/nodes/node-2",
                 );
             });
+        expect(alerts).toHaveTextContent("Node currently affected");
+    });
+
+    it("shows resolved threshold crossings as historical alerts", () => {
+        const past = {
+            ...healthy,
+            id: "health-past",
+            gpuTemperatureCelsius: 94,
+            checkedAt: new Date(
+                Date.now() - 24 * 60 * 60 * 1000,
+            ).toISOString(),
+        };
+        const latest = {
+            ...healthy,
+            id: "health-current",
+        };
+
+        renderDashboard(
+            {
+                "node-1": latest,
+            },
+            {
+                "node-1": [past, latest],
+            },
+        );
+
+        const alerts = screen.getByRole("region", {
+            name: "Health Alerts",
+        });
+        const history = within(alerts).getByRole("region", {
+            name: "History",
+        });
+
+        expect(history).toHaveTextContent(
+            "GPU temperature reached 94.0°C.",
+        );
+        expect(history).not.toHaveTextContent("Node currently affected");
+        expect(
+            within(history).getByRole("link", {
+                name: "gpu-node-01",
+            }),
+        ).toHaveAttribute("href", "/nodes/node-1");
     });
 
     it("flags high GPU usage even when the node is otherwise healthy", () => {
@@ -318,11 +364,14 @@ describe("HealthDashboard", () => {
                 isHealthy: true,
                 cpuUsagePercent: 50,
                 gpuUsagePercent: 60,
+                gpuTemperatureCelsius: 65,
             },
         });
 
         expect(
-            screen.getByRole("status"),
+            within(
+                screen.getByRole("region", { name: "Active" }),
+            ).getByRole("status"),
         ).toHaveTextContent("No active health alerts.");
     });
 

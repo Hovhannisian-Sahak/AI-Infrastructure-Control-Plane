@@ -125,8 +125,12 @@ export default function HealthDashboard({
     }, [nodesWithHealth]);
 
     const alerts = useMemo(
-        () => deriveHealthAlerts(nodes, latestByNodeId),
-        [nodes, latestByNodeId],
+        () => deriveHealthAlerts(
+            nodes,
+            historyByNodeId,
+            latestByNodeId,
+        ),
+        [nodes, historyByNodeId, latestByNodeId],
     );
 
     const visibleNodes = useMemo(

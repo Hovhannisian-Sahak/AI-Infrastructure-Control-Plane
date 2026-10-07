@@ -1,16 +1,95 @@
 import Link from "next/link";
 
-import type { HealthAlert as HealthAlertItem } from "@/lib/health/healthAlerts";
+import {
+    formatAlertAge,
+    type DerivedHealthAlerts,
+    type HealthAlert,
+} from "@/lib/health/healthAlerts";
 
 import styles from "./HealthAlerts.module.css";
 
 type HealthAlertsProps = {
-    alerts: HealthAlertItem[];
+    alerts: DerivedHealthAlerts;
 };
+
+function getAlertLabel(type: HealthAlert["type"]) {
+    switch (type) {
+        case "unhealthy":
+            return "Unhealthy";
+        case "high-cpu":
+            return "High CPU";
+        case "high-gpu":
+            return "High GPU";
+        case "high-temperature":
+            return "High GPU temperature";
+    }
+}
+
+function AlertList({
+                       alerts,
+                       historical = false,
+                   }: {
+    alerts: HealthAlert[];
+    historical?: boolean;
+}) {
+    if (alerts.length === 0) {
+        return (
+            <p className={styles.empty} role="status">
+                {historical
+                    ? "No historical alerts in this range."
+                    : "No active health alerts."}
+            </p>
+        );
+    }
+
+    return (
+        <ul className={styles.list}>
+            {alerts.map(alert => (
+                <li
+                    className={`${styles.alert} ${
+                        historical ? styles.historicalAlert : ""
+                    }`}
+                    key={alert.id}
+                >
+                    <span
+                        className={`${styles.indicator} ${
+                            historical
+                                ? styles.historicalIndicator
+                                : styles[alert.type]
+                        }`}
+                        aria-hidden="true"
+                    />
+                    <div className={styles.content}>
+                        <div className={styles.alertHeader}>
+                            <Link
+                                href={`/nodes/${alert.nodeId}`}
+                                className={styles.nodeLink}
+                            >
+                                {alert.nodeName}
+                            </Link>
+                            <span className={styles.type}>
+                                {getAlertLabel(alert.type)}
+                            </span>
+                        </div>
+                        <p>{alert.message}</p>
+                        <span className={styles.context}>
+                            {historical
+                                ? formatAlertAge(alert.checkedAt)
+                                : "Node currently affected"}
+                        </span>
+                    </div>
+                </li>
+            ))}
+        </ul>
+    );
+}
 
 export default function HealthAlerts({
                                          alerts,
                                      }: HealthAlertsProps) {
+    const totalAlerts =
+        alerts.active.length + alerts.historical.length;
+
     return (
         <section
             className={styles.panel}
@@ -21,45 +100,20 @@ export default function HealthAlerts({
                     <p className={styles.eyebrow}>Monitoring</p>
                     <h2 id="health-alerts-title">Health Alerts</h2>
                 </div>
-                <span className={styles.count} aria-label={`${alerts.length} alerts`}>
-                    {alerts.length}
+                <span className={styles.count} aria-label={`${totalAlerts} alerts`}>
+                    {totalAlerts}
                 </span>
             </div>
 
-            {alerts.length === 0 ? (
-                <p className={styles.empty} role="status">
-                    No active health alerts.
-                </p>
-            ) : (
-                <ul className={styles.list}>
-                    {alerts.map(alert => (
-                        <li className={styles.alert} key={alert.id}>
-                            <span
-                                className={`${styles.indicator} ${styles[alert.type]}`}
-                                aria-hidden="true"
-                            />
-                            <div className={styles.content}>
-                                <div className={styles.alertHeader}>
-                                    <Link
-                                        href={`/nodes/${alert.nodeId}`}
-                                        className={styles.nodeLink}
-                                    >
-                                        {alert.nodeName}
-                                    </Link>
-                                    <span className={styles.type}>
-                                        {alert.type === "unhealthy"
-                                            ? "Unhealthy"
-                                            : alert.type === "high-cpu"
-                                                ? "High CPU"
-                                                : "High GPU"}
-                                    </span>
-                                </div>
-                                <p>{alert.message}</p>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            )}
+            <section className={styles.group} aria-labelledby="active-alerts-title">
+                <h3 id="active-alerts-title">Active</h3>
+                <AlertList alerts={alerts.active} />
+            </section>
+
+            <section className={styles.group} aria-labelledby="historical-alerts-title">
+                <h3 id="historical-alerts-title">History</h3>
+                <AlertList alerts={alerts.historical} historical />
+            </section>
         </section>
     );
 }
