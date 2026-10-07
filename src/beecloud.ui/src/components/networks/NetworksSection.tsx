@@ -151,8 +151,7 @@ export default function NetworksSection() {
                 </div>
             )}
 
-        {!loading &&
-            networks.length > 0 && (
+        {networks.length > 0 && (
                 <div className={styles.grid}>
                   {visibleNetworks.map((network) => (
                       <NetworkCard
@@ -162,13 +161,14 @@ export default function NetworksSection() {
                   ))}
                 </div>
             )}
-        {!loading && networks.length > 0 && (
+        {networks.length > 0 && (
             <Pagination
                 page={currentPage}
                 pageSize={NETWORK_PAGE_SIZE}
                 totalItems={networks.length}
                 ariaLabel="Network pages"
                 onPageChange={setNetworkPage}
+                disabled={loading}
             />
         )}
       </section>

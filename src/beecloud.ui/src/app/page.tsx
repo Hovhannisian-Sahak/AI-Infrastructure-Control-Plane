@@ -256,8 +256,7 @@ export default function Home() {
                   </div>
               )}
 
-          {!loading &&
-              nodes.length > 0 && (
+          {nodes.length > 0 && (
                   <section
                       className={styles.nodes}
                   >
@@ -269,13 +268,14 @@ export default function Home() {
                     ))}
                   </section>
               )}
-          {!loading && nodes.length > 0 && (
+          {nodes.length > 0 && (
               <Pagination
                   page={currentNodePage}
                   pageSize={NODE_PAGE_SIZE}
                   totalItems={nodes.length}
                   ariaLabel="Compute node pages"
                   onPageChange={setNodePage}
+                  disabled={loading}
               />
           )}
 

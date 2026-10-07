@@ -25,7 +25,6 @@ export default function CursorPagination({
     } = usePaginationViewportAnchor(
         `${nextCursor ?? ""}:${previousCursor ?? ""}`,
         loading,
-        true,
     );
 
     if (!nextCursor && !previousCursor) return null;

@@ -233,6 +233,32 @@ describe("NetworkCard", () => {
     expect(screen.getByText(/Showing\s*4–4\s*of\s*4/)).toBeInTheDocument();
   });
 
+  it("keeps attachment pagination visible while attachments refresh", async () => {
+    const user = userEvent.setup();
+    const attachments = Array.from({ length: 4 }, (_, index) => ({
+      id: `attachment-${index + 1}`,
+      computeNodeId: `node-${index + 1}`,
+      networkId: network.id,
+      attachedAt: `2026-10-03T12:0${index}:00Z`,
+    }));
+
+    renderNetworkCard({ attachments });
+
+    await user.click(
+        screen.getByRole("button", { name: /show attachments/i }),
+    );
+
+    expect(
+        screen.getByText("Loading attachments..."),
+    ).toBeInTheDocument();
+    expect(
+        screen.getByRole("navigation", {
+          name: "Attachments for gpu-production",
+        }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("GPU Node 1")).toBeInTheDocument();
+  });
+
   it("hides attachments when Hide attachments is clicked", async () => {
     const user = userEvent.setup();
 

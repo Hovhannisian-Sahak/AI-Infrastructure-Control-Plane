@@ -351,9 +351,7 @@ export default function NetworkCard({
                       </p>
                   )}
 
-              {!attachmentsLoading &&
-                  !attachmentsError &&
-                  attachments.length > 0 && (
+              {attachments.length > 0 && (
                       <ul
                           className={
                             styles.attachmentList
@@ -421,9 +419,7 @@ export default function NetworkCard({
                         )}
                       </ul>
                   )}
-              {!attachmentsLoading &&
-                  !attachmentsError &&
-                  attachments.length > 0 && (
+              {attachments.length > 0 && (
                       <Pagination
                           page={currentAttachmentPage}
                           pageSize={ATTACHMENT_PAGE_SIZE}

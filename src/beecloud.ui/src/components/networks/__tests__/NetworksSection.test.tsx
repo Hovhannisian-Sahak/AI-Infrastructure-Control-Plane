@@ -281,10 +281,18 @@ describe("NetworksSection", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("does not show network cards while loading", () => {
+  it("keeps network cards and pagination mounted while refreshing", () => {
+    const manyNetworks = Array.from(
+        { length: 7 },
+        (_, index) => ({
+          ...network,
+          id: `network-${index + 1}`,
+          name: `gpu-network-${index + 1}`,
+        }),
+    );
     const store = createTestStore({
       networks: {
-        networks: [network],
+        networks: manyNetworks,
         attachmentsByNetworkId: {},
         deleteErrorByNetworkId: {},
         loading: true,
@@ -302,10 +310,18 @@ describe("NetworksSection", () => {
     ).toBeInTheDocument();
 
     expect(
-        screen.queryByRole("heading", {
-          name: "gpu-production",
+        screen.getByRole("heading", {
+          name: "gpu-network-1",
         }),
-    ).not.toBeInTheDocument();
+    ).toBeInTheDocument();
+    expect(
+        screen.getByRole("navigation", {
+          name: "Network pages",
+        }),
+    ).toBeInTheDocument();
+    expect(
+        screen.getByRole("button", { name: "Next" }),
+    ).toBeDisabled();
   });
 
   it("keeps network cards visible when there is an error", async () => {

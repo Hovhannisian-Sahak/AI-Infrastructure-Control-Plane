@@ -144,7 +144,6 @@ describe("IncidentsSection", () => {
     });
 
     it("keeps the incident list and pagination mounted while a page loads", async () => {
-        const scrollTo = jest.spyOn(window, "scrollTo").mockImplementation(() => {});
         let resolvePage!: (value: ReturnType<typeof page>) => void;
         mockedIncidentsApi.search
             .mockResolvedValueOnce(page([incident], 25))
@@ -169,8 +168,6 @@ describe("IncidentsSection", () => {
 
         expect(await screen.findByRole("heading", { name: secondIncident.title }))
             .toBeInTheDocument();
-        expect(scrollTo).toHaveBeenCalled();
-        scrollTo.mockRestore();
     });
 
     it("shows an empty state for no matching incidents", async () => {

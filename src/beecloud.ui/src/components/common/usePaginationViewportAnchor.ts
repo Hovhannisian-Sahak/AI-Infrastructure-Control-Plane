@@ -38,7 +38,11 @@ export function usePaginationViewportAnchor(
         const frame = window.requestAnimationFrame(() => {
             const previousTop = anchorTop.current;
             const currentTop = element.current?.getBoundingClientRect().top;
-            if (previousTop !== null && currentTop !== undefined) {
+            if (
+                previousTop !== null &&
+                currentTop !== undefined &&
+                currentTop !== previousTop
+            ) {
                 window.scrollTo(
                     window.scrollX,
                     window.scrollY + currentTop - previousTop,
