@@ -255,6 +255,66 @@ describe("HealthDashboard", () => {
         ).toBeInTheDocument();
     });
 
+    it("compares metrics side by side for multiple selected nodes", async () => {
+        const user = userEvent.setup();
+        renderDashboard();
+
+        await user.click(
+            screen.getByRole("checkbox", {
+                name: "Compare gpu-node-01",
+            }),
+        );
+        await user.click(
+            screen.getByRole("checkbox", {
+                name: "Compare gpu-node-02",
+            }),
+        );
+
+        const comparison = screen.getByRole("table", {
+            name: "Node comparison",
+        });
+
+        expect(comparison).toHaveTextContent("gpu-node-01");
+        expect(comparison).toHaveTextContent("gpu-node-02");
+        expect(comparison).toHaveTextContent("50.0%");
+        expect(comparison).toHaveTextContent("95.0%");
+        expect(comparison).toHaveTextContent("60.0%");
+        expect(comparison).toHaveTextContent("80.0%");
+        expect(comparison).toHaveTextContent("65.0°C");
+        expect(comparison).toHaveTextContent("96.0°C");
+        expect(comparison).toHaveTextContent("Healthy");
+        expect(comparison).toHaveTextContent("Unhealthy");
+        expect(
+            within(comparison).getByRole("link", {
+                name: "gpu-node-01",
+            }),
+        ).toHaveAttribute("href", "/nodes/node-1");
+    });
+
+    it("updates the comparison when a node is deselected", async () => {
+        const user = userEvent.setup();
+        renderDashboard();
+
+        const firstNodeCheckbox = screen.getByRole("checkbox", {
+            name: "Compare gpu-node-01",
+        });
+
+        await user.click(firstNodeCheckbox);
+        expect(
+            screen.getByRole("table", { name: "Node comparison" }),
+        ).toHaveTextContent("gpu-node-01");
+
+        await user.click(firstNodeCheckbox);
+        expect(
+            screen.queryByRole("table", { name: "Node comparison" }),
+        ).not.toBeInTheDocument();
+        expect(
+            screen.getByText(
+                "Select nodes in the health table to compare their latest readings.",
+            ),
+        ).toBeInTheDocument();
+    });
+
     it("shows active unhealthy and high-usage alerts derived from latest readings", () => {
         renderDashboard();
 

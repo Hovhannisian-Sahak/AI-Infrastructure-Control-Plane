@@ -75,6 +75,9 @@ export default function HealthDashboard({
     const [range, setRange] =
         useState<HealthTimeRange>("24h");
 
+    const [selectedNodeIds, setSelectedNodeIds] =
+        useState<Set<string>>(() => new Set());
+
     const nodesWithHealth = useMemo(
         () =>
             nodes.map(node => {
@@ -144,6 +147,24 @@ export default function HealthDashboard({
             }),
         [filter, nodesWithHealth],
     );
+
+    const selectedNodes = nodesWithHealth.filter(
+        item => selectedNodeIds.has(item.node.id),
+    );
+
+    const toggleNodeComparison = (nodeId: string) => {
+        setSelectedNodeIds(current => {
+            const next = new Set(current);
+
+            if (next.has(nodeId)) {
+                next.delete(nodeId);
+            } else {
+                next.add(nodeId);
+            }
+
+            return next;
+        });
+    };
 
     return (
         <div className={styles.dashboard}>
@@ -292,6 +313,7 @@ export default function HealthDashboard({
                             <thead>
                             <tr>
                                 <th>Node</th>
+                                <th>Compare</th>
                                 <th>Status</th>
                                 <th>CPU</th>
                                 <th>GPU</th>
@@ -330,6 +352,17 @@ export default function HealthDashboard({
                               {node.gpuModel}
                             </span>
                                                 </div>
+                                            </td>
+
+                                            <td>
+                                                <input
+                                                    type="checkbox"
+                                                    aria-label={`Compare ${node.name}`}
+                                                    checked={selectedNodeIds.has(node.id)}
+                                                    onChange={() =>
+                                                        toggleNodeComparison(node.id)
+                                                    }
+                                                />
                                             </td>
 
                                             <td>
@@ -421,6 +454,103 @@ export default function HealthDashboard({
                                     );
                                 },
                             )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </section>
+
+            <section
+                className={styles.comparisonSection}
+                aria-labelledby="node-comparison-title"
+            >
+                <div className={styles.sectionHeader}>
+                    <div>
+                        <h2 id="node-comparison-title">Node Comparison</h2>
+                        <p>
+                            {selectedNodes.length}{" "}
+                            {selectedNodes.length === 1 ? "node" : "nodes"} selected
+                        </p>
+                    </div>
+                </div>
+
+                {selectedNodes.length === 0 ? (
+                    <p className={styles.comparisonEmpty}>
+                        Select nodes in the health table to compare their latest readings.
+                    </p>
+                ) : (
+                    <div className={styles.tableWrapper}>
+                        <table
+                            className={styles.comparisonTable}
+                            aria-label="Node comparison"
+                        >
+                            <thead>
+                                <tr>
+                                    <th scope="col">Metric</th>
+                                    {selectedNodes.map(({ node }) => (
+                                        <th scope="col" key={node.id}>
+                                            <Link
+                                                href={`/nodes/${node.id}`}
+                                                className={styles.comparisonNodeLink}
+                                            >
+                                                {node.name}
+                                            </Link>
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th scope="row">CPU</th>
+                                    {selectedNodes.map(({ node, latest }) => (
+                                        <td key={node.id}>
+                                            {formatValue(
+                                                latest?.cpuUsagePercent,
+                                                "%",
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                                <tr>
+                                    <th scope="row">GPU</th>
+                                    {selectedNodes.map(({ node, latest }) => (
+                                        <td key={node.id}>
+                                            {formatValue(
+                                                latest?.gpuUsagePercent,
+                                                "%",
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                                <tr>
+                                    <th scope="row">Temperature</th>
+                                    {selectedNodes.map(({ node, latest }) => (
+                                        <td key={node.id}>
+                                            {formatValue(
+                                                latest?.gpuTemperatureCelsius,
+                                                "°C",
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                                <tr>
+                                    <th scope="row">Health</th>
+                                    {selectedNodes.map(({ node, status }) => (
+                                        <td key={node.id}>
+                                            <span
+                                                className={`${styles.status} ${
+                                                    styles[`${status}Status`]
+                                                }`}
+                                            >
+                                                {status === "no-data"
+                                                    ? "No Data"
+                                                    : status === "healthy"
+                                                        ? "Healthy"
+                                                        : "Unhealthy"}
+                                            </span>
+                                        </td>
+                                    ))}
+                                </tr>
                             </tbody>
                         </table>
                     </div>
