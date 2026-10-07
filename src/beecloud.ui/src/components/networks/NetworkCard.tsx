@@ -12,6 +12,7 @@ import {
   deactivateNetwork,
   deleteNetwork,
   detachNodeFromNetwork,
+  clearAttachSuccess,
   fetchNetworkAttachments,
 } from "@/store/slices/networksSlice";
 import styles from "./NetworkCard.module.css";
@@ -30,9 +31,6 @@ export default function NetworkCard({
 
   const [selectedNodeId, setSelectedNodeId] =
       useState("");
-
-  const [showAttachSuccess, setShowAttachSuccess] =
-      useState(false);
 
   const nodes = useAppSelector(
       (state) => state.nodes.nodes,
@@ -100,14 +98,12 @@ export default function NetworkCard({
       return;
     }
 
-    setShowAttachSuccess(true);
-
     const timeoutId = setTimeout(() => {
-      setShowAttachSuccess(false);
+      dispatch(clearAttachSuccess(network.id));
     }, 3000);
 
     return () => clearTimeout(timeoutId);
-  }, [attachSuccess]);
+  }, [attachSuccess, dispatch, network.id]);
 
   const handleToggleAttachments = () => {
     setShowAttachments(
@@ -512,7 +508,7 @@ export default function NetworkCard({
           )}
         </div>
 
-        {showAttachSuccess && (
+        {attachSuccess && (
             <div
                 className={styles.successAlert}
                 role="status"

@@ -2,11 +2,13 @@
 import nodesReducer from "./slices/nodesSlice";
 import networksReducer from "./slices/networksSlice";
 import incidentsReducer from "./slices/incidentsSlice";
+import healthReducer from "./slices/healthSlice";
 export const store = configureStore({
     reducer: {
         nodes: nodesReducer,
         networks: networksReducer,
         incidents: incidentsReducer,
+        health: healthReducer,
     },
 });
 

@@ -1,7 +1,13 @@
-﻿import { render, screen, waitFor } from "@testing-library/react";
+﻿import {
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
+
 import NetworksSection from "../NetworksSection";
+
 import { networksApi } from "@/lib/api/networksApi";
 import { createTestStore } from "@/test-utils";
 import type { Network } from "@/types/network";
@@ -28,19 +34,23 @@ const secondNetwork: Network = {
   createdAt: "2026-10-03T11:00:00Z",
 };
 
-function renderNetworksSection(preloadedNetworks: Network[] = []) {
+function renderNetworksSection(
+    preloadedNetworks: Network[] = [],
+) {
   const store = createTestStore({
     networks: {
       networks: preloadedNetworks,
+      attachmentsByNetworkId: {},
+      deleteErrorByNetworkId: {},
     },
   });
 
   return {
     store,
     ...render(
-      <Provider store={store}>
-        <NetworksSection />
-      </Provider>,
+        <Provider store={store}>
+          <NetworksSection />
+        </Provider>,
     ),
   };
 }
@@ -48,9 +58,15 @@ function renderNetworksSection(preloadedNetworks: Network[] = []) {
 beforeEach(() => {
   jest.resetAllMocks();
 
-  mockedNetworksApi.getAll.mockReturnValue(new Promise<Network[]>(() => {}));
+  mockedNetworksApi.getAll.mockReturnValue(
+      new Promise<Network[]>(() => {}),
+  );
+
   mockedNetworksApi.create.mockResolvedValue(network);
-  mockedNetworksApi.getNetworkNodes.mockReturnValue(new Promise(() => {}));
+
+  mockedNetworksApi.getNetworkNodes.mockReturnValue(
+      new Promise(() => {}),
+  );
 });
 
 describe("NetworksSection", () => {
@@ -58,7 +74,9 @@ describe("NetworksSection", () => {
     renderNetworksSection();
 
     await waitFor(() => {
-      expect(mockedNetworksApi.getAll).toHaveBeenCalledTimes(1);
+      expect(
+          mockedNetworksApi.getAll,
+      ).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -66,47 +84,60 @@ describe("NetworksSection", () => {
     renderNetworksSection();
 
     expect(
-      screen.getByRole("heading", {
-        name: "Networks",
-      }),
+        screen.getByRole("heading", {
+          name: "Networks",
+        }),
     ).toBeInTheDocument();
   });
 
   it("renders zero networks initially", () => {
     renderNetworksSection();
 
-    expect(screen.getByText("0 networks")).toBeInTheDocument();
+    expect(
+        screen.getByText("0 networks"),
+    ).toBeInTheDocument();
   });
 
   it("renders singular network count", () => {
     renderNetworksSection([network]);
 
-    expect(screen.getByText("1 network")).toBeInTheDocument();
+    expect(
+        screen.getByText("1 network"),
+    ).toBeInTheDocument();
   });
 
   it("renders plural network count", () => {
-    renderNetworksSection([network, secondNetwork]);
+    renderNetworksSection([
+      network,
+      secondNetwork,
+    ]);
 
-    expect(screen.getByText("2 networks")).toBeInTheDocument();
+    expect(
+        screen.getByText("2 networks"),
+    ).toBeInTheDocument();
   });
 
   it("renders the create network form", () => {
     renderNetworksSection();
 
     expect(
-      screen.getByRole("heading", {
-        name: "Create Network",
-      }),
+        screen.getByRole("heading", {
+          name: "Create Network",
+        }),
     ).toBeInTheDocument();
 
-    expect(screen.getByLabelText(/Network name/i)).toBeInTheDocument();
-
-    expect(screen.getByLabelText(/Description/)).toBeInTheDocument();
+    expect(
+        screen.getByLabelText(/Network name/i),
+    ).toBeInTheDocument();
 
     expect(
-      screen.getByRole("button", {
-        name: "Create Network",
-      }),
+        screen.getByLabelText(/Description/),
+    ).toBeInTheDocument();
+
+    expect(
+        screen.getByRole("button", {
+          name: "Create Network",
+        }),
     ).toBeInTheDocument();
   });
 
@@ -116,49 +147,59 @@ describe("NetworksSection", () => {
     renderNetworksSection();
 
     expect(
-      await screen.findByRole("heading", {
-        name: "No networks yet",
-      }),
+        await screen.findByRole("heading", {
+          name: "No networks yet",
+        }),
     ).toBeInTheDocument();
 
     expect(
-      screen.getByText(/Create your first network to connect compute nodes/i),
+        screen.getByText(
+            /Create your first network to connect compute nodes/i,
+        ),
     ).toBeInTheDocument();
   });
 
   it("renders network cards", async () => {
-    mockedNetworksApi.getAll.mockResolvedValue([network, secondNetwork]);
+    mockedNetworksApi.getAll.mockResolvedValue([
+      network,
+      secondNetwork,
+    ]);
 
-    renderNetworksSection([network, secondNetwork]);
+    renderNetworksSection([
+      network,
+      secondNetwork,
+    ]);
 
     expect(
-      await screen.findByRole("heading", {
-        name: "gpu-production",
-      }),
+        await screen.findByRole("heading", {
+          name: "gpu-production",
+        }),
     ).toBeInTheDocument();
 
     expect(
-      await screen.findByRole("heading", {
-        name: "gpu-development",
-      }),
+        await screen.findByRole("heading", {
+          name: "gpu-development",
+        }),
     ).toBeInTheDocument();
   });
 
   it("does not show the empty state when networks exist", async () => {
-    mockedNetworksApi.getAll.mockResolvedValue([network]);
+    mockedNetworksApi.getAll.mockResolvedValue([
+      network,
+    ]);
 
     renderNetworksSection([network]);
 
     expect(
-      await screen.findByRole("heading", {
-        name: "gpu-production",
-      }),
+        await screen.findByRole("heading", {
+          name: "gpu-production",
+        }),
     ).toBeInTheDocument();
 
     expect(
-      screen.queryByRole("heading", {
-        name: "No networks yet",
-      }),
+        screen.queryByRole("heading", {
+          name: "No networks yet",
+        }),
     ).not.toBeInTheDocument();
   });
 
@@ -166,36 +207,46 @@ describe("NetworksSection", () => {
     const store = createTestStore({
       networks: {
         networks: [],
+        attachmentsByNetworkId: {},
+        deleteErrorByNetworkId: {},
         loading: true,
       },
     });
 
     render(
-      <Provider store={store}>
-        <NetworksSection />
-      </Provider>,
+        <Provider store={store}>
+          <NetworksSection />
+        </Provider>,
     );
 
-    expect(screen.getByText("Loading networks...")).toBeInTheDocument();
+    expect(
+        screen.getByText("Loading networks..."),
+    ).toBeInTheDocument();
 
     expect(
-      screen.queryByRole("heading", {
-        name: "No networks yet",
-      }),
+        screen.queryByRole("heading", {
+          name: "No networks yet",
+        }),
     ).not.toBeInTheDocument();
   });
 
   it("shows the error state", async () => {
-    mockedNetworksApi.getAll.mockRejectedValue(new Error("Failed to load networks"));
+    mockedNetworksApi.getAll.mockRejectedValue(
+        new Error("Failed to load networks"),
+    );
 
     renderNetworksSection();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to load networks");
+    expect(
+        await screen.findByRole("alert"),
+    ).toHaveTextContent(
+        "Failed to load networks",
+    );
 
     expect(
-      screen.queryByRole("heading", {
-        name: "No networks yet",
-      }),
+        screen.queryByRole("heading", {
+          name: "No networks yet",
+        }),
     ).not.toBeInTheDocument();
   });
 
@@ -203,22 +254,26 @@ describe("NetworksSection", () => {
     const store = createTestStore({
       networks: {
         networks: [network],
+        attachmentsByNetworkId: {},
+        deleteErrorByNetworkId: {},
         loading: true,
       },
     });
 
     render(
-      <Provider store={store}>
-        <NetworksSection />
-      </Provider>,
+        <Provider store={store}>
+          <NetworksSection />
+        </Provider>,
     );
 
-    expect(screen.getByText("Loading networks...")).toBeInTheDocument();
+    expect(
+        screen.getByText("Loading networks..."),
+    ).toBeInTheDocument();
 
     expect(
-      screen.queryByRole("heading", {
-        name: "gpu-production",
-      }),
+        screen.queryByRole("heading", {
+          name: "gpu-production",
+        }),
     ).not.toBeInTheDocument();
   });
 
@@ -230,6 +285,8 @@ describe("NetworksSection", () => {
     const store = createTestStore({
       networks: {
         networks: [network],
+        attachmentsByNetworkId: {},
+        deleteErrorByNetworkId: {},
       },
     });
 
@@ -241,7 +298,9 @@ describe("NetworksSection", () => {
 
     expect(
         await screen.findByRole("alert"),
-    ).toHaveTextContent("Failed to load networks");
+    ).toHaveTextContent(
+        "Failed to load networks",
+    );
 
     expect(
         screen.getByRole("heading", {
@@ -253,28 +312,41 @@ describe("NetworksSection", () => {
   it("creates a network from the form", async () => {
     const user = userEvent.setup();
 
-    mockedNetworksApi.create.mockResolvedValue(network);
+    mockedNetworksApi.create.mockResolvedValue(
+        network,
+    );
 
     renderNetworksSection();
 
-    const nameInput = screen.getByLabelText(/Network name/i);
+    const nameInput =
+        screen.getByLabelText(/Network name/i);
 
-    const descriptionInput = screen.getByLabelText(/Description/);
+    const descriptionInput =
+        screen.getByLabelText(/Description/);
 
-    await user.type(nameInput, "gpu-production");
+    await user.type(
+        nameInput,
+        "gpu-production",
+    );
 
-    await user.type(descriptionInput, "Production GPU network");
+    await user.type(
+        descriptionInput,
+        "Production GPU network",
+    );
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Create Network",
-      }),
+        screen.getByRole("button", {
+          name: "Create Network",
+        }),
     );
 
     await waitFor(() => {
-      expect(mockedNetworksApi.create).toHaveBeenCalledWith({
+      expect(
+          mockedNetworksApi.create,
+      ).toHaveBeenCalledWith({
         name: "gpu-production",
-        description: "Production GPU network",
+        description:
+            "Production GPU network",
       });
     });
   });
@@ -282,21 +354,28 @@ describe("NetworksSection", () => {
   it("shows create success message", async () => {
     const user = userEvent.setup();
 
-    mockedNetworksApi.create.mockResolvedValue(network);
+    mockedNetworksApi.create.mockResolvedValue(
+        network,
+    );
 
     renderNetworksSection();
 
-    await user.type(screen.getByLabelText(/Network name/i), "gpu-production");
+    await user.type(
+        screen.getByLabelText(/Network name/i),
+        "gpu-production",
+    );
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Create Network",
-      }),
+        screen.getByRole("button", {
+          name: "Create Network",
+        }),
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent(
-        'Network "gpu-production" created successfully.',
+      expect(
+          screen.getByRole("status"),
+      ).toHaveTextContent(
+          'Network "gpu-production" created successfully.',
       );
     });
   });

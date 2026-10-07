@@ -1,6 +1,7 @@
 ﻿import {
     createAsyncThunk,
     createSlice,
+    type PayloadAction,
 } from "@reduxjs/toolkit";
 import { networksApi } from "@/lib/api/networksApi";
 import {
@@ -239,6 +240,20 @@ const networksSlice = createSlice({
 
         clearCreateSuccess(state) {
             state.createSuccess = null;
+        },
+
+        clearAttachSuccess(
+            state,
+            action: PayloadAction<string>,
+        ) {
+            const attachmentState =
+                state.attachmentsByNetworkId[
+                    action.payload
+                    ];
+
+            if (attachmentState) {
+                attachmentState.attachSuccess = null;
+            }
         },
     },
 
@@ -699,6 +714,7 @@ const networksSlice = createSlice({
 export const {
     clearNetworkError,
     clearCreateSuccess,
+    clearAttachSuccess,
 } = networksSlice.actions;
 
 export default networksSlice.reducer;

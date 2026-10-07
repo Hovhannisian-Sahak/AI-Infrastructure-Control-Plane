@@ -116,9 +116,11 @@ export default function HealthSparkline({
             ) {
                 const previousPoint = points[previousKnownIndex];
 
-                gapSegments.push(
-                    `M ${previousPoint.x},${previousPoint.y} L ${point.x},${point.y}`,
-                );
+                if (previousPoint) {
+                    gapSegments.push(
+                        `M ${previousPoint.x},${previousPoint.y} L ${point.x},${point.y}`,
+                    );
+                }
             }
         }
     });

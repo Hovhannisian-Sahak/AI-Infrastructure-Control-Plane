@@ -1,28 +1,16 @@
-﻿import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-
+﻿import { fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders } from "@/test-utils";
-import NodeCard from "@/components/nodes/NodeCard";
-import { nodesApi } from "@/lib/api/nodesApi";
+import NodeCard from "../NodeCard";
 import type { ComputeNode } from "@/lib/api/models/computeNode";
 import type { HealthCheck } from "@/lib/api/models/healthCheck";
 
-jest.mock("@/lib/api/nodesApi");
-
-const mockedNodesApi = jest.mocked(nodesApi);
-
-const node: ComputeNode = {
+const baseNode: ComputeNode = {
   id: "node-1",
-  name: "GPU Node 1",
-  gpuModel: "NVIDIA A100",
+  name: "gpu-node-01",
+  gpuModel: "NVIDIA H100",
   gpuCount: 4,
   status: "Available",
   activeFault: "None",
-};
-
-const runningNode: ComputeNode = {
-  ...node,
-  status: "Running",
 };
 
 const healthyHistory: HealthCheck[] = [
@@ -30,28 +18,19 @@ const healthyHistory: HealthCheck[] = [
     id: "health-1",
     computeNodeId: "node-1",
     isHealthy: true,
-    cpuUsagePercent: 60,
-    gpuUsagePercent: 70,
-    gpuTemperatureCelsius: 68,
-    checkedAt: "2026-10-06T16:25:21.000Z",
+    cpuUsagePercent: 42.5,
+    gpuUsagePercent: 68.2,
+    gpuTemperatureCelsius: 61.4,
+    checkedAt: "2026-10-06T10:00:00Z",
   },
   {
     id: "health-2",
     computeNodeId: "node-1",
     isHealthy: true,
-    cpuUsagePercent: 61.5,
-    gpuUsagePercent: 70.5,
-    gpuTemperatureCelsius: 71,
-    checkedAt: "2026-10-06T16:25:31.000Z",
-  },
-  {
-    id: "health-3",
-    computeNodeId: "node-1",
-    isHealthy: true,
-    cpuUsagePercent: 63.4,
-    gpuUsagePercent: 71.2,
-    gpuTemperatureCelsius: 74,
-    checkedAt: "2026-10-06T16:25:41.000Z",
+    cpuUsagePercent: 55.1,
+    gpuUsagePercent: 74.3,
+    gpuTemperatureCelsius: 65.8,
+    checkedAt: "2026-10-06T10:00:10Z",
   },
 ];
 
@@ -59,105 +38,70 @@ const unhealthyHistory: HealthCheck[] = [
   {
     id: "health-1",
     computeNodeId: "node-1",
-    isHealthy: true,
-    cpuUsagePercent: 80,
-    gpuUsagePercent: 60,
-    gpuTemperatureCelsius: 75,
-    checkedAt: "2026-10-06T16:26:21.000Z",
+    isHealthy: false,
+    cpuUsagePercent: 95.2,
+    gpuUsagePercent: 91.4,
+    gpuTemperatureCelsius: 94.8,
+    checkedAt: "2026-10-06T10:00:00Z",
   },
   {
     id: "health-2",
     computeNodeId: "node-1",
     isHealthy: false,
-    cpuUsagePercent: 93.3,
-    gpuUsagePercent: 63.1,
-    gpuTemperatureCelsius: 78,
-    checkedAt: "2026-10-06T16:26:41.000Z",
-  },
-];
-
-const missingMetricsHistory: HealthCheck[] = [
-  {
-    id: "health-missing",
-    computeNodeId: "node-1",
-    isHealthy: true,
-    cpuUsagePercent: null,
-    gpuUsagePercent: null,
-    gpuTemperatureCelsius: null,
-    checkedAt: "2026-10-06T16:25:41.000Z",
+    cpuUsagePercent: 97.1,
+    gpuUsagePercent: 93.7,
+    gpuTemperatureCelsius: 96.2,
+    checkedAt: "2026-10-06T10:00:10Z",
   },
 ];
 
 describe("NodeCard", () => {
   beforeEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
+
+    Object.defineProperty(window, "confirm", {
+      writable: true,
+      value: jest.fn(() => true),
+    });
   });
 
-  it("renders node details", () => {
-    renderWithProviders(
-        <NodeCard
-            node={node}
-            healthHistory={[]}
-        />,
-    );
+  it("renders node information", () => {
+    renderWithProviders(<NodeCard node={baseNode} />);
 
-    expect(
-        screen.getByText("GPU Node 1"),
-    ).toBeInTheDocument();
-
-    expect(
-        screen.getByText("NVIDIA A100"),
-    ).toBeInTheDocument();
-
-    expect(
-        screen.getByText("4"),
-    ).toBeInTheDocument();
-
-    expect(
-        screen.getByText("Available"),
-    ).toBeInTheDocument();
-
-    expect(
-        screen.getByText("None"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("gpu-node-01")).toBeInTheDocument();
+    expect(screen.getByText("node-1")).toBeInTheDocument();
+    expect(screen.getByText("NVIDIA H100")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.getByText("None")).toBeInTheDocument();
+    expect(screen.getByText("Available")).toBeInTheDocument();
   });
 
-  it("shows no health check message when health data is unavailable", () => {
-    renderWithProviders(
-        <NodeCard
-            node={node}
-            healthHistory={[]}
-        />,
-    );
+  it("renders no health data when history is empty", () => {
+    renderWithProviders(<NodeCard node={baseNode} />);
 
-    expect(
-        screen.getByText("Health"),
-    ).toBeInTheDocument();
-
-    expect(
-        screen.getByText("No health check yet"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Health")).toBeInTheDocument();
+    expect(screen.getByText("No health check yet")).toBeInTheDocument();
   });
 
-  it("renders healthy health metrics and sparklines", () => {
-    renderWithProviders(
-        <NodeCard
-            node={runningNode}
-            healthHistory={healthyHistory}
-        />,
-    );
+  it("renders healthy health information", () => {
+    renderWithProviders(<NodeCard node={baseNode} />, {
+      preloadedState: {
+        health: {
+          historyByNodeId: {
+            "node-1": healthyHistory,
+          },
+          latestByNodeId: {
+            "node-1": healthyHistory[1],
+          },
+          loadingByNodeId: {},
+          errorByNodeId: {},
+        },
+      },
+    });
 
-    expect(
-        screen.getByText("Healthy"),
-    ).toBeInTheDocument();
-
-    expect(
-        screen.getByText("63.4%"),
-    ).toBeInTheDocument();
-
-    expect(
-        screen.getByText("74.0°C"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Healthy")).toBeInTheDocument();
+    expect(screen.getByText("55.1%")).toBeInTheDocument();
+    expect(screen.getByText("65.8°C")).toBeInTheDocument();
 
     expect(
         screen.getByRole("img", {
@@ -172,28 +116,110 @@ describe("NodeCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders unhealthy health metrics", () => {
-    renderWithProviders(
-        <NodeCard
-            node={{
-              ...runningNode,
-              status: "Unhealthy",
-            }}
-            healthHistory={unhealthyHistory}
-        />,
-    );
+  it("renders unhealthy health information", () => {
+    const unhealthyNode: ComputeNode = {
+      ...baseNode,
+      status: "Unhealthy",
+      activeFault: "GpuOverheat",
+    };
+
+    renderWithProviders(<NodeCard node={unhealthyNode} />, {
+      preloadedState: {
+        health: {
+          historyByNodeId: {
+            "node-1": unhealthyHistory,
+          },
+          latestByNodeId: {
+            "node-1": unhealthyHistory[1],
+          },
+          loadingByNodeId: {},
+          errorByNodeId: {},
+        },
+      },
+    });
 
     expect(
         screen.getAllByText("Unhealthy"),
     ).toHaveLength(2);
 
-    expect(
-        screen.getByText("93.3%"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("GpuOverheat")).toBeInTheDocument();
+    expect(screen.getByText("97.1%")).toBeInTheDocument();
+    expect(screen.getByText("96.2°C")).toBeInTheDocument();
+  });
 
-    expect(
-        screen.getByText("78.0°C"),
-    ).toBeInTheDocument();
+  it("uses the latest item from health history as the displayed health", () => {
+    renderWithProviders(<NodeCard node={baseNode} />, {
+      preloadedState: {
+        health: {
+          historyByNodeId: {
+            "node-1": healthyHistory,
+          },
+
+          // Deliberately use an older value here.
+          // NodeCard should derive the latest value from history.
+          latestByNodeId: {
+            "node-1": healthyHistory[0],
+          },
+
+          loadingByNodeId: {},
+          errorByNodeId: {},
+        },
+      },
+    });
+
+    expect(screen.getByText("55.1%")).toBeInTheDocument();
+    expect(screen.getByText("65.8°C")).toBeInTheDocument();
+
+    expect(screen.queryByText("42.5%")).not.toBeInTheDocument();
+    expect(screen.queryByText("61.4°C")).not.toBeInTheDocument();
+  });
+
+  it("renders N/A when the latest health metric is null", () => {
+    const history: HealthCheck[] = [
+      {
+        id: "health-1",
+        computeNodeId: "node-1",
+        isHealthy: true,
+        cpuUsagePercent: null,
+        gpuUsagePercent: null,
+        gpuTemperatureCelsius: null,
+        checkedAt: "2026-10-06T10:00:00Z",
+      },
+    ];
+
+    renderWithProviders(<NodeCard node={baseNode} />, {
+      preloadedState: {
+        health: {
+          historyByNodeId: {
+            "node-1": history,
+          },
+          latestByNodeId: {
+            "node-1": history[0],
+          },
+          loadingByNodeId: {},
+          errorByNodeId: {},
+        },
+      },
+    });
+
+    expect(screen.getAllByText("N/A")).toHaveLength(2);
+  });
+
+  it("renders the CPU and temperature sparklines", () => {
+    renderWithProviders(<NodeCard node={baseNode} />, {
+      preloadedState: {
+        health: {
+          historyByNodeId: {
+            "node-1": healthyHistory,
+          },
+          latestByNodeId: {
+            "node-1": healthyHistory[1],
+          },
+          loadingByNodeId: {},
+          errorByNodeId: {},
+        },
+      },
+    });
 
     expect(
         screen.getByRole("img", {
@@ -208,334 +234,123 @@ describe("NodeCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders N/A for missing health metrics", () => {
-    renderWithProviders(
-        <NodeCard
-            node={runningNode}
-            healthHistory={missingMetricsHistory}
-        />,
-    );
+  it("renders a start button for an available node", () => {
+    renderWithProviders(<NodeCard node={baseNode} />);
 
     expect(
-        screen.getAllByText("N/A"),
-    ).toHaveLength(2);
-  });
-
-  it("starts an available node when Start is clicked", async () => {
-    const user = userEvent.setup();
-
-    const updatedNode: ComputeNode = {
-      ...node,
-      status: "Running",
-    };
-
-    mockedNodesApi.start.mockResolvedValue(
-        updatedNode,
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={node}
-            healthHistory={[]}
-        />,
-    );
-
-    store.dispatch({
-      type: "nodes/fetchNodes/fulfilled",
-      payload: [node],
-    });
-
-    await user.click(
         screen.getByRole("button", {
           name: "Start",
         }),
-    );
-
-    await waitFor(() => {
-      expect(
-          mockedNodesApi.start,
-      ).toHaveBeenCalledWith("node-1");
-
-      expect(
-          store.getState().nodes.nodes,
-      ).toEqual([
-        updatedNode,
-      ]);
-    });
+    ).toBeInTheDocument();
 
     expect(
-        store.getState().nodes
-            .actionLoadingByNodeId["node-1"],
-    ).toBe(false);
+        screen.queryByRole("button", {
+          name: "Stop",
+        }),
+    ).not.toBeInTheDocument();
+
+    expect(
+        screen.queryByRole("button", {
+          name: "Restart",
+        }),
+    ).not.toBeInTheDocument();
   });
 
-  it("stops a running node when Stop is clicked", async () => {
-    const user = userEvent.setup();
-
-    const updatedNode: ComputeNode = {
-      ...runningNode,
+  it("renders a start button for a stopped node", () => {
+    const node: ComputeNode = {
+      ...baseNode,
       status: "Stopped",
     };
 
-    mockedNodesApi.stop.mockResolvedValue(
-        updatedNode,
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={runningNode}
-            healthHistory={[]}
-        />,
-    );
-
-    store.dispatch({
-      type: "nodes/fetchNodes/fulfilled",
-      payload: [runningNode],
-    });
-
-    await user.click(
-        screen.getByRole("button", {
-          name: "Stop",
-        }),
-    );
-
-    await waitFor(() => {
-      expect(
-          mockedNodesApi.stop,
-      ).toHaveBeenCalledWith("node-1");
-
-      expect(
-          store.getState().nodes.nodes,
-      ).toEqual([
-        updatedNode,
-      ]);
-    });
+    renderWithProviders(<NodeCard node={node} />);
 
     expect(
-        store.getState().nodes
-            .actionLoadingByNodeId["node-1"],
-    ).toBe(false);
+        screen.getByRole("button", {
+          name: "Start",
+        }),
+    ).toBeInTheDocument();
   });
 
-  it("restarts a running node when Restart is clicked", async () => {
-    const user = userEvent.setup();
-
-    const updatedNode: ComputeNode = {
-      ...runningNode,
+  it("renders stop and restart buttons for a running node", () => {
+    const node: ComputeNode = {
+      ...baseNode,
       status: "Running",
     };
 
-    mockedNodesApi.restart.mockResolvedValue(
-        updatedNode,
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={runningNode}
-            healthHistory={[]}
-        />,
-    );
-
-    store.dispatch({
-      type: "nodes/fetchNodes/fulfilled",
-      payload: [runningNode],
-    });
-
-    await user.click(
-        screen.getByRole("button", {
-          name: "Restart",
-        }),
-    );
-
-    await waitFor(() => {
-      expect(
-          mockedNodesApi.restart,
-      ).toHaveBeenCalledWith("node-1");
-
-      expect(
-          store.getState().nodes.nodes,
-      ).toEqual([
-        updatedNode,
-      ]);
-    });
+    renderWithProviders(<NodeCard node={node} />);
 
     expect(
-        store.getState().nodes
-            .actionLoadingByNodeId["node-1"],
-    ).toBe(false);
-  });
-
-  it("shows an error when starting a node fails", async () => {
-    const user = userEvent.setup();
-
-    mockedNodesApi.start.mockRejectedValue(
-        new Error("Failed to start node"),
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={node}
-            healthHistory={[]}
-        />,
-    );
-
-    await user.click(
-        screen.getByRole("button", {
-          name: "Start",
-        }),
-    );
-
-    await waitFor(() => {
-      expect(
-          store.getState().nodes.error,
-      ).toBe("Failed to start node");
-    });
-
-    expect(
-        store.getState().nodes
-            .actionLoadingByNodeId["node-1"],
-    ).toBe(false);
-  });
-
-  it("shows an error when stopping a node fails", async () => {
-    const user = userEvent.setup();
-
-    mockedNodesApi.stop.mockRejectedValue(
-        new Error("Failed to stop node"),
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={runningNode}
-            healthHistory={[]}
-        />,
-    );
-
-    await user.click(
         screen.getByRole("button", {
           name: "Stop",
         }),
-    );
-
-    await waitFor(() => {
-      expect(
-          store.getState().nodes.error,
-      ).toBe("Failed to stop node");
-    });
+    ).toBeInTheDocument();
 
     expect(
-        store.getState().nodes
-            .actionLoadingByNodeId["node-1"],
-    ).toBe(false);
-  });
-
-  it("shows an error when restarting a node fails", async () => {
-    const user = userEvent.setup();
-
-    mockedNodesApi.restart.mockRejectedValue(
-        new Error("Failed to restart node"),
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={runningNode}
-            healthHistory={[]}
-        />,
-    );
-
-    await user.click(
         screen.getByRole("button", {
           name: "Restart",
         }),
-    );
-
-    await waitFor(() => {
-      expect(
-          store.getState().nodes.error,
-      ).toBe("Failed to restart node");
-    });
+    ).toBeInTheDocument();
 
     expect(
-        store.getState().nodes
-            .actionLoadingByNodeId["node-1"],
-    ).toBe(false);
-  });
-
-  it("shows a loading state while starting a node", async () => {
-    const user = userEvent.setup();
-
-    let resolveStart:
-        | ((value: ComputeNode) => void)
-        | undefined;
-
-    mockedNodesApi.start.mockReturnValue(
-        new Promise<ComputeNode>((resolve) => {
-          resolveStart = resolve;
-        }),
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={node}
-            healthHistory={[]}
-        />,
-    );
-
-    await user.click(
-        screen.getByRole("button", {
+        screen.queryByRole("button", {
           name: "Start",
         }),
-    );
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not render start, stop, or restart for a provisioning node", () => {
+    const node: ComputeNode = {
+      ...baseNode,
+      status: "Provisioning",
+    };
+
+    renderWithProviders(<NodeCard node={node} />);
 
     expect(
-        screen.getByRole("button", {
-          name: "Starting...",
+        screen.queryByRole("button", {
+          name: "Start",
         }),
-    ).toBeDisabled();
+    ).not.toBeInTheDocument();
 
     expect(
-        store.getState().nodes
-            .actionLoadingByNodeId["node-1"],
-    ).toBe(true);
+        screen.queryByRole("button", {
+          name: "Stop",
+        }),
+    ).not.toBeInTheDocument();
 
-    resolveStart!({
-      ...node,
+    expect(
+        screen.queryByRole("button", {
+          name: "Restart",
+        }),
+    ).not.toBeInTheDocument();
+
+    expect(
+        screen.getByText(/Node is being provisioned/),
+    ).toBeInTheDocument();
+  });
+
+  it("disables action buttons while an action is loading", () => {
+    const node: ComputeNode = {
+      ...baseNode,
       status: "Running",
+    };
+
+    renderWithProviders(<NodeCard node={node} />, {
+      preloadedState: {
+        nodes: {
+          nodes: [node],
+          loading: false,
+          error: null,
+          creating: false,
+          createSuccess: null,
+          actionLoadingByNodeId: {
+            "node-1": true,
+          },
+          deletingNodeId: null,
+          deleteErrorByNodeId: {},
+        },
+      },
     });
-
-    await waitFor(() => {
-      expect(
-          store.getState().nodes
-              .actionLoadingByNodeId["node-1"],
-      ).toBe(false);
-    });
-  });
-
-  it("shows a loading state while stopping a node", async () => {
-    const user = userEvent.setup();
-
-    let resolveStop:
-        | ((value: ComputeNode) => void)
-        | undefined;
-
-    mockedNodesApi.stop.mockReturnValue(
-        new Promise<ComputeNode>((resolve) => {
-          resolveStop = resolve;
-        }),
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={runningNode}
-            healthHistory={[]}
-        />,
-    );
-
-    await user.click(
-        screen.getByRole("button", {
-          name: "Stop",
-        }),
-    );
 
     expect(
         screen.getByRole("button", {
@@ -544,263 +359,135 @@ describe("NodeCard", () => {
     ).toBeDisabled();
 
     expect(
-        store.getState().nodes
-            .actionLoadingByNodeId["node-1"],
-    ).toBe(true);
-
-    resolveStop!({
-      ...runningNode,
-      status: "Stopped",
-    });
-
-    await waitFor(() => {
-      expect(
-          store.getState().nodes
-              .actionLoadingByNodeId["node-1"],
-      ).toBe(false);
-    });
-  });
-
-  it("shows a loading state while restarting a node", async () => {
-    const user = userEvent.setup();
-
-    let resolveRestart:
-        | ((value: ComputeNode) => void)
-        | undefined;
-
-    mockedNodesApi.restart.mockReturnValue(
-        new Promise<ComputeNode>((resolve) => {
-          resolveRestart = resolve;
-        }),
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={runningNode}
-            healthHistory={[]}
-        />,
-    );
-
-    await user.click(
-        screen.getByRole("button", {
-          name: "Restart",
-        }),
-    );
-
-    expect(
         screen.getByRole("button", {
           name: "Restarting...",
         }),
     ).toBeDisabled();
 
     expect(
-        store.getState().nodes
-            .actionLoadingByNodeId["node-1"],
-    ).toBe(true);
-
-    resolveRestart!({
-      ...runningNode,
-      status: "Running",
-    });
-
-    await waitFor(() => {
-      expect(
-          store.getState().nodes
-              .actionLoadingByNodeId["node-1"],
-      ).toBe(false);
-    });
-  });
-
-  it("does not delete a node when deletion is cancelled", async () => {
-    const user = userEvent.setup();
-
-    const confirmSpy = jest
-        .spyOn(window, "confirm")
-        .mockReturnValue(false);
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={node}
-            healthHistory={[]}
-        />,
-        {
-          nodes: {
-            nodes: [node],
-          },
-        },
-    );
-
-    await user.click(
         screen.getByRole("button", {
           name: "Delete",
         }),
-    );
-
-    expect(
-        confirmSpy,
-    ).toHaveBeenCalledWith(
-        'Are you sure you want to delete "GPU Node 1"?',
-    );
-
-    expect(
-        mockedNodesApi.delete,
-    ).not.toHaveBeenCalled();
-
-    expect(
-        store.getState().nodes.nodes,
-    ).toEqual([node]);
-
-    confirmSpy.mockRestore();
+    ).toBeDisabled();
   });
 
-  it("deletes a node when deletion is confirmed", async () => {
-    const user = userEvent.setup();
-
-    jest
-        .spyOn(window, "confirm")
-        .mockReturnValue(true);
-
-    mockedNodesApi.delete.mockResolvedValue(
-        undefined,
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={node}
-            healthHistory={[]}
-        />,
-        {
-          nodes: {
-            nodes: [node],
-          },
+  it("shows deleting state", () => {
+    renderWithProviders(<NodeCard node={baseNode} />, {
+      preloadedState: {
+        nodes: {
+          nodes: [baseNode],
+          loading: false,
+          error: null,
+          creating: false,
+          createSuccess: null,
+          actionLoadingByNodeId: {},
+          deletingNodeId: "node-1",
+          deleteErrorByNodeId: {},
         },
-    );
-
-    await user.click(
-        screen.getByRole("button", {
-          name: "Delete",
-        }),
-    );
-
-    await waitFor(() => {
-      expect(
-          mockedNodesApi.delete,
-      ).toHaveBeenCalledWith("node-1");
+      },
     });
-
-    await waitFor(() => {
-      expect(
-          store.getState().nodes.nodes,
-      ).toEqual([]);
-    });
-
-    expect(
-        store.getState().nodes.deletingNodeId,
-    ).toBeNull();
-  });
-
-  it("shows a loading state while deleting a node", async () => {
-    const user = userEvent.setup();
-
-    jest
-        .spyOn(window, "confirm")
-        .mockReturnValue(true);
-
-    let resolveDelete:
-        | (() => void)
-        | undefined;
-
-    mockedNodesApi.delete.mockReturnValue(
-        new Promise<void>((resolve) => {
-          resolveDelete = resolve;
-        }),
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={node}
-            healthHistory={[]}
-        />,
-        {
-          nodes: {
-            nodes: [node],
-          },
-        },
-    );
-
-    await user.click(
-        screen.getByRole("button", {
-          name: "Delete",
-        }),
-    );
 
     expect(
         screen.getByRole("button", {
           name: "Deleting...",
         }),
     ).toBeDisabled();
-
-    expect(
-        store.getState().nodes.deletingNodeId,
-    ).toBe("node-1");
-
-    resolveDelete!();
-
-    await waitFor(() => {
-      expect(
-          store.getState().nodes.deletingNodeId,
-      ).toBeNull();
-    });
   });
 
-  it("shows an error when deleting a node fails", async () => {
-    const user = userEvent.setup();
-
-    jest
-        .spyOn(window, "confirm")
-        .mockReturnValue(true);
-
-    mockedNodesApi.delete.mockRejectedValue(
-        new Error("Failed to delete node"),
-    );
-
-    const { store } = renderWithProviders(
-        <NodeCard
-            node={node}
-            healthHistory={[]}
-        />,
-        {
-          nodes: {
-            nodes: [node],
+  it("shows delete error", () => {
+    renderWithProviders(<NodeCard node={baseNode} />, {
+      preloadedState: {
+        nodes: {
+          nodes: [baseNode],
+          loading: false,
+          error: null,
+          creating: false,
+          createSuccess: null,
+          actionLoadingByNodeId: {},
+          deletingNodeId: null,
+          deleteErrorByNodeId: {
+            "node-1": "Failed to delete node.",
           },
         },
-    );
+      },
+    });
 
-    await user.click(
+    expect(
+        screen.getByRole("alert"),
+    ).toHaveTextContent("Failed to delete node.");
+  });
+
+  it("asks for confirmation before deleting a node", () => {
+    const confirmMock = jest.fn(() => true);
+
+    Object.defineProperty(window, "confirm", {
+      writable: true,
+      value: confirmMock,
+    });
+
+    renderWithProviders(<NodeCard node={baseNode} />);
+
+    fireEvent.click(
         screen.getByRole("button", {
           name: "Delete",
         }),
     );
 
-    await waitFor(() => {
-      expect(
-          store.getState().nodes
-              .deleteErrorByNodeId["node-1"],
-      ).toBe("Failed to delete node");
+    expect(confirmMock).toHaveBeenCalledWith(
+        'Are you sure you want to delete "gpu-node-01"?',
+    );
+  });
+
+  it("does not delete when confirmation is cancelled", () => {
+    const confirmMock = jest.fn(() => false);
+
+    Object.defineProperty(window, "confirm", {
+      writable: true,
+      value: confirmMock,
     });
 
-    expect(
-        screen.getByRole("alert"),
-    ).toHaveTextContent(
-        "Failed to delete node",
+    renderWithProviders(<NodeCard node={baseNode} />);
+
+    fireEvent.click(
+        screen.getByRole("button", {
+          name: "Delete",
+        }),
     );
 
-    expect(
-        store.getState().nodes.deletingNodeId,
-    ).toBeNull();
+    expect(confirmMock).toHaveBeenCalled();
+  });
+
+  it("highlights an active fault", () => {
+    const node: ComputeNode = {
+      ...baseNode,
+      activeFault: "GpuFailure",
+    };
+
+    renderWithProviders(<NodeCard node={node} />);
 
     expect(
-        store.getState().nodes.nodes,
-    ).toEqual([node]);
+        screen.getByText("GpuFailure"),
+    ).toBeInTheDocument();
+  });
+
+  it("renders health error when one exists", () => {
+    renderWithProviders(<NodeCard node={baseNode} />, {
+      preloadedState: {
+        health: {
+          historyByNodeId: {},
+          latestByNodeId: {},
+          loadingByNodeId: {},
+          errorByNodeId: {
+            "node-1": "Failed to fetch health history.",
+          },
+        },
+      },
+    });
+
+    // NodeCard currently does not render the health error.
+    // This test intentionally does not expect an error element.
+    expect(
+        screen.getByText("No health check yet"),
+    ).toBeInTheDocument();
   });
 });

@@ -1,17 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useEffect } from "react";
+
 import {
-  createNode,
+  useAppDispatch,
+  useAppSelector,
+} from "@/store/hooks";
+
+import {
   fetchNodes,
+  createNode,
 } from "@/store/slices/nodesSlice";
+
+import {
+  fetchHealthHistory,
+} from "@/store/slices/healthSlice";
+
 import NodeCard from "@/components/nodes/NodeCard";
 import CreateNodeForm from "@/components/nodes/CreateNodeForm";
 import NetworksSection from "@/components/networks/NetworksSection";
 import IncidentsSection from "@/components/incidents/IncidentsSection";
-import { nodesApi } from "@/lib/api/nodesApi";
-import type { HealthCheck } from "@/lib/api/models/healthCheck";
+
 import styles from "./page.module.css";
 
 export default function Home() {
@@ -23,21 +32,21 @@ export default function Home() {
     creating,
     createSuccess,
     error,
-  } = useAppSelector((state) => state.nodes);
-
-  const [healthHistoryByNodeId, setHealthHistoryByNodeId] =
-      useState<Record<string, HealthCheck[]>>({});
+  } = useAppSelector(
+      (state) => state.nodes,
+  );
 
   useEffect(() => {
     dispatch(fetchNodes());
   }, [dispatch]);
 
   useEffect(() => {
-    const hasTransitionalNodes = nodes.some(
-        (node) =>
-            node.status === "Provisioning" ||
-            node.status === "Stopping",
-    );
+    const hasTransitionalNodes =
+        nodes.some(
+            (node) =>
+                node.status === "Provisioning" ||
+                node.status === "Stopping",
+        );
 
     if (!hasTransitionalNodes) {
       return;
@@ -52,82 +61,70 @@ export default function Home() {
     };
   }, [dispatch, nodes]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadHealthHistory = async () => {
-      const monitoredNodes = nodes.filter(
+  /*
+   * Health polling is intentionally independent
+   * from the node object reference.
+   *
+   * We only depend on the IDs of nodes whose
+   * health should currently be monitored.
+   */
+  const monitoredNodeIds = nodes
+      .filter(
           (node) =>
               node.status === "Running" ||
               node.status === "Unhealthy" ||
               node.status === "Quarantined" ||
               node.status === "Remediating",
-      );
+      )
+      .map((node) => node.id)
+      .sort();
 
-      if (monitoredNodes.length === 0) {
-        return;
+  const monitoredNodeKey = monitoredNodeIds.join(",");
+
+  useEffect(() => {
+    if (!monitoredNodeKey) {
+      return;
+    }
+
+    const currentMonitoredNodeIds =
+        monitoredNodeKey.split(",");
+
+    const loadHealth = () => {
+      for (const nodeId of currentMonitoredNodeIds) {
+        void dispatch(
+            fetchHealthHistory({
+              nodeId,
+              limit: 10,
+            }),
+        );
       }
-
-      const results = await Promise.all(
-          monitoredNodes.map(async (node) => {
-            try {
-              const history =
-                  await nodesApi.getHealthHistory(
-                      node.id,
-                      10,
-                  );
-
-              const latestHistory = [...history]
-                  .sort(
-                      (a, b) =>
-                          new Date(a.checkedAt).getTime() -
-                          new Date(b.checkedAt).getTime(),
-                  )
-                  .slice(-10);
-
-              return [node.id, latestHistory] as const;
-            } catch {
-              return null;
-            }
-          }),
-      );
-
-      if (cancelled) {
-        return;
-      }
-
-      setHealthHistoryByNodeId((current) => {
-        const next = { ...current };
-
-        for (const result of results) {
-          if (result) {
-            const [nodeId, history] = result;
-            next[nodeId] = history;
-          }
-        }
-
-        return next;
-      });
     };
 
-    void loadHealthHistory();
+    loadHealth();
 
-    const intervalId = setInterval(() => {
-      void loadHealthHistory();
-    }, 10_000);
+    const intervalId = setInterval(
+        loadHealth,
+        10_000,
+    );
 
     return () => {
-      cancelled = true;
       clearInterval(intervalId);
     };
-  }, [nodes]);
+  }, [
+    dispatch,
+    monitoredNodeKey,
+  ]);
 
-  const handleCreateNode = async (request: {
-    name: string;
-    gpuModel: string;
-    gpuCount: number;
-  }) => {
-    await dispatch(createNode(request));
+  const handleCreateNode = async (
+      request: {
+        name: string;
+        gpuModel: string;
+        gpuCount: number;
+      },
+  ) => {
+    await dispatch(
+        createNode(request),
+    );
   };
 
   return (
@@ -148,15 +145,21 @@ export default function Home() {
               <button
                   className={styles.refreshButton}
                   type="button"
-                  onClick={() => dispatch(fetchNodes())}
+                  onClick={() =>
+                      dispatch(fetchNodes())
+                  }
                   disabled={loading}
               >
-                {loading ? "Refreshing..." : "Refresh"}
+                {loading
+                    ? "Refreshing..."
+                    : "Refresh"}
               </button>
 
               <div className={styles.nodeCount}>
                 {nodes.length}{" "}
-                {nodes.length === 1 ? "node" : "nodes"}
+                {nodes.length === 1
+                    ? "node"
+                    : "nodes"}
               </div>
             </div>
           </header>
@@ -176,13 +179,17 @@ export default function Home() {
           )}
 
           {loading && (
-              <div className={styles.loadingState}>
+              <div
+                  className={styles.loadingState}
+              >
             <span
                 className={styles.spinner}
                 aria-hidden="true"
             />
 
-                <p className={styles.loadingMessage}>
+                <p
+                    className={styles.loadingMessage}
+                >
                   Loading nodes...
                 </p>
               </div>
@@ -197,32 +204,41 @@ export default function Home() {
               </p>
           )}
 
-          {!loading && nodes.length === 0 && (
-              <div className={styles.emptyState}>
-                <h2 className={styles.emptyTitle}>
-                  No compute nodes
-                </h2>
+          {!loading &&
+              nodes.length === 0 && (
+                  <div
+                      className={styles.emptyState}
+                  >
+                    <h2
+                        className={styles.emptyTitle}
+                    >
+                      No compute nodes
+                    </h2>
 
-                <p className={styles.emptyMessage}>
-                  Create a node to start managing your GPU
-                  fleet.
-                </p>
-              </div>
-          )}
-
-          {!loading && nodes.length > 0 && (
-              <section className={styles.nodes}>
-                {nodes.map((node) => (
-                    <NodeCard
-                        key={node.id}
-                        node={node}
-                        healthHistory={
-                            healthHistoryByNodeId[node.id] ?? []
+                    <p
+                        className={
+                          styles.emptyMessage
                         }
-                    />
-                ))}
-              </section>
-          )}
+                    >
+                      Create a node to start
+                      managing your GPU fleet.
+                    </p>
+                  </div>
+              )}
+
+          {!loading &&
+              nodes.length > 0 && (
+                  <section
+                      className={styles.nodes}
+                  >
+                    {nodes.map((node) => (
+                        <NodeCard
+                            key={node.id}
+                            node={node}
+                        />
+                    ))}
+                  </section>
+              )}
 
           <NetworksSection />
           <IncidentsSection />
