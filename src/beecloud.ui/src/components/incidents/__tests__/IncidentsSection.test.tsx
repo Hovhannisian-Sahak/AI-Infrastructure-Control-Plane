@@ -169,6 +169,36 @@ describe("IncidentsSection", () => {
             .toBeInTheDocument();
     });
 
+    it("shows only the latest resolved incident per node in history", async () => {
+        const olderResolvedIncident: Incident = {
+            ...incident,
+            id: "incident-resolved-older",
+            status: "Resolved",
+            title: "Older resolved incident",
+            resolvedAt: "2026-10-05T11:00:00Z",
+        };
+        const latestResolvedIncident: Incident = {
+            ...olderResolvedIncident,
+            id: "incident-resolved-latest",
+            title: "Latest resolved incident",
+            resolvedAt: "2026-10-05T12:00:00Z",
+        };
+        mockedIncidentsApi.search.mockResolvedValue(
+            page([olderResolvedIncident, latestResolvedIncident]),
+        );
+        renderSection();
+
+        expect(await screen.findByRole("heading", {
+            name: "Latest resolved incident",
+        })).toBeInTheDocument();
+        expect(screen.queryByRole("heading", {
+            name: "Older resolved incident",
+        })).not.toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Incident history" }))
+            .toBeInTheDocument();
+        expect(screen.getAllByRole("article")).toHaveLength(1);
+    });
+
     it("sends date bounds to the server query", async () => {
         mockedIncidentsApi.search.mockResolvedValue(page([incident]));
         renderSection();

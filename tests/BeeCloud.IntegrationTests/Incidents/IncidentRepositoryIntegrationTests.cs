@@ -105,6 +105,43 @@ public class IncidentRepositoryIntegrationTests
 
         Assert.That(result, Is.Null);
     }
+
+    [Test]
+    public async Task GetPageAsync_WhenNodeHasMultipleResolvedIncidents_ShouldReturnOnlyLatest()
+    {
+        var node = await CreateNodeAsync();
+        var olderIncident = new Incident(
+            node.Id,
+            IncidentSeverity.High,
+            "Older GPU failure");
+        olderIncident.Resolve();
+        await _repository.AddAsync(olderIncident);
+        await _repository.SaveChangesAsync();
+
+        await Task.Delay(10);
+
+        var latestIncident = new Incident(
+            node.Id,
+            IncidentSeverity.Critical,
+            "Latest GPU failure");
+        latestIncident.Resolve();
+        await _repository.AddAsync(latestIncident);
+        await _repository.SaveChangesAsync();
+
+        var result = await _repository.GetPageAsync(
+            severity: null,
+            status: IncidentStatus.Resolved,
+            computeNodeId: node.Id,
+            from: null,
+            to: null,
+            page: 1,
+            pageSize: 12);
+
+        Assert.That(result.TotalCount, Is.EqualTo(1));
+        Assert.That(result.Items, Has.Count.EqualTo(1));
+        Assert.That(result.Items[0].Id, Is.EqualTo(latestIncident.Id));
+    }
+
     private async Task<ComputeNode> CreateNodeAsync()
     {
         var node = new ComputeNode(
