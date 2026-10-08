@@ -107,7 +107,7 @@ public class IncidentRepositoryIntegrationTests
     }
 
     [Test]
-    public async Task GetPageAsync_WhenNodeHasMultipleResolvedIncidents_ShouldReturnOnlyLatest()
+    public async Task GetPageAsync_WhenNodeHasMultipleResolvedIncidents_ShouldReturnAllEpisodes()
     {
         var node = await CreateNodeAsync();
         var olderIncident = new Incident(
@@ -117,8 +117,6 @@ public class IncidentRepositoryIntegrationTests
         olderIncident.Resolve();
         await _repository.AddAsync(olderIncident);
         await _repository.SaveChangesAsync();
-
-        await Task.Delay(10);
 
         var latestIncident = new Incident(
             node.Id,
@@ -137,9 +135,11 @@ public class IncidentRepositoryIntegrationTests
             page: 1,
             pageSize: 12);
 
-        Assert.That(result.TotalCount, Is.EqualTo(1));
-        Assert.That(result.Items, Has.Count.EqualTo(1));
-        Assert.That(result.Items[0].Id, Is.EqualTo(latestIncident.Id));
+        Assert.That(result.TotalCount, Is.EqualTo(2));
+        Assert.That(result.Items, Has.Count.EqualTo(2));
+        Assert.That(
+            result.Items.Select(incident => incident.Id),
+            Is.EquivalentTo(new[] { olderIncident.Id, latestIncident.Id }));
     }
 
     private async Task<ComputeNode> CreateNodeAsync()

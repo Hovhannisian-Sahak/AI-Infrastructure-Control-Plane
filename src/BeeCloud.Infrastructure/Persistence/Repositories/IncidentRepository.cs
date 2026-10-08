@@ -62,21 +62,6 @@ public class IncidentRepository : IIncidentRepository
         CancellationToken cancellationToken = default)
     {
         var query = BuildQuery(severity, status, computeNodeId, from, to);
-
-        var latestResolvedIncidentIds = query
-            .Where(incident => incident.Status == IncidentStatus.Resolved)
-            .GroupBy(incident => incident.ComputeNodeId)
-            .Select(group => group
-                .OrderByDescending(incident => incident.ResolvedAt)
-                .ThenByDescending(incident => incident.CreatedAt)
-                .ThenByDescending(incident => incident.Id)
-                .Select(incident => incident.Id)
-                .First());
-
-        query = query.Where(incident =>
-            incident.Status != IncidentStatus.Resolved ||
-            latestResolvedIncidentIds.Contains(incident.Id));
-
         var totalCount = await query.CountAsync(cancellationToken);
         var offset = (long)(page - 1) * pageSize;
         if (offset > int.MaxValue)

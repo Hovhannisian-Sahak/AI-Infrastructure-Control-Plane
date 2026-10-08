@@ -165,11 +165,15 @@ describe("IncidentsSection", () => {
             .toBeInTheDocument();
         expect(screen.getByRole("heading", { name: incident.title }))
             .toBeInTheDocument();
+        const historyGroup = document.querySelector("details");
+        expect(historyGroup).not.toHaveAttribute("open");
+        await userEvent.setup().click(historyGroup!.querySelector("summary")!);
+        expect(historyGroup).toHaveAttribute("open");
         expect(screen.getByRole("heading", { name: resolvedIncident.title }))
             .toBeInTheDocument();
     });
 
-    it("shows only the latest resolved incident per node in history", async () => {
+    it("groups all resolved episodes under their node in history", async () => {
         const olderResolvedIncident: Incident = {
             ...incident,
             id: "incident-resolved-older",
@@ -188,15 +192,21 @@ describe("IncidentsSection", () => {
         );
         renderSection();
 
-        expect(await screen.findByRole("heading", {
-            name: "Latest resolved incident",
-        })).toBeInTheDocument();
-        expect(screen.queryByRole("heading", {
-            name: "Older resolved incident",
-        })).not.toBeInTheDocument();
+        expect(await screen.findByText("Older resolved incident"))
+            .toBeInTheDocument();
         expect(screen.getByRole("heading", { name: "Incident history" }))
             .toBeInTheDocument();
-        expect(screen.getAllByRole("article")).toHaveLength(1);
+        const historyGroup = document.querySelector("details");
+        expect(historyGroup).not.toHaveAttribute("open");
+        await userEvent.setup().click(historyGroup!.querySelector("summary")!);
+        expect(historyGroup).toHaveAttribute("open");
+        expect(screen.getByRole("heading", {
+            name: "Latest resolved incident",
+        })).toBeInTheDocument();
+        expect(screen.getByRole("heading", {
+            name: "Older resolved incident",
+        })).toBeInTheDocument();
+        expect(screen.getAllByRole("article")).toHaveLength(2);
     });
 
     it("sends date bounds to the server query", async () => {

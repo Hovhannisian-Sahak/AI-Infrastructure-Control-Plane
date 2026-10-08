@@ -6,8 +6,8 @@ import {
     clearIncidentError,
     fetchIncidents,
 } from "@/store/slices/incidentsSlice";
-import type { Incident } from "@/lib/api/models/incident";
 import IncidentCard from "./IncidentCard";
+import IncidentNodeHistory from "./IncidentNodeHistory";
 import Pagination from "@/components/common/Pagination";
 import styles from "./IncidentsSection.module.css";
 
@@ -117,19 +117,16 @@ export default function IncidentsSection() {
     const resolvedIncidents = incidents.filter(
         (incident) => incident.status === "Resolved",
     );
-    const latestResolvedIncidentByNode = new Map<string, Incident>();
+    const resolvedHistoryByNode = new Map<string, typeof resolvedIncidents>();
     for (const incident of resolvedIncidents) {
-        const current = latestResolvedIncidentByNode.get(incident.computeNodeId);
-        const incidentActivity = Date.parse(incident.resolvedAt ?? incident.createdAt);
-        const currentActivity = current
-            ? Date.parse(current.resolvedAt ?? current.createdAt)
-            : Number.NEGATIVE_INFINITY;
-
-        if (!current || incidentActivity > currentActivity) {
-            latestResolvedIncidentByNode.set(incident.computeNodeId, incident);
+        const nodeIncidents = resolvedHistoryByNode.get(incident.computeNodeId);
+        if (nodeIncidents) {
+            nodeIncidents.push(incident);
+        } else {
+            resolvedHistoryByNode.set(incident.computeNodeId, [incident]);
         }
     }
-    const resolvedHistory = [...latestResolvedIncidentByNode.values()];
+    const resolvedHistory = [...resolvedHistoryByNode.entries()];
 
     const hasActiveFilters =
         severityFilter !== "All" ||
@@ -435,24 +432,28 @@ export default function IncidentsSection() {
                         </div>
                     </div>
                 )}
-                {resolvedHistory.length > 0 && (
+                {resolvedIncidents.length > 0 && (
                     <div className={styles.group}>
                         <div className={styles.groupHeader}>
                             <h3 className={styles.groupTitle}>
                                 Incident history
                             </h3>
                             <span className={styles.groupCount}>
-                                {resolvedHistory.length}
+                                {resolvedIncidents.length}
                             </span>
                         </div>
-                        <div className={styles.grid} aria-busy={loading}>
-                            {resolvedHistory.map((incident) => (
-                                <IncidentCard
-                                    key={incident.id}
-                                    incident={incident}
-                                    nodeName={nodes.find(
-                                        (node) => node.id === incident.computeNodeId,
-                                    )?.name}
+                        <p className={styles.subtitle}>
+                            All matching episodes are retained and grouped by node.
+                            Pages are counted by episodes, so a node may appear on
+                            more than one page.
+                        </p>
+                        <div className={styles.group} aria-busy={loading}>
+                            {resolvedHistory.map(([nodeId, nodeIncidents]) => (
+                                <IncidentNodeHistory
+                                    key={nodeId}
+                                    nodeId={nodeId}
+                                    nodeName={nodes.find((node) => node.id === nodeId)?.name}
+                                    incidents={nodeIncidents}
                                 />
                             ))}
                         </div>
