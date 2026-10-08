@@ -31,7 +31,11 @@ const secondIncident: Incident = {
     title: "GPU failure detected",
 };
 
-const page = (items: Incident[], totalCount = items.length, currentPage = 1) => ({
+const page = (
+    items: Incident[],
+    totalCount = new Set(items.map((incident) => incident.computeNodeId)).size,
+    currentPage = 1,
+) => ({
     items,
     page: currentPage,
     pageSize: 12,
@@ -136,7 +140,7 @@ describe("IncidentsSection", () => {
         expect(await screen.findByRole("heading", {
             name: secondIncident.title,
         })).toBeInTheDocument();
-        expect(screen.getByText("28 incidents")).toBeInTheDocument();
+        expect(screen.getByText("28 incident nodes")).toBeInTheDocument();
     });
 
     it("groups resolved incidents under history after active incidents", async () => {
@@ -243,6 +247,8 @@ describe("IncidentsSection", () => {
         expect(await screen.findByRole("heading", {
             name: secondIncident.title,
         })).toBeInTheDocument();
+        expect(screen.getByText("Showing 13–24 of 25 nodes"))
+            .toBeInTheDocument();
     });
 
     it("keeps the incident list and pagination mounted while a page loads", async () => {

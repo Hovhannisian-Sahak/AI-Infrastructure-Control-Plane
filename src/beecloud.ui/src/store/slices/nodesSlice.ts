@@ -82,8 +82,13 @@ export const startNode = createAsyncThunk(
 
 export const stopNode = createAsyncThunk(
     "nodes/stopNode",
-    async (id: string) => {
-      return nodesApi.stop(id);
+    async (id: string, { dispatch }) => {
+      try {
+        return await nodesApi.stop(id);
+      } catch (error) {
+        await dispatch(fetchNodes());
+        throw error;
+      }
     },
 );
 

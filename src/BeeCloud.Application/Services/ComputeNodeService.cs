@@ -175,8 +175,25 @@ public class ComputeNodeService : IComputeNodeService
 
         node.Stop();
 
-        await _repository.SaveChangesAsync(
+        var transition = await _repository.TryTransitionStatusAsync(
+            node.Id,
+            NodeStatus.Running,
+            node.Status,
+            node.UpdatedAt,
             cancellationToken);
+
+        if (!transition.Succeeded)
+        {
+            if (transition.CurrentStatus is null)
+            {
+                throw new KeyNotFoundException(
+                    $"Compute node with id '{id}' was not found.");
+            }
+
+            throw new InvalidNodeStateTransitionException(
+                transition.CurrentStatus.Value,
+                NodeStatus.Stopping);
+        }
         
         await _stoppingQueue.EnqueueAsync(
             node.Id,

@@ -14,11 +14,21 @@
     padding: 12px 16px;
     color: #0f172a;
     cursor: pointer;
-    list-style-position: inside;
+    list-style: none;
 }
 
-.summary::marker {
+.summary::before {
+    content: "›";
+    flex-shrink: 0;
+    width: 12px;
     color: #64748b;
+    font-size: 22px;
+    line-height: 1;
+    transition: transform 0.15s ease;
+}
+
+.group[open] > .summary::before {
+    transform: rotate(90deg);
 }
 
 .summary:focus-visible {
@@ -28,6 +38,7 @@
 
 .nodeName {
     min-width: 0;
+    flex: 1;
     overflow-wrap: anywhere;
     font-size: 14px;
     font-weight: 700;

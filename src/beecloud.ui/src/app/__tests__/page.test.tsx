@@ -162,7 +162,7 @@ describe("Home page", () => {
         ).toBeInTheDocument();
         expect(screen.queryByRole("heading", { name: "GPU Node 1" }))
             .not.toBeInTheDocument();
-        expect(screen.getByText("Showing 9–13 of 13")).toBeInTheDocument();
+        expect(screen.getByText("Showing 9–13 of 13 nodes")).toBeInTheDocument();
     });
 
     it("renders an error when the API request fails", async () => {
@@ -906,6 +906,47 @@ describe("Home page", () => {
                 mockedNodesApi.getHealthHistory,
             ).toHaveBeenCalledTimes(2);
         });
+    });
+
+    it("refreshes node status so controls do not stay stale", async () => {
+        jest.useFakeTimers();
+        const runningNode: ComputeNode = {
+            id: "node-1",
+            name: "GPU Node 1",
+            gpuModel: "NVIDIA A100",
+            gpuCount: 4,
+            status: "Running",
+            activeFault: "None",
+        };
+        const availableNode: ComputeNode = {
+            ...runningNode,
+            status: "Available",
+        };
+        mockedNodesApi.getAll
+            .mockResolvedValueOnce([runningNode])
+            .mockResolvedValue([availableNode]);
+        mockedNodesApi.getHealthHistory.mockResolvedValue(healthHistory);
+        mockedNodesApi.getNodeMetrics.mockResolvedValue(nodeMetrics);
+
+        const rendered = renderWithProviders(<Home />);
+
+        try {
+            expect(await screen.findByRole("button", { name: "Stop" }))
+                .toBeInTheDocument();
+
+            await act(async () => {
+                await jest.advanceTimersByTimeAsync(10_000);
+            });
+
+            expect(mockedNodesApi.getAll).toHaveBeenCalledTimes(2);
+            expect(await screen.findByRole("button", { name: "Start" }))
+                .toBeInTheDocument();
+            expect(screen.queryByRole("button", { name: "Stop" }))
+                .not.toBeInTheDocument();
+        } finally {
+            rendered.unmount();
+            jest.useRealTimers();
+        }
     });
 
     it("does not restart the health polling timer when unrelated node data refreshes", async () => {

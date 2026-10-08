@@ -109,11 +109,13 @@ public class IncidentRepositoryIntegrationTests
     [Test]
     public async Task GetPageAsync_WhenNodeHasMultipleResolvedIncidents_ShouldReturnAllEpisodes()
     {
+        var observedAt = new DateTime(2099, 1, 2, 0, 0, 0, DateTimeKind.Utc);
         var node = await CreateNodeAsync();
         var olderIncident = new Incident(
             node.Id,
             IncidentSeverity.High,
-            "Older GPU failure");
+            "Older GPU failure",
+            firstObservedAt: observedAt);
         olderIncident.Resolve();
         await _repository.AddAsync(olderIncident);
         await _repository.SaveChangesAsync();
@@ -121,25 +123,52 @@ public class IncidentRepositoryIntegrationTests
         var latestIncident = new Incident(
             node.Id,
             IncidentSeverity.Critical,
-            "Latest GPU failure");
+            "Latest GPU failure",
+            firstObservedAt: observedAt.AddMinutes(1));
         latestIncident.Resolve();
         await _repository.AddAsync(latestIncident);
         await _repository.SaveChangesAsync();
 
-        var result = await _repository.GetPageAsync(
+        var otherNode = await CreateNodeAsync();
+        var otherNodeIncident = new Incident(
+            otherNode.Id,
+            IncidentSeverity.Medium,
+            "Other node incident",
+            firstObservedAt: observedAt.AddMinutes(2));
+        otherNodeIncident.Resolve();
+        await _repository.AddAsync(otherNodeIncident);
+        await _repository.SaveChangesAsync();
+
+        var firstPage = await _repository.GetPageAsync(
             severity: null,
             status: IncidentStatus.Resolved,
-            computeNodeId: node.Id,
-            from: null,
-            to: null,
+            computeNodeId: null,
+            from: observedAt,
+            to: observedAt.AddDays(1),
             page: 1,
-            pageSize: 12);
+            pageSize: 1);
 
-        Assert.That(result.TotalCount, Is.EqualTo(2));
-        Assert.That(result.Items, Has.Count.EqualTo(2));
+        Assert.That(firstPage.TotalCount, Is.EqualTo(2));
+        Assert.That(firstPage.Items, Has.Count.EqualTo(1));
+        Assert.That(firstPage.Items[0].ComputeNodeId, Is.EqualTo(otherNode.Id));
+
+        var secondPage = await _repository.GetPageAsync(
+            severity: null,
+            status: IncidentStatus.Resolved,
+            computeNodeId: null,
+            from: observedAt,
+            to: observedAt.AddDays(1),
+            page: 2,
+            pageSize: 1);
+
+        Assert.That(secondPage.TotalCount, Is.EqualTo(2));
+        Assert.That(secondPage.Items, Has.Count.EqualTo(2));
         Assert.That(
-            result.Items.Select(incident => incident.Id),
+            secondPage.Items.Select(incident => incident.Id),
             Is.EquivalentTo(new[] { olderIncident.Id, latestIncident.Id }));
+        Assert.That(
+            secondPage.Items.Select(incident => incident.ComputeNodeId).Distinct(),
+            Is.EquivalentTo(new[] { node.Id }));
     }
 
     private async Task<ComputeNode> CreateNodeAsync()

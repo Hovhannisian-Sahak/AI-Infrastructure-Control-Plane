@@ -9,6 +9,7 @@ type PaginationProps = {
     totalItems: number;
     ariaLabel: string;
     onPageChange: (page: number) => void;
+    itemLabel?: string;
     disabled?: boolean;
     waitForLoading?: boolean;
 };
@@ -19,6 +20,7 @@ export default function Pagination({
     totalItems,
     ariaLabel,
     onPageChange,
+    itemLabel = "items",
     disabled = false,
     waitForLoading = false,
 }: PaginationProps) {
@@ -55,7 +57,7 @@ export default function Pagination({
             onPointerDownCapture={onPointerDownCapture}
         >
             <span className={styles.summary} aria-live="polite">
-                Showing {firstItem}–{lastItem} of {totalItems}
+                Showing {firstItem}–{lastItem} of {totalItems} {itemLabel}
             </span>
             <div className={styles.controls}>
                 <button

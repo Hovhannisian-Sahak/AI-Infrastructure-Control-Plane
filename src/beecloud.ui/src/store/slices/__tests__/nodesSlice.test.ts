@@ -83,6 +83,35 @@ describe("nodesSlice", () => {
       .toBe("Invalid node state transition: Quarantined -> Stopping.");
   });
 
+  it("refreshes node state when a stop request fails", async () => {
+    mockedNodesApi.getAll.mockClear();
+    const refreshedNode = {
+      id: "node-1",
+      name: "GPU Node 1",
+      gpuModel: "NVIDIA A100",
+      gpuCount: 4,
+      status: "Available" as const,
+      activeFault: "None" as const,
+    };
+    mockedNodesApi.stop.mockRejectedValue(
+      new Error("Invalid node state transition: Available -> Stopping."),
+    );
+    mockedNodesApi.getAll.mockResolvedValue([refreshedNode]);
+
+    const store = configureStore({
+      reducer: {
+        nodes: nodesReducer,
+      },
+    });
+
+    await store.dispatch(stopNode(refreshedNode.id));
+
+    expect(mockedNodesApi.getAll).toHaveBeenCalledTimes(1);
+    expect(store.getState().nodes.nodes).toEqual([refreshedNode]);
+    expect(store.getState().nodes.error)
+      .toBe("Invalid node state transition: Available -> Stopping.");
+  });
+
   it("ignores an older fetch response after a newer refresh completes", async () => {
     let resolveFirst!: (nodes: Awaited<ReturnType<typeof nodesApi.getAll>>) => void;
     let resolveSecond!: (nodes: Awaited<ReturnType<typeof nodesApi.getAll>>) => void;

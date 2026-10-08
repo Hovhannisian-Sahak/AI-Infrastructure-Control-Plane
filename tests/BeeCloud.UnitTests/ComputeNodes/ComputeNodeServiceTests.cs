@@ -3,6 +3,7 @@ using BeeCloud.Application.Interfaces;
 using BeeCloud.Application.Services;
 using BeeCloud.Domain.Entities;
 using BeeCloud.Domain.Enums;
+using BeeCloud.Domain.Exceptions;
 using Moq;
 
 namespace BeeCloud.UnitTests.ComputeNodes;
@@ -324,6 +325,14 @@ public class ComputeNodeServiceTests
                 node.Id,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(node);
+        _repository
+            .Setup(repository => repository.TryTransitionStatusAsync(
+                node.Id,
+                NodeStatus.Running,
+                NodeStatus.Stopping,
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((true, (NodeStatus?)NodeStatus.Stopping));
 
         // Act
         var result = await _service.StopAsync(node.Id);
@@ -335,7 +344,7 @@ public class ComputeNodeServiceTests
         _repository.Verify(
             repository => repository.SaveChangesAsync(
                 It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.Never);
     }
     [Test]
     public async Task StopAsync_WhenNodeExists_ShouldEnqueueNodeForStopping()
@@ -348,6 +357,14 @@ public class ComputeNodeServiceTests
                 node.Id,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(node);
+        _repository
+            .Setup(repository => repository.TryTransitionStatusAsync(
+                node.Id,
+                NodeStatus.Running,
+                NodeStatus.Stopping,
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((true, (NodeStatus?)NodeStatus.Stopping));
 
         // Act
         await _service.StopAsync(node.Id);
@@ -358,6 +375,42 @@ public class ComputeNodeServiceTests
                 node.Id,
                 It.IsAny<CancellationToken>()),
             Times.Once);
+        _repository.Verify(repository =>
+            repository.TryTransitionStatusAsync(
+                node.Id,
+                NodeStatus.Running,
+                NodeStatus.Stopping,
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()), Times.Once);
+        _repository.Verify(repository =>
+            repository.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public void StopAsync_WhenNodeStatusChangesBeforeStop_ShouldReturnConflictWithoutEnqueueing()
+    {
+        var node = CreateRunningNode();
+        _repository
+            .Setup(repository => repository.GetByIdAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+        _repository
+            .Setup(repository => repository.TryTransitionStatusAsync(
+                node.Id,
+                NodeStatus.Running,
+                NodeStatus.Stopping,
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((false, (NodeStatus?)NodeStatus.Available));
+
+        var exception = Assert.ThrowsAsync<InvalidNodeStateTransitionException>(
+            async () => await _service.StopAsync(node.Id));
+
+        Assert.That(exception!.CurrentStatus, Is.EqualTo(NodeStatus.Available));
+        _stoppingQueue.Verify(queue =>
+            queue.EnqueueAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
     [Test]
     public void StopAsync_WhenNodeDoesNotExist_ShouldThrow()

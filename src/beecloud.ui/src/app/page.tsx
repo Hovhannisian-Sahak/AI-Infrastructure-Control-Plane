@@ -50,6 +50,10 @@ export default function Home() {
   }, [dispatch]);
 
   useEffect(() => {
+    if (nodes.length === 0) {
+      return;
+    }
+
     const hasTransitionalNodes =
         nodes.some(
             (node) =>
@@ -57,13 +61,9 @@ export default function Home() {
                 node.status === "Stopping",
         );
 
-    if (!hasTransitionalNodes) {
-      return;
-    }
-
     const intervalId = setInterval(() => {
       dispatch(fetchNodes());
-    }, 5000);
+    }, hasTransitionalNodes ? 5000 : 10_000);
 
     return () => {
       clearInterval(intervalId);
@@ -296,6 +296,7 @@ export default function Home() {
                   pageSize={NODE_PAGE_SIZE}
                   totalItems={nodes.length}
                   ariaLabel="Compute node pages"
+                  itemLabel="nodes"
                   onPageChange={setNodePage}
                   disabled={loading}
               />

@@ -110,7 +110,7 @@ export default function IncidentsSection() {
         };
     }, [error, dispatch]);
 
-    const resultCount = totalCount || incidents.length;
+    const resultCount = totalCount;
     const activeIncidents = incidents.filter(
         (incident) => incident.status !== "Resolved",
     );
@@ -165,8 +165,8 @@ export default function IncidentsSection() {
                 <span className={styles.count}>
                     {resultCount}{" "}
                     {resultCount === 1
-                        ? "incident"
-                        : "incidents"}
+                        ? "incident node"
+                        : "incident nodes"}
                 </span>
             </div>
 
@@ -439,13 +439,12 @@ export default function IncidentsSection() {
                                 Incident history
                             </h3>
                             <span className={styles.groupCount}>
-                                {resolvedIncidents.length}
+                                {resolvedIncidents.length} episodes
                             </span>
                         </div>
                         <p className={styles.subtitle}>
                             All matching episodes are retained and grouped by node.
-                            Pages are counted by episodes, so a node may appear on
-                            more than one page.
+                            Pagination keeps each node and its episodes together.
                         </p>
                         <div className={styles.group} aria-busy={loading}>
                             {resolvedHistory.map(([nodeId, nodeIncidents]) => (
@@ -465,6 +464,7 @@ export default function IncidentsSection() {
                     pageSize={pageSize}
                     totalItems={resultCount}
                     ariaLabel="Incident pages"
+                    itemLabel="nodes"
                     onPageChange={setPage}
                     disabled={loading}
                     waitForLoading
