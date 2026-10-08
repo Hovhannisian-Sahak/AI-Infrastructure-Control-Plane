@@ -12,6 +12,8 @@ const incident: Incident = {
     "Health check failed. CPU: 93.3%, GPU: 63.1%, GPU temperature: 78.0°C.",
   createdAt: "2026-10-05T10:00:00Z",
   updatedAt: "2026-10-05T10:00:00Z",
+  lastSeenAt: "2026-10-05T10:00:00Z",
+  occurrenceCount: 1,
   resolvedAt: null,
 };
 
@@ -97,17 +99,38 @@ describe("IncidentCard", () => {
     );
   });
 
+  it("shows the occurrence count and last observed time", () => {
+    render(
+      <IncidentCard
+        incident={{
+          ...incident,
+          occurrenceCount: 3,
+          lastSeenAt: "2026-10-05T11:00:00Z",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Occurrences: 3")).toBeInTheDocument();
+    expect(screen.getByText(/Last seen/)).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("time").some(
+        time => time.getAttribute("dateTime") === "2026-10-05T11:00:00Z",
+      ),
+    ).toBe(true);
+  });
+
   it("shows the latest activity time when the incident has been updated", () => {
     render(
       <IncidentCard
         incident={{
           ...incident,
           updatedAt: "2026-10-05T11:00:00Z",
+          lastSeenAt: "2026-10-05T11:00:00Z",
         }}
       />,
     );
 
-    expect(screen.getByText(/Updated/)).toBeInTheDocument();
+    expect(screen.getByText(/Last seen/)).toBeInTheDocument();
     expect(
       screen.getAllByRole("time").some(
         time => time.getAttribute("dateTime") === "2026-10-05T11:00:00Z",

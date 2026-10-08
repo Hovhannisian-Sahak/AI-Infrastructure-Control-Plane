@@ -46,6 +46,9 @@ public class IncidentServiceTests
         Assert.That(result.Status, Is.EqualTo(IncidentStatus.Open));
         Assert.That(result.Severity, Is.EqualTo(IncidentSeverity.Critical));
         Assert.That(result.Title, Is.EqualTo("GPU overheat detected"));
+        Assert.That(result.CreatedAt, Is.EqualTo(healthCheck.CheckedAt));
+        Assert.That(result.LastSeenAt, Is.EqualTo(healthCheck.CheckedAt));
+        Assert.That(result.OccurrenceCount, Is.EqualTo(1));
 
         _incidentRepository.Verify(
             repository => repository.AddAsync(
@@ -63,13 +66,13 @@ public class IncidentServiceTests
     }
 
     [Test]
-    public async Task CreateForUnhealthyNodeAsync_WhenActiveIncidentExists_ShouldNotCreateDuplicate()
+    public async Task CreateForUnhealthyNodeAsync_WhenActiveIncidentExists_ShouldUpdateOccurrence()
     {
         var node = CreateNode();
-        var healthCheck = CreateUnhealthyHealthCheck(node.Id);
         var existingIncident = CreateIncident(
             node.Id,
             IncidentStatus.Open);
+        var healthCheck = CreateUnhealthyHealthCheck(node.Id);
 
         _incidentRepository
             .Setup(repository => repository.GetActiveForNodeAsync(
@@ -81,7 +84,10 @@ public class IncidentServiceTests
             node,
             healthCheck);
 
-        Assert.That(result, Is.Null);
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Id, Is.EqualTo(existingIncident.Id));
+        Assert.That(result.OccurrenceCount, Is.EqualTo(2));
+        Assert.That(result.LastSeenAt, Is.EqualTo(healthCheck.CheckedAt));
 
         _incidentRepository.Verify(
             repository => repository.AddAsync(
@@ -92,17 +98,17 @@ public class IncidentServiceTests
         _incidentRepository.Verify(
             repository => repository.SaveChangesAsync(
                 It.IsAny<CancellationToken>()),
-            Times.Never);
+            Times.Once);
     }
 
     [Test]
-    public async Task CreateForUnhealthyNodeAsync_WhenInvestigatingIncidentExists_ShouldNotCreateDuplicate()
+    public async Task CreateForUnhealthyNodeAsync_WhenInvestigatingIncidentExists_ShouldUpdateOccurrence()
     {
         var node = CreateNode();
-        var healthCheck = CreateUnhealthyHealthCheck(node.Id);
         var existingIncident = CreateIncident(
             node.Id,
             IncidentStatus.Investigating);
+        var healthCheck = CreateUnhealthyHealthCheck(node.Id);
 
         _incidentRepository
             .Setup(repository => repository.GetActiveForNodeAsync(
@@ -114,7 +120,9 @@ public class IncidentServiceTests
             node,
             healthCheck);
 
-        Assert.That(result, Is.Null);
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.Id, Is.EqualTo(existingIncident.Id));
+        Assert.That(result.OccurrenceCount, Is.EqualTo(2));
 
         _incidentRepository.Verify(
             repository => repository.AddAsync(
@@ -144,6 +152,7 @@ public class IncidentServiceTests
 
         Assert.That(result, Is.Not.Null);
         Assert.That(result!.Status, Is.EqualTo(IncidentStatus.Open));
+        Assert.That(result.OccurrenceCount, Is.EqualTo(1));
 
         _incidentRepository.Verify(
             repository => repository.AddAsync(

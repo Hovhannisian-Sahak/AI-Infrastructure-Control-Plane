@@ -174,6 +174,8 @@ public class IncidentApiTests
         Assert.That(
             incident.CreatedAt,
             Is.Not.EqualTo(default(DateTime)));
+        Assert.That(incident.OccurrenceCount, Is.EqualTo(1));
+        Assert.That(incident.LastSeenAt, Is.EqualTo(incident.CreatedAt));
 
         TestContext.WriteLine(
             $"Created incident: {incident.Id}");

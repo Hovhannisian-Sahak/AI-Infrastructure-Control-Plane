@@ -34,8 +34,8 @@ export default function IncidentCard({
                                          nodeName,
                                      }: IncidentCardProps) {
     const affectedNodeName = nodeName ?? incident.computeNodeId;
-    const lastActivity = incident.resolvedAt ?? incident.updatedAt;
-    const activityLabel = incident.resolvedAt ? "Resolved" : "Updated";
+    const lastActivity = incident.resolvedAt ?? incident.lastSeenAt;
+    const activityLabel = incident.resolvedAt ? "Resolved" : "Last seen";
 
     return (
         <article className={`${styles.card} ${styles[incident.severity.toLowerCase()]}`}>
@@ -75,6 +75,7 @@ export default function IncidentCard({
                     {incident.status}
                 </span>
                 <div className={styles.timestamps}>
+                    <span>Occurrences: {incident.occurrenceCount}</span>
                     <span>
                         Created{" "}
                         <time dateTime={incident.createdAt}>

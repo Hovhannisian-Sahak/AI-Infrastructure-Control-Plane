@@ -79,6 +79,10 @@ public class HealthMonitoringProcessor : IHealthMonitoringProcessor
                 "Node {NodeId} ({NodeName}) is healthy.",
                 node.Id,
                 node.Name);
+
+            await _incidentService.ResolveForNodeAsync(
+                node.Id,
+                cancellationToken);
         }
 
         node.RecordHealthCheck(

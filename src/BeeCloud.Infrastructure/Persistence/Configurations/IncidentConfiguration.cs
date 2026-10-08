@@ -39,6 +39,12 @@ public class IncidentConfiguration
         builder.Property(incident => incident.UpdatedAt)
             .IsRequired();
 
+        builder.Property(incident => incident.LastSeenAt)
+            .IsRequired();
+
+        builder.Property(incident => incident.OccurrenceCount)
+            .IsRequired();
+
         builder.HasIndex(incident => new
         {
             incident.ComputeNodeId,

@@ -18,5 +18,7 @@ export type Incident = {
     description?: string | null;
     createdAt: string;
     updatedAt: string;
+    lastSeenAt: string;
+    occurrenceCount: number;
     resolvedAt?: string | null;
 };

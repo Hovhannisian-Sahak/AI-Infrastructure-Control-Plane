@@ -170,7 +170,10 @@ public class IncidentService : IIncidentService
 
         if (existingIncident is not null)
         {
-            return null;
+            existingIncident.RecordOccurrence(healthCheck.CheckedAt);
+            await _incidentRepository.SaveChangesAsync(
+                cancellationToken);
+            return MapToResponse(existingIncident);
         }
 
         var severity = DetermineSeverity(healthCheck);
@@ -179,7 +182,8 @@ public class IncidentService : IIncidentService
             node.Id,
             severity,
             BuildTitle(healthCheck),
-            BuildDescription(healthCheck));
+            BuildDescription(healthCheck),
+            healthCheck.CheckedAt);
 
         await _incidentRepository.AddAsync(
             incident,
@@ -292,6 +296,8 @@ public class IncidentService : IIncidentService
             Description = incident.Description,
             CreatedAt = incident.CreatedAt,
             UpdatedAt = incident.UpdatedAt,
+            LastSeenAt = incident.LastSeenAt,
+            OccurrenceCount = incident.OccurrenceCount,
             ResolvedAt = incident.ResolvedAt
         };
     }

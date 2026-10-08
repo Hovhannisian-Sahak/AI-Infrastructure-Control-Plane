@@ -82,6 +82,50 @@ public class IncidentServiceIntegrationTests
         Assert.That(
             persistedIncident!.ComputeNodeId,
             Is.EqualTo(node.Id));
+        Assert.That(persistedIncident.OccurrenceCount, Is.EqualTo(1));
+        Assert.That(
+            persistedIncident.LastSeenAt,
+            Is.EqualTo(persistedIncident.CreatedAt));
+    }
+
+    [Test]
+    public async Task CreateForUnhealthyNodeAsync_ShouldDeduplicateAndResolveIncidentLifecycle()
+    {
+        var node = await CreateTestNodeAsync();
+        var firstHealthCheck = new HealthCheck(
+            node.Id,
+            isHealthy: false,
+            cpuUsagePercent: 50,
+            gpuUsagePercent: 0,
+            gpuTemperatureCelsius: 45);
+
+        var firstIncident = await _service.CreateForUnhealthyNodeAsync(
+            node,
+            firstHealthCheck);
+        var laterHealthCheck = new HealthCheck(
+            node.Id,
+            isHealthy: false,
+            cpuUsagePercent: 55,
+            gpuUsagePercent: 0,
+            gpuTemperatureCelsius: 46);
+        var updatedIncident = await _service.CreateForUnhealthyNodeAsync(
+            node,
+            laterHealthCheck);
+
+        Assert.That(firstIncident, Is.Not.Null);
+        Assert.That(updatedIncident, Is.Not.Null);
+        Assert.That(updatedIncident!.Id, Is.EqualTo(firstIncident!.Id));
+        Assert.That(updatedIncident.OccurrenceCount, Is.EqualTo(2));
+        Assert.That(
+            updatedIncident.LastSeenAt,
+            Is.EqualTo(laterHealthCheck.CheckedAt));
+
+        await _service.ResolveForNodeAsync(node.Id);
+
+        var resolved = await _service.GetByIdAsync(firstIncident.Id);
+        Assert.That(resolved!.Status, Is.EqualTo(IncidentStatus.Resolved));
+        Assert.That(resolved.ResolvedAt, Is.Not.Null);
+        Assert.That(resolved.OccurrenceCount, Is.EqualTo(2));
     }
 
     [Test]
@@ -284,7 +328,7 @@ public class IncidentServiceIntegrationTests
     }
 
     [Test]
-    public async Task CreateForUnhealthyNodeAsync_WhenActiveIncidentExists_ShouldNotCreateDuplicate()
+    public async Task CreateForUnhealthyNodeAsync_WhenActiveIncidentExists_ShouldUpdateOccurrence()
     {
         // Arrange
         var node = await CreateTestNodeAsync();
@@ -316,7 +360,12 @@ public class IncidentServiceIntegrationTests
 
         // Assert
         Assert.That(firstIncident, Is.Not.Null);
-        Assert.That(secondIncident, Is.Null);
+        Assert.That(secondIncident, Is.Not.Null);
+        Assert.That(secondIncident!.Id, Is.EqualTo(firstIncident!.Id));
+        Assert.That(secondIncident.OccurrenceCount, Is.EqualTo(2));
+        Assert.That(
+            secondIncident.LastSeenAt,
+            Is.EqualTo(secondHealthCheck.CheckedAt));
 
         var incidents =
             await _dbContext.Incidents
@@ -328,7 +377,7 @@ public class IncidentServiceIntegrationTests
     }
 
     [Test]
-    public async Task CreateForUnhealthyNodeAsync_WhenIncidentIsInvestigating_ShouldNotCreateDuplicate()
+    public async Task CreateForUnhealthyNodeAsync_WhenIncidentIsInvestigating_ShouldUpdateOccurrence()
     {
         // Arrange
         var node = await CreateTestNodeAsync();
@@ -357,7 +406,9 @@ public class IncidentServiceIntegrationTests
                 healthCheck);
 
         // Assert
-        Assert.That(secondIncident, Is.Null);
+        Assert.That(secondIncident, Is.Not.Null);
+        Assert.That(secondIncident!.Id, Is.EqualTo(incident.Id));
+        Assert.That(secondIncident.OccurrenceCount, Is.EqualTo(2));
 
         var incidents =
             await _dbContext.Incidents
@@ -411,10 +462,10 @@ public class IncidentServiceIntegrationTests
 
         Assert.That(incidents, Has.Count.EqualTo(2));
         Assert.That(
-            incidents[0].Status,
+            incidents.Single(i => i.Id == firstIncident.Id).Status,
             Is.EqualTo(IncidentStatus.Resolved));
         Assert.That(
-            incidents[1].Status,
+            incidents.Single(i => i.Id == secondIncident.Id).Status,
             Is.EqualTo(IncidentStatus.Open));
     }
 

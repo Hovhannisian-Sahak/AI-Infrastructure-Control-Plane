@@ -20,5 +20,9 @@ public class IncidentResponse
 
     public DateTime UpdatedAt { get; set; }
 
+    public DateTime LastSeenAt { get; set; }
+
+    public int OccurrenceCount { get; set; }
+
     public DateTime? ResolvedAt { get; set; }
 }

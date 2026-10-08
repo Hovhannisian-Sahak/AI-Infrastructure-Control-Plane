@@ -17,6 +17,8 @@ const incident = {
     status: "Open" as const,
     createdAt: "2026-10-05T10:00:00Z",
     updatedAt: "2026-10-05T10:00:00Z",
+    lastSeenAt: "2026-10-05T10:00:00Z",
+    occurrenceCount: 1,
 };
 const result = {
     items: [incident],

@@ -46,6 +46,38 @@ public class IncidentTests
     }
 
     [Test]
+    public void NewIncident_ShouldStartWithOneOccurrence()
+    {
+        var incident = CreateIncident();
+
+        Assert.That(incident.OccurrenceCount, Is.EqualTo(1));
+        Assert.That(incident.LastSeenAt, Is.EqualTo(incident.CreatedAt));
+    }
+
+    [Test]
+    public void RecordOccurrence_ShouldUpdateCountAndLastSeen()
+    {
+        var incident = CreateIncident();
+        var observedAt = incident.LastSeenAt.AddMinutes(1);
+
+        incident.RecordOccurrence(observedAt);
+
+        Assert.That(incident.OccurrenceCount, Is.EqualTo(2));
+        Assert.That(incident.LastSeenAt, Is.EqualTo(observedAt));
+        Assert.That(incident.UpdatedAt, Is.EqualTo(observedAt));
+    }
+
+    [Test]
+    public void RecordOccurrence_WhenIncidentIsResolved_ShouldThrow()
+    {
+        var incident = CreateIncident();
+        incident.Resolve();
+
+        Assert.Throws<InvalidOperationException>(
+            () => incident.RecordOccurrence(DateTime.UtcNow));
+    }
+
+    [Test]
     public void StartInvestigation_WhenOpen_ShouldBecomeInvestigating()
     {
         var incident = CreateIncident();

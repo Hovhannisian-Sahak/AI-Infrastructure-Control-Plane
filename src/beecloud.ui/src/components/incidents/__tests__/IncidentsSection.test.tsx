@@ -19,6 +19,8 @@ const incident: Incident = {
     description: "Health check failed on GPU node.",
     createdAt: "2026-10-05T10:00:00Z",
     updatedAt: "2026-10-05T10:00:00Z",
+    lastSeenAt: "2026-10-05T10:00:00Z",
+    occurrenceCount: 1,
     resolvedAt: null,
 };
 const secondIncident: Incident = {

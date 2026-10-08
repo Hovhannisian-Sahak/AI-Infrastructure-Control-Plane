@@ -20,6 +20,10 @@ public class Incident
 
     public DateTime UpdatedAt { get; private set; }
 
+    public DateTime LastSeenAt { get; private set; }
+
+    public int OccurrenceCount { get; private set; }
+
     public DateTime? ResolvedAt { get; private set; }
 
     private Incident()
@@ -30,7 +34,8 @@ public class Incident
         Guid computeNodeId,
         IncidentSeverity severity,
         string title,
-        string? description = null)
+        string? description = null,
+        DateTime? firstObservedAt = null)
     {
         if (computeNodeId == Guid.Empty)
         {
@@ -52,8 +57,10 @@ public class Incident
         Status = IncidentStatus.Open;
         Title = title;
         Description = description;
-        CreatedAt = DateTime.UtcNow;
+        CreatedAt = firstObservedAt ?? DateTime.UtcNow;
         UpdatedAt = CreatedAt;
+        LastSeenAt = CreatedAt;
+        OccurrenceCount = 1;
     }
 
     public void StartInvestigation()
@@ -79,5 +86,25 @@ public class Incident
         Status = IncidentStatus.Resolved;
         ResolvedAt = DateTime.UtcNow;
         UpdatedAt = ResolvedAt.Value;
+    }
+
+    public void RecordOccurrence(DateTime observedAt)
+    {
+        if (Status == IncidentStatus.Resolved)
+        {
+            throw new InvalidOperationException(
+                "Cannot record an occurrence for a resolved incident.");
+        }
+
+        if (observedAt < LastSeenAt)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(observedAt),
+                "An incident occurrence cannot predate its last observation.");
+        }
+
+        OccurrenceCount = checked(OccurrenceCount + 1);
+        LastSeenAt = observedAt;
+        UpdatedAt = observedAt;
     }
 }
