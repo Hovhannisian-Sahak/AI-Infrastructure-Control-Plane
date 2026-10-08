@@ -53,6 +53,10 @@ public class HealthMonitoringProcessor : IHealthMonitoringProcessor
         ComputeNode node,
         CancellationToken cancellationToken)
     {
+        var previousHealthCheck =
+            await _healthCheckRepository.GetLatestAsync(
+                node.Id,
+                cancellationToken);
         var healthCheck = CreateSimulatedHealthCheck(node);
 
         await _healthCheckRepository.AddAsync(
@@ -61,7 +65,10 @@ public class HealthMonitoringProcessor : IHealthMonitoringProcessor
 
         if (!healthCheck.IsHealthy)
         {
-            node.MarkUnhealthy();
+            if (previousHealthCheck is { IsHealthy: false })
+            {
+                node.MarkUnhealthy();
+            }
 
             _logger.LogWarning(
                 "Node {NodeId} ({NodeName}) is unhealthy.",

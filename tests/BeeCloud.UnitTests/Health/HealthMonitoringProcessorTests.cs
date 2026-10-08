@@ -52,11 +52,12 @@ public class HealthMonitoringProcessorTests
     }
 
     [Test]
-    public async Task ProcessAsync_WithGpuOverheat_PersistsUnhealthyCheckAndCreatesIncident()
+    public async Task ProcessAsync_WithConsecutiveGpuOverheatChecks_MarksNodeUnhealthyAndCreatesIncident()
     {
         var node = CreateRunningNode();
         node.SimulateFault(NodeFault.GpuOverheat);
-        HealthCheck? savedCheck = null;
+        HealthCheck? latestCheck = null;
+        var savedChecks = new List<HealthCheck>();
 
         _nodeRepository
             .Setup(repository => repository.GetByStatusAsync(
@@ -64,32 +65,44 @@ public class HealthMonitoringProcessorTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { node });
         _healthCheckRepository
+            .Setup(repository => repository.GetLatestAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => latestCheck);
+        _healthCheckRepository
             .Setup(repository => repository.AddAsync(
                 It.IsAny<HealthCheck>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<HealthCheck, CancellationToken>((check, _) => savedCheck = check)
+            .Callback<HealthCheck, CancellationToken>((check, _) =>
+            {
+                latestCheck = check;
+                savedChecks.Add(check);
+            })
             .Returns(Task.CompletedTask);
 
         await _processor.ProcessAsync();
 
-        Assert.That(savedCheck, Is.Not.Null);
-        Assert.That(savedCheck!.ComputeNodeId, Is.EqualTo(node.Id));
-        Assert.That(savedCheck.IsHealthy, Is.False);
-        Assert.That(savedCheck.GpuTemperatureCelsius, Is.EqualTo(105));
+        Assert.That(node.Status, Is.EqualTo(NodeStatus.Running));
+        await _processor.ProcessAsync();
+
+        Assert.That(savedChecks, Has.Count.EqualTo(2));
+        Assert.That(savedChecks[0].ComputeNodeId, Is.EqualTo(node.Id));
+        Assert.That(savedChecks[1].IsHealthy, Is.False);
+        Assert.That(savedChecks[1].GpuTemperatureCelsius, Is.EqualTo(105));
         Assert.That(node.Status, Is.EqualTo(NodeStatus.Unhealthy));
-        Assert.That(node.LastHealthCheck, Is.EqualTo(savedCheck.CheckedAt));
+        Assert.That(node.LastHealthCheck, Is.EqualTo(savedChecks[1].CheckedAt));
         _incidentService.Verify(service =>
             service.CreateForUnhealthyNodeAsync(
                 node,
-                savedCheck,
+                It.IsAny<HealthCheck>(),
                 It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.Exactly(2));
         _healthCheckRepository.Verify(repository =>
             repository.SaveChangesAsync(It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.Exactly(2));
         _nodeRepository.Verify(repository =>
             repository.SaveChangesAsync(It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.Exactly(2));
     }
 
     [Test]
@@ -120,7 +133,7 @@ public class HealthMonitoringProcessorTests
         await _processor.ProcessAsync();
 
         Assert.That(addedNodeIds, Is.EqualTo(new[] { failedNode.Id, nextNode.Id }));
-        Assert.That(nextNode.Status, Is.EqualTo(NodeStatus.Unhealthy));
+        Assert.That(nextNode.Status, Is.EqualTo(NodeStatus.Running));
         _healthCheckRepository.Verify(repository =>
             repository.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Once);
