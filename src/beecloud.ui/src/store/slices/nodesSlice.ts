@@ -89,8 +89,13 @@ export const stopNode = createAsyncThunk(
 
 export const restartNode = createAsyncThunk(
     "nodes/restartNode",
-    async (id: string) => {
-      return nodesApi.restart(id);
+    async (id: string, { dispatch }) => {
+      try {
+        return await nodesApi.restart(id);
+      } catch (error) {
+        await dispatch(fetchNodes());
+        throw error;
+      }
     },
 );
 

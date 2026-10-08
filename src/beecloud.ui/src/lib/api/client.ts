@@ -11,10 +11,10 @@ export class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private handleError(
+  private async handleError(
       response: Response,
       action: string,
-  ): never {
+  ): Promise<never> {
     switch (response.status) {
       case 400:
         throw new Error(
@@ -37,6 +37,17 @@ export class ApiClient {
         );
 
       case 409:
+        if (response.headers.get("content-type")?.includes("json")) {
+          const problem: unknown = await response.json();
+          if (
+              typeof problem === "object" &&
+              problem !== null &&
+              "detail" in problem &&
+              typeof problem.detail === "string"
+          ) {
+            throw new Error(problem.detail);
+          }
+        }
         throw new Error(
             "The request conflicts with the current state of the resource.",
         );
@@ -59,7 +70,7 @@ export class ApiClient {
     );
 
     if (!response.ok) {
-      this.handleError(response, "get");
+      await this.handleError(response, "get");
     }
 
     return response.json() as Promise<T>;
@@ -81,7 +92,7 @@ export class ApiClient {
     );
 
     if (!response.ok) {
-      this.handleError(response, "create");
+      await this.handleError(response, "create");
     }
 
     if (response.status === 204) {
@@ -107,7 +118,7 @@ export class ApiClient {
     );
 
     if (!response.ok) {
-      this.handleError(response, "update");
+      await this.handleError(response, "update");
     }
 
     return response.json() as Promise<TResponse>;
@@ -122,7 +133,7 @@ export class ApiClient {
     );
 
     if (!response.ok) {
-      this.handleError(response, "delete");
+      await this.handleError(response, "delete");
     }
   }
 }

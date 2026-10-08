@@ -2,6 +2,7 @@
 using BeeCloud.Application.Interfaces;
 using BeeCloud.Domain.Entities;
 using BeeCloud.Domain.Enums;
+using BeeCloud.Domain.Exceptions;
 
 namespace BeeCloud.Application.Services;
 
@@ -208,10 +209,28 @@ public class ComputeNodeService : IComputeNodeService
                 $"Compute node with id '{id}' was not found.");
         }
 
+        var previousStatus = node.Status;
         node.Restart();
 
-        await _repository.SaveChangesAsync(
+        var transition = await _repository.TryTransitionStatusAsync(
+            node.Id,
+            previousStatus,
+            node.Status,
+            node.UpdatedAt,
             cancellationToken);
+
+        if (!transition.Succeeded)
+        {
+            if (transition.CurrentStatus is null)
+            {
+                throw new KeyNotFoundException(
+                    $"Compute node with id '{id}' was not found.");
+            }
+
+            throw new InvalidNodeStateTransitionException(
+                transition.CurrentStatus.Value,
+                NodeStatus.Stopping);
+        }
 
         await _restartQueue.EnqueueAsync(
             node.Id,

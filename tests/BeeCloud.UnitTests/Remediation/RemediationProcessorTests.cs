@@ -73,6 +73,43 @@ public class RemediationProcessorTests
     }
 
     [Test]
+    public async Task ProcessAsync_WhenNodeStatusChangedBeforeQuarantine_ShouldSkipStaleNode()
+    {
+        var node = CreateUnhealthyNode();
+        _nodeRepository
+            .Setup(repository => repository.GetByStatusAsync(
+                NodeStatus.Unhealthy,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ComputeNode> { node });
+        _nodeRepository
+            .Setup(repository => repository.TryTransitionStatusAsync(
+                node.Id,
+                NodeStatus.Unhealthy,
+                NodeStatus.Quarantined,
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((false, (NodeStatus?)NodeStatus.Stopping));
+        _nodeRepository
+            .Setup(repository => repository.GetByStatusAsync(
+                NodeStatus.Quarantined,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ComputeNode>());
+
+        await _processor.ProcessAsync();
+
+        _nodeRepository.Verify(repository =>
+            repository.TryTransitionStatusAsync(
+                node.Id,
+                NodeStatus.Unhealthy,
+                NodeStatus.Quarantined,
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()), Times.Once);
+        _operationalMetricsService.Verify(service =>
+            service.IncrementRemediationAsync(
+                It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
     public async Task ProcessAsync_WithQuarantinedNode_ShouldIncrementRemediationMetric()
     {
         var node = CreateQuarantinedNode();
@@ -228,6 +265,20 @@ public class RemediationProcessorTests
         node.Start();
         node.MarkUnhealthy();
         node.Quarantine();
+
+        return node;
+    }
+
+    private static ComputeNode CreateUnhealthyNode()
+    {
+        var node = new ComputeNode(
+            $"remediation-test-node-{Guid.NewGuid():N}",
+            "NVIDIA A100",
+            4);
+
+        node.MarkAvailable();
+        node.Start();
+        node.MarkUnhealthy();
 
         return node;
     }

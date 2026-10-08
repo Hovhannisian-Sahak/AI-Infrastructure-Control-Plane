@@ -56,6 +56,46 @@ public class ComputeNodeRepository : IComputeNodeRepository
                 cancellationToken);
     }
 
+    public async Task<(bool Succeeded, NodeStatus? CurrentStatus)> TryTransitionStatusAsync(
+        Guid id,
+        NodeStatus expectedStatus,
+        NodeStatus newStatus,
+        DateTime updatedAt,
+        CancellationToken cancellationToken = default)
+    {
+        var updatedCount = await _dbContext.ComputeNodes
+            .Where(node =>
+                node.Id == id &&
+                node.DeletedAt == null &&
+                node.Status == expectedStatus)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(node => node.Status, newStatus)
+                    .SetProperty(node => node.UpdatedAt, updatedAt),
+                cancellationToken);
+
+        var trackedNode = _dbContext.ChangeTracker
+            .Entries<ComputeNode>()
+            .FirstOrDefault(entry => entry.Entity.Id == id);
+        if (trackedNode is not null)
+        {
+            trackedNode.State = EntityState.Detached;
+        }
+
+        if (updatedCount > 0)
+        {
+            return (true, newStatus);
+        }
+
+        var currentStatus = await _dbContext.ComputeNodes
+            .AsNoTracking()
+            .Where(node => node.Id == id && node.DeletedAt == null)
+            .Select(node => (NodeStatus?)node.Status)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return (false, currentStatus);
+    }
+
     public async Task AddAsync(
         ComputeNode node,
         CancellationToken cancellationToken = default)

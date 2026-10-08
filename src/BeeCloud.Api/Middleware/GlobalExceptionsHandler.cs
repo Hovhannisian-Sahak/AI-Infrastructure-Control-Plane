@@ -1,6 +1,7 @@
 ﻿using BeeCloud.Domain.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace BeeCloud.Api.Middleware;
 
@@ -34,6 +35,9 @@ public class GlobalExceptionHandler : IExceptionHandler
             InvalidNodeStateTransitionException =>
                 StatusCodes.Status409Conflict,
 
+            DbUpdateConcurrencyException =>
+                StatusCodes.Status409Conflict,
+
             InvalidOperationException =>
                 StatusCodes.Status409Conflict,
 
@@ -58,7 +62,9 @@ public class GlobalExceptionHandler : IExceptionHandler
                 _ =>
                     "An unexpected error occurred."
             },
-            Detail = exception.Message,
+            Detail = exception is DbUpdateConcurrencyException
+                ? "The resource changed while the request was being processed. Refresh its status and try again."
+                : exception.Message,
             Instance = httpContext.Request.Path
         };
 

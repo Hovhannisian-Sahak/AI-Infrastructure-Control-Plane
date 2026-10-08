@@ -31,6 +31,7 @@ public class ComputeNodeConfiguration
         builder.Property(node => node.Status)
             .HasConversion<string>()
             .HasMaxLength(30)
+            .IsConcurrencyToken()
             .IsRequired();
         
         builder.Property(node => node.ActiveFault)

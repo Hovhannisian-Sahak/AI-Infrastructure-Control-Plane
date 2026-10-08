@@ -391,6 +391,14 @@ public class ComputeNodeServiceTests
                 node.Id,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(node);
+        _repository
+            .Setup(repository => repository.TryTransitionStatusAsync(
+                node.Id,
+                NodeStatus.Running,
+                NodeStatus.Stopping,
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((true, (NodeStatus?)NodeStatus.Stopping));
 
         // Act
         var result = await _service.RestartAsync(node.Id);
@@ -411,9 +419,17 @@ public class ComputeNodeServiceTests
             Times.Once);
 
         _repository.Verify(
-            repository => repository.SaveChangesAsync(
+            repository => repository.TryTransitionStatusAsync(
+                node.Id,
+                NodeStatus.Running,
+                NodeStatus.Stopping,
+                It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+        _repository.Verify(
+            repository => repository.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Test]
@@ -427,6 +443,14 @@ public class ComputeNodeServiceTests
                 node.Id,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(node);
+        _repository
+            .Setup(repository => repository.TryTransitionStatusAsync(
+                node.Id,
+                NodeStatus.Unhealthy,
+                NodeStatus.Stopping,
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((true, (NodeStatus?)NodeStatus.Stopping));
 
         var result = await _service.RestartAsync(node.Id);
 
@@ -438,9 +462,49 @@ public class ComputeNodeServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
         _repository.Verify(
-            repository => repository.SaveChangesAsync(
+            repository => repository.TryTransitionStatusAsync(
+                node.Id,
+                NodeStatus.Unhealthy,
+                NodeStatus.Stopping,
+                It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+        _repository.Verify(
+            repository => repository.SaveChangesAsync(
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Test]
+    public void RestartAsync_WhenNodeStatusChangesBeforeRestart_ShouldReturnConflictWithoutEnqueueing()
+    {
+        var node = CreateRunningNode();
+        node.MarkUnhealthy();
+
+        _repository
+            .Setup(repository => repository.GetByIdAsync(
+                node.Id,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(node);
+        _repository
+            .Setup(repository => repository.TryTransitionStatusAsync(
+                node.Id,
+                NodeStatus.Unhealthy,
+                NodeStatus.Stopping,
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((false, (NodeStatus?)NodeStatus.Quarantined));
+
+        var exception = Assert.ThrowsAsync<
+            BeeCloud.Domain.Exceptions.InvalidNodeStateTransitionException>(
+            async () => await _service.RestartAsync(node.Id));
+
+        Assert.That(exception!.CurrentStatus, Is.EqualTo(NodeStatus.Quarantined));
+        _restartQueue.Verify(
+            queue => queue.EnqueueAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Test]

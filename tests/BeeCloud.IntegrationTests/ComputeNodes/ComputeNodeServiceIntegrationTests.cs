@@ -309,6 +309,44 @@ public class ComputeNodeServiceIntegrationTests
             queuedNodeId,
             Is.EqualTo(node.Id));
     }
+
+    [Test]
+    public async Task TryTransitionStatusAsync_WhenStatusHasChanged_ShouldNotOverwriteCurrentState()
+    {
+        var node = new ComputeNode(
+            "restart-race-integration-test-node",
+            "NVIDIA A100",
+            2);
+        node.MarkAvailable();
+        node.Start();
+        await _dbContext.ComputeNodes.AddAsync(node);
+        await _dbContext.SaveChangesAsync();
+
+        var staleNode = await _dbContext.ComputeNodes
+            .SingleAsync(candidate => candidate.Id == node.Id);
+        staleNode.Restart();
+
+        await _dbContext.ComputeNodes
+            .Where(candidate => candidate.Id == node.Id)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(candidate => candidate.Status, NodeStatus.Quarantined));
+
+        var repository = new ComputeNodeRepository(_dbContext);
+        var transition = await repository.TryTransitionStatusAsync(
+            node.Id,
+            NodeStatus.Running,
+            NodeStatus.Stopping,
+            staleNode.UpdatedAt);
+
+        Assert.That(transition.Succeeded, Is.False);
+        Assert.That(transition.CurrentStatus, Is.EqualTo(NodeStatus.Quarantined));
+
+        _dbContext.ChangeTracker.Clear();
+        var persistedNode = await _dbContext.ComputeNodes
+            .SingleAsync(candidate => candidate.Id == node.Id);
+        Assert.That(persistedNode.Status, Is.EqualTo(NodeStatus.Quarantined));
+    }
+
     [Test]
     public async Task RestartProcessor_WhenNodeIsStopping_ShouldPersistRunning()
     {

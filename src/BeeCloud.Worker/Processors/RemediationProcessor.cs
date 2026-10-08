@@ -49,8 +49,21 @@ public class RemediationProcessor : IRemediationProcessor
 
                 node.Quarantine();
 
-                await _nodeRepository.SaveChangesAsync(
+                var transition = await _nodeRepository.TryTransitionStatusAsync(
+                    node.Id,
+                    NodeStatus.Unhealthy,
+                    NodeStatus.Quarantined,
+                    node.UpdatedAt,
                     cancellationToken);
+
+                if (!transition.Succeeded)
+                {
+                    _logger.LogInformation(
+                        "Skipping quarantine for node {NodeId}; its status changed to {Status}.",
+                        node.Id,
+                        transition.CurrentStatus);
+                    continue;
+                }
 
                 _logger.LogWarning(
                     "Node {NodeId} ({NodeName}) is now quarantined.",

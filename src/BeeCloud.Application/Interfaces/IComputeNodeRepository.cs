@@ -20,6 +20,13 @@ public interface IComputeNodeRepository
         string name,
         CancellationToken cancellationToken = default);
 
+    Task<(bool Succeeded, NodeStatus? CurrentStatus)> TryTransitionStatusAsync(
+        Guid id,
+        NodeStatus expectedStatus,
+        NodeStatus newStatus,
+        DateTime updatedAt,
+        CancellationToken cancellationToken = default);
+
     Task AddAsync(
         ComputeNode node,
         CancellationToken cancellationToken = default);

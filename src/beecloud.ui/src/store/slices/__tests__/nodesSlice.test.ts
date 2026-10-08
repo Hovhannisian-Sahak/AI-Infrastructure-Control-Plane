@@ -1,5 +1,5 @@
 ﻿import { configureStore } from "@reduxjs/toolkit";
-import nodesReducer, { fetchNodes, createNode, startNode, stopNode, deleteNode } from "../nodesSlice";
+import nodesReducer, { fetchNodes, createNode, startNode, stopNode, restartNode, deleteNode } from "../nodesSlice";
 import { nodesApi } from "@/lib/api/nodesApi";
 
 jest.mock("@/lib/api/nodesApi");
@@ -52,6 +52,35 @@ describe("nodesSlice", () => {
     expect(state.loading).toBe(false);
     expect(state.error).toBe("API unavailable");
     expect(state.nodes).toEqual([]);
+  });
+
+  it("refreshes node state when a restart request fails", async () => {
+    mockedNodesApi.getAll.mockClear();
+    const refreshedNode = {
+      id: "node-1",
+      name: "GPU Node 1",
+      gpuModel: "NVIDIA A100",
+      gpuCount: 4,
+      status: "Quarantined" as const,
+      activeFault: "GpuOverheat" as const,
+    };
+    mockedNodesApi.restart.mockRejectedValue(
+      new Error("Invalid node state transition: Quarantined -> Stopping."),
+    );
+    mockedNodesApi.getAll.mockResolvedValue([refreshedNode]);
+
+    const store = configureStore({
+      reducer: {
+        nodes: nodesReducer,
+      },
+    });
+
+    await store.dispatch(restartNode(refreshedNode.id));
+
+    expect(mockedNodesApi.getAll).toHaveBeenCalledTimes(1);
+    expect(store.getState().nodes.nodes).toEqual([refreshedNode]);
+    expect(store.getState().nodes.error)
+      .toBe("Invalid node state transition: Quarantined -> Stopping.");
   });
 
   it("ignores an older fetch response after a newer refresh completes", async () => {
