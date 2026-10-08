@@ -213,6 +213,47 @@ describe("IncidentsSection", () => {
         expect(screen.getAllByRole("article")).toHaveLength(2);
     });
 
+    it("paginates node history in groups of six episodes", async () => {
+        const episodes: Incident[] = Array.from({ length: 25 }, (_, index) => ({
+            ...incident,
+            id: `incident-${index + 1}`,
+            title: `Resolved episode ${index + 1}`,
+            status: "Resolved",
+            createdAt: new Date(Date.UTC(2026, 9, index + 1)).toISOString(),
+            resolvedAt: new Date(Date.UTC(2026, 9, index + 1, 1)).toISOString(),
+        }));
+        mockedIncidentsApi.search.mockResolvedValue(page(episodes));
+        renderSection();
+
+        expect(await screen.findByText("Resolved episode 1"))
+            .toBeInTheDocument();
+        const historyGroup = document.querySelector("details");
+        expect(historyGroup).not.toHaveAttribute("open");
+        await userEvent.setup().click(historyGroup!.querySelector("summary")!);
+
+        expect(screen.getAllByRole("article")).toHaveLength(6);
+        expect(screen.getByRole("heading", { name: "Resolved episode 1" }))
+            .toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Resolved episode 6" }))
+            .toBeInTheDocument();
+        expect(screen.queryByRole("heading", { name: "Resolved episode 7" }))
+            .not.toBeInTheDocument();
+        expect(screen.getByText("Showing 1–6 of 25 episodes"))
+            .toBeInTheDocument();
+
+        await userEvent.setup().click(screen.getByRole("button", { name: "Next" }));
+
+        expect(screen.getAllByRole("article")).toHaveLength(6);
+        expect(screen.getByRole("heading", { name: "Resolved episode 7" }))
+            .toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Resolved episode 12" }))
+            .toBeInTheDocument();
+        expect(screen.queryByRole("heading", { name: "Resolved episode 6" }))
+            .not.toBeInTheDocument();
+        expect(screen.getByText("Showing 7–12 of 25 episodes"))
+            .toBeInTheDocument();
+    });
+
     it("sends date bounds to the server query", async () => {
         mockedIncidentsApi.search.mockResolvedValue(page([incident]));
         renderSection();

@@ -57,3 +57,11 @@
     gap: 14px;
     padding: 0 14px 14px;
 }
+
+.pagination {
+    padding: 0 14px 14px;
+}
+
+.pagination > nav {
+    margin-top: 0;
+}

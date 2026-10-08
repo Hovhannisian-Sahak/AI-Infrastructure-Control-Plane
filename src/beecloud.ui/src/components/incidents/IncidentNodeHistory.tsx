@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import type { Incident } from "@/lib/api/models/incident";
+import Pagination from "@/components/common/Pagination";
 import IncidentCard from "./IncidentCard";
 import styles from "./IncidentNodeHistory.module.css";
+
+const EPISODES_PER_PAGE = 6;
 
 type IncidentNodeHistoryProps = {
     nodeId: string;
@@ -16,6 +20,13 @@ export default function IncidentNodeHistory({
     incidents,
 }: IncidentNodeHistoryProps) {
     const label = nodeName ?? nodeId;
+    const [page, setPage] = useState(1);
+    const pageCount = Math.ceil(incidents.length / EPISODES_PER_PAGE);
+    const currentPage = Math.min(page, pageCount);
+    const pageIncidents = incidents.slice(
+        (currentPage - 1) * EPISODES_PER_PAGE,
+        currentPage * EPISODES_PER_PAGE,
+    );
 
     return (
         <details className={styles.group}>
@@ -27,13 +38,23 @@ export default function IncidentNodeHistory({
                 </span>
             </summary>
             <div className={styles.episodes}>
-                {incidents.map((incident) => (
+                {pageIncidents.map((incident) => (
                     <IncidentCard
                         key={incident.id}
                         incident={incident}
                         nodeName={nodeName}
                     />
                 ))}
+            </div>
+            <div className={styles.pagination}>
+                <Pagination
+                    page={currentPage}
+                    pageSize={EPISODES_PER_PAGE}
+                    totalItems={incidents.length}
+                    ariaLabel={`Incident history for ${label}`}
+                    itemLabel="episodes"
+                    onPageChange={setPage}
+                />
             </div>
         </details>
     );
