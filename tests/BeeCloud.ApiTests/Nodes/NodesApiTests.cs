@@ -1,11 +1,12 @@
 ﻿using System.Net;
+using BeeCloud.ApiTests;
 using BeeCloud.ApiTests.Clients;
 using BeeCloud.ApiTests.Models;
 using BeeCloud.ApiTests.Models.Requests;
 using BeeCloud.ApiTests.TestData;
 using BeeCloud.Domain.Enums;
 
-namespace BeeCloud.ApiTests;
+namespace BeeCloud.ApiTests.Nodes;
 
 [TestFixture]
 public class NodesApiTests

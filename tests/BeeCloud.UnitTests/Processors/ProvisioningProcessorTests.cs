@@ -5,7 +5,7 @@ using BeeCloud.Worker.Processors;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace BeeCloud.UnitTests.Worker;
+namespace BeeCloud.UnitTests.Processors;
 
 [TestFixture]
 public class ProvisioningProcessorTests

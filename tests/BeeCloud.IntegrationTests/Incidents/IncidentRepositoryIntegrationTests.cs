@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace BeeCloud.IntegrationTests.Incidents;
 
 [TestFixture]
-public class IncidentRepositoryTests
+public class IncidentRepositoryIntegrationTests
 {
     private PostgreSqlTestContainer _postgres = null!;
     private ApplicationDbContext _dbContext = null!;

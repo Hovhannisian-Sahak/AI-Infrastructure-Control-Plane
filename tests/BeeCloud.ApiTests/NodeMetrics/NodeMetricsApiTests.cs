@@ -1,8 +1,9 @@
 using System.Net;
+using BeeCloud.ApiTests;
 using BeeCloud.ApiTests.Clients;
 using BeeCloud.ApiTests.TestData;
 
-namespace BeeCloud.ApiTests;
+namespace BeeCloud.ApiTests.NodeMetrics;
 
 [TestFixture]
 public class NodeMetricsApiTests

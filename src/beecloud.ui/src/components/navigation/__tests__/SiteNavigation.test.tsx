@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 
-import SiteNavigation from "./SiteNavigation";
+import SiteNavigation from "../SiteNavigation";
 
 jest.mock("next/navigation", () => ({
     usePathname: jest.fn(),

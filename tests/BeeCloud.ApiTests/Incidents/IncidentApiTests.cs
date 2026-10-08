@@ -1,11 +1,12 @@
 ﻿using System.Net;
+using BeeCloud.ApiTests;
 using BeeCloud.ApiTests.Clients;
 using BeeCloud.ApiTests.Models;
 using BeeCloud.ApiTests.TestData;
 using BeeCloud.Domain.Enums;
 using NUnit.Framework;
 
-namespace BeeCloud.ApiTests;
+namespace BeeCloud.ApiTests.Incidents;
 
 [TestFixture]
 public class IncidentApiTests

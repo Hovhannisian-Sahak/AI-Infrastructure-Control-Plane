@@ -2,7 +2,7 @@ import type { ComputeNode } from "@/lib/api/models/computeNode";
 import {
     getHealthMonitoringNodeIds,
     isHealthMonitored,
-} from "./healthMonitoring";
+} from "../healthMonitoring";
 
 const node = (id: string, status: ComputeNode["status"]): ComputeNode => ({
     id,

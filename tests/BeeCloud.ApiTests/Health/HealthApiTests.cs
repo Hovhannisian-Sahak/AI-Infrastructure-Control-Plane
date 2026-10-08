@@ -1,9 +1,10 @@
 using System.Net;
+using BeeCloud.ApiTests;
 using BeeCloud.ApiTests.Clients;
 using BeeCloud.ApiTests.TestData;
 using BeeCloud.Application.DTOs.Health;
 
-namespace BeeCloud.ApiTests;
+namespace BeeCloud.ApiTests.Health;
 
 [TestFixture]
 public class HealthApiTests

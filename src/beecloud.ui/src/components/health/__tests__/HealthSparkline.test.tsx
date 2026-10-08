@@ -1,6 +1,6 @@
 ﻿import { render, screen } from "@testing-library/react";
-import HealthSparkline from "./HealthSparkline";
-import styles from "./HealthSparkline.module.css";
+import HealthSparkline from "../HealthSparkline";
+import styles from "../HealthSparkline.module.css";
 describe("HealthSparkline", () => {
     it("renders the sparkline with an accessible label", () => {
         render(

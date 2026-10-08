@@ -5,7 +5,7 @@ import {
     formatAlertAge,
     HIGH_GPU_TEMPERATURE_THRESHOLD,
     HIGH_USAGE_THRESHOLD,
-} from "./healthAlerts";
+} from "../healthAlerts";
 
 const node: ComputeNode = {
     id: "node-1",

@@ -1,10 +1,11 @@
 ﻿using System.Net;
+using BeeCloud.ApiTests;
 using BeeCloud.ApiTests.Clients;
 using BeeCloud.ApiTests.Models;
 using BeeCloud.ApiTests.Models.Requests;
 using NUnit.Framework;
 
-namespace BeeCloud.ApiTests;
+namespace BeeCloud.ApiTests.Networks;
 
 [TestFixture]
 public class NetworkApiTests
