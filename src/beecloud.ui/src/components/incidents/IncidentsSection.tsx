@@ -18,6 +18,7 @@ type SeverityFilter =
     | "Critical";
 
 type StatusFilter = "All" | "Open" | "Investigating" | "Resolved";
+const INCIDENT_REFRESH_INTERVAL_MS = 5_000;
 
 export default function IncidentsSection() {
     const dispatch = useAppDispatch();
@@ -54,7 +55,7 @@ export default function IncidentsSection() {
     const pageSize = 12;
 
     useEffect(() => {
-        dispatch(fetchIncidents({
+        const query = {
             page,
             pageSize,
             ...(severityFilter !== "All" && { severity: severityFilter }),
@@ -62,7 +63,28 @@ export default function IncidentsSection() {
             ...(nodeFilter !== "All" && { computeNodeId: nodeFilter }),
             ...(fromDate && { from: `${fromDate}T00:00:00.000Z` }),
             ...(toDate && { to: `${toDate}T23:59:59.999Z` }),
-        }));
+        };
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        let cancelled = false;
+
+        const refreshIncidents = async () => {
+            await dispatch(fetchIncidents(query));
+            if (!cancelled) {
+                timeoutId = setTimeout(
+                    refreshIncidents,
+                    INCIDENT_REFRESH_INTERVAL_MS,
+                );
+            }
+        };
+
+        void refreshIncidents();
+
+        return () => {
+            cancelled = true;
+            if (timeoutId !== undefined) {
+                clearTimeout(timeoutId);
+            }
+        };
     }, [
         dispatch,
         page,
@@ -88,6 +110,12 @@ export default function IncidentsSection() {
     }, [error, dispatch]);
 
     const resultCount = totalCount || incidents.length;
+    const activeIncidents = incidents.filter(
+        (incident) => incident.status !== "Resolved",
+    );
+    const resolvedIncidents = incidents.filter(
+        (incident) => incident.status === "Resolved",
+    );
 
     const hasActiveFilters =
         severityFilter !== "All" ||
@@ -119,7 +147,7 @@ export default function IncidentsSection() {
 
                     <p className={styles.subtitle}>
                         Monitor incidents reported by the
-                        BeeCloud fleet.
+                        {" "}BeeCloud fleet. Updates automatically.
                     </p>
                 </div>
 
@@ -370,10 +398,18 @@ export default function IncidentsSection() {
                     </div>
                 )}
 
-            {incidents.length > 0 && (
-                    <div className={styles.grid} aria-busy={loading}>
-                        {incidents.map(
-                            (incident) => (
+                {activeIncidents.length > 0 && (
+                    <div className={styles.group}>
+                        <div className={styles.groupHeader}>
+                            <h3 className={styles.groupTitle}>
+                                Active incidents
+                            </h3>
+                            <span className={styles.groupCount}>
+                                {activeIncidents.length}
+                            </span>
+                        </div>
+                        <div className={styles.grid} aria-busy={loading}>
+                            {activeIncidents.map((incident) => (
                                 <IncidentCard
                                     key={incident.id}
                                     incident={incident}
@@ -381,8 +417,31 @@ export default function IncidentsSection() {
                                         (node) => node.id === incident.computeNodeId,
                                     )?.name}
                                 />
-                            ),
-                        )}
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {resolvedIncidents.length > 0 && (
+                    <div className={styles.group}>
+                        <div className={styles.groupHeader}>
+                            <h3 className={styles.groupTitle}>
+                                Incident history
+                            </h3>
+                            <span className={styles.groupCount}>
+                                {resolvedIncidents.length}
+                            </span>
+                        </div>
+                        <div className={styles.grid} aria-busy={loading}>
+                            {resolvedIncidents.map((incident) => (
+                                <IncidentCard
+                                    key={incident.id}
+                                    incident={incident}
+                                    nodeName={nodes.find(
+                                        (node) => node.id === incident.computeNodeId,
+                                    )?.name}
+                                />
+                            ))}
+                        </div>
                     </div>
                 )}
             {resultCount > 0 && (

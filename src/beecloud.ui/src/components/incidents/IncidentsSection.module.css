@@ -188,6 +188,39 @@
 
 /* Grid */
 
+.group {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.groupHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.groupTitle {
+    margin: 0;
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.groupCount {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+}
+
 .grid {
     display: grid;
     grid-template-columns: repeat(

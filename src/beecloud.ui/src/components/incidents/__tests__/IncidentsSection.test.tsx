@@ -63,12 +63,42 @@ describe("IncidentsSection", () => {
         renderSection();
 
         expect(await screen.findByRole("heading", {
+            name: "Active incidents",
+        })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", {
             name: incident.title,
         })).toBeInTheDocument();
         expect(mockedIncidentsApi.search).toHaveBeenCalledWith({
             page: 1,
             pageSize: 12,
         });
+    });
+
+    it("automatically refreshes incidents and displays newly reported incidents", async () => {
+        jest.useFakeTimers();
+        mockedIncidentsApi.search
+            .mockResolvedValueOnce(page([]))
+            .mockResolvedValue(page([incident]));
+        const rendered = renderSection();
+
+        try {
+            await act(async () => {
+                await Promise.resolve();
+            });
+            expect(mockedIncidentsApi.search).toHaveBeenCalledTimes(1);
+
+            await act(async () => {
+                await jest.advanceTimersByTimeAsync(5_000);
+            });
+
+            expect(mockedIncidentsApi.search).toHaveBeenCalledTimes(2);
+            expect(screen.getByRole("heading", {
+                name: incident.title,
+            })).toBeInTheDocument();
+        } finally {
+            rendered.unmount();
+            jest.useRealTimers();
+        }
     });
 
     it("requests server filters and uses the returned fleet-wide total", async () => {
@@ -107,6 +137,36 @@ describe("IncidentsSection", () => {
             name: secondIncident.title,
         })).toBeInTheDocument();
         expect(screen.getByText("28 incidents")).toBeInTheDocument();
+    });
+
+    it("groups resolved incidents under history after active incidents", async () => {
+        const resolvedIncident: Incident = {
+            ...incident,
+            id: "incident-resolved",
+            status: "Resolved",
+            title: "Resolved GPU incident",
+            resolvedAt: "2026-10-05T11:00:00Z",
+        };
+        mockedIncidentsApi.search.mockResolvedValue(
+            page([secondIncident, resolvedIncident, incident]),
+        );
+        renderSection();
+
+        const activeHeading = await screen.findByRole("heading", {
+            name: "Active incidents",
+        });
+        const historyHeading = screen.getByRole("heading", {
+            name: "Incident history",
+        });
+
+        expect(activeHeading.compareDocumentPosition(historyHeading))
+            .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+        expect(screen.getByRole("heading", { name: secondIncident.title }))
+            .toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: incident.title }))
+            .toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: resolvedIncident.title }))
+            .toBeInTheDocument();
     });
 
     it("sends date bounds to the server query", async () => {
