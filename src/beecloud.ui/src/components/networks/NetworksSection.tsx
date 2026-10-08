@@ -55,7 +55,10 @@ export default function NetworksSection() {
         description?: string;
       },
   ) => {
-    await dispatch(createNetwork(request));
+    const result = await dispatch(createNetwork(request));
+    if (createNetwork.fulfilled.match(result)) {
+      setNetworkPage(1);
+    }
   };
   const pageCount = Math.ceil(networks.length / NETWORK_PAGE_SIZE);
   const currentPage = Math.min(networkPage, Math.max(1, pageCount));

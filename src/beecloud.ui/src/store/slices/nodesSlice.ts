@@ -11,6 +11,7 @@ type NodesState = {
     loading: boolean;
     creating: boolean;
     refreshing: boolean;
+    fetchRequestId: string | null;
     createSuccess: string | null;
     actionLoadingByNodeId: Record<string, boolean>;
     deletingNodeId: string | null;
@@ -23,12 +24,31 @@ const initialState: NodesState = {
   loading: false,
   creating: false,
   refreshing: false,
+  fetchRequestId: null,
   createSuccess: null,
   actionLoadingByNodeId: {},
   deletingNodeId: null,
   deleteErrorByNodeId: {},
   error: null,
 };
+
+const sortNewestNodesFirst = (nodes: ComputeNode[]): ComputeNode[] =>
+    [...nodes].sort((left, right) => {
+      const leftCreatedAt = left.createdAt
+          ? Date.parse(left.createdAt)
+          : Number.NaN;
+      const rightCreatedAt = right.createdAt
+          ? Date.parse(right.createdAt)
+          : Number.NaN;
+      const leftHasTimestamp = Number.isFinite(leftCreatedAt);
+      const rightHasTimestamp = Number.isFinite(rightCreatedAt);
+
+      if (leftHasTimestamp && !rightHasTimestamp) return -1;
+      if (!leftHasTimestamp && rightHasTimestamp) return 1;
+      if (!leftHasTimestamp || !rightHasTimestamp) return 0;
+
+      return rightCreatedAt - leftCreatedAt;
+    });
 
 export const fetchNodes = createAsyncThunk(
     "nodes/fetchNodes",
@@ -87,7 +107,8 @@ const nodesSlice = createSlice({
 
         .addCase(
             fetchNodes.pending,
-            (state) => {
+            (state, action) => {
+              state.fetchRequestId = action.meta.requestId;
               if (state.nodes.length === 0) {
                 state.loading = true;
               } else {
@@ -101,9 +122,14 @@ const nodesSlice = createSlice({
         .addCase(
             fetchNodes.fulfilled,
             (state, action) => {
+              if (state.fetchRequestId !== action.meta.requestId) {
+                return;
+              }
+
               state.loading = false;
               state.refreshing = false;
-              state.nodes = action.payload;
+              state.fetchRequestId = null;
+              state.nodes = sortNewestNodesFirst(action.payload);
               state.error = null;
             },
         )
@@ -111,8 +137,13 @@ const nodesSlice = createSlice({
         .addCase(
             fetchNodes.rejected,
             (state, action) => {
+              if (state.fetchRequestId !== action.meta.requestId) {
+                return;
+              }
+
               state.loading = false;
               state.refreshing = false;
+              state.fetchRequestId = null;
 
               state.error =
                   action.error.message ??
@@ -139,7 +170,7 @@ const nodesSlice = createSlice({
               state.creating = false;
               state.createSuccess =
                   "Node created successfully.";
-              state.nodes.push(action.payload);
+              state.nodes.unshift(action.payload);
               state.error = null;
             },
         )

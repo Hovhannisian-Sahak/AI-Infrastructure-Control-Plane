@@ -23,5 +23,6 @@ export type ComputeNode = {
   gpuCount: number;
   status: NodeStatus;
   activeFault: ActiveFault;
+  createdAt?: string;
   lastHealthCheck?: string | null;
 };

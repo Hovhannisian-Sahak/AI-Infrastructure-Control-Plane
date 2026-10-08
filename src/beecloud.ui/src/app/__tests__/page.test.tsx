@@ -428,7 +428,6 @@ describe("Home page", () => {
         const user = userEvent.setup();
 
         mockedNodesApi.getAll
-            .mockResolvedValueOnce([])
             .mockResolvedValueOnce([
                 {
                     id: "node-1",
@@ -439,6 +438,12 @@ describe("Home page", () => {
                     activeFault: "None",
                 },
             ]);
+        let resolveRefresh!: (nodes: ComputeNode[]) => void;
+        mockedNodesApi.getAll.mockReturnValueOnce(
+            new Promise(resolve => {
+                resolveRefresh = resolve;
+            }),
+        );
 
         renderWithProviders(<Home />);
 
@@ -447,6 +452,11 @@ describe("Home page", () => {
                 mockedNodesApi.getAll,
             ).toHaveBeenCalledTimes(1);
         });
+        expect(
+            await screen.findByRole("heading", {
+                name: "GPU Node 1",
+            }),
+        ).toBeInTheDocument();
 
         await user.click(
             screen.getByRole("button", {
@@ -460,11 +470,34 @@ describe("Home page", () => {
             ).toHaveBeenCalledTimes(2);
         });
 
+        const refreshButton = screen.getByRole("button", {
+            name: "Refreshing...",
+        });
+        expect(refreshButton).toBeDisabled();
+
+        await user.click(refreshButton);
+        expect(mockedNodesApi.getAll).toHaveBeenCalledTimes(2);
+
+        await act(async () => {
+            resolveRefresh([
+                {
+                    id: "node-1",
+                    name: "GPU Node 1",
+                    gpuModel: "NVIDIA A100",
+                    gpuCount: 4,
+                    status: "Available",
+                    activeFault: "None",
+                },
+            ]);
+        });
+
         expect(
-            await screen.findByRole("heading", {
-                name: "GPU Node 1",
-            }),
-        ).toBeInTheDocument();
+            screen.getByRole("button", { name: "Refreshing..." }),
+        ).toBeDisabled();
+
+        expect(
+            await screen.findByRole("button", { name: "Refresh" }),
+        ).toBeEnabled();
     });
 
     it("shows an empty state when no nodes exist", async () => {

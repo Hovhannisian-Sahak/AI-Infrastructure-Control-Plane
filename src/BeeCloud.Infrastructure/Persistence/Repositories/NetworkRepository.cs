@@ -32,7 +32,8 @@ public class NetworkRepository : INetworkRepository
         return await _dbContext.Networks
             .AsNoTracking()
             .Where(network => network.DeletedAt == null)
-            .OrderBy(network => network.CreatedAt)
+            .OrderByDescending(network => network.CreatedAt)
+            .ThenByDescending(network => network.Id)
             .ToListAsync(cancellationToken);
     }
 

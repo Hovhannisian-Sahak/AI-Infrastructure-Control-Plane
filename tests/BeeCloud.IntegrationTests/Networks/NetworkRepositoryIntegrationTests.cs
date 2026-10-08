@@ -113,6 +113,8 @@ public class NetworkRepositoryIntegrationTests
         var network1 = new Network(
             $"integration-network-{Guid.NewGuid():N}");
 
+        await Task.Delay(10);
+
         var network2 = new Network(
             $"integration-network-{Guid.NewGuid():N}");
 
@@ -130,10 +132,10 @@ public class NetworkRepositoryIntegrationTests
 
         Assert.That(
             result.Select(x => x.Id),
-            Is.EquivalentTo(new[]
+            Is.EqualTo(new[]
             {
-                network1.Id,
-                network2.Id
+                network2.Id,
+                network1.Id
             }));
     }
 

@@ -309,7 +309,7 @@ const networksSlice = createSlice({
                 (state, action) => {
                     state.creating = false;
 
-                    state.networks.push(
+                    state.networks.unshift(
                         action.payload,
                     );
 

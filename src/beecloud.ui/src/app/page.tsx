@@ -27,14 +27,17 @@ import Pagination from "@/components/common/Pagination";
 import styles from "./page.module.css";
 
 const NODE_PAGE_SIZE = 8;
+const MIN_REFRESH_FEEDBACK_MS = 350;
 
 export default function Home() {
   const dispatch = useAppDispatch();
   const [nodePage, setNodePage] = useState(1);
+  const [manualRefreshPending, setManualRefreshPending] = useState(false);
 
   const {
     nodes,
     loading,
+    refreshing,
     creating,
     createSuccess,
     error,
@@ -146,9 +149,30 @@ export default function Home() {
         gpuCount: number;
       },
   ) => {
-    await dispatch(
+    const result = await dispatch(
         createNode(request),
     );
+    if (createNode.fulfilled.match(result)) {
+      setNodePage(1);
+    }
+  };
+  const handleRefreshNodes = async () => {
+    const startedAt = Date.now();
+    setManualRefreshPending(true);
+
+    try {
+      await dispatch(fetchNodes());
+    } finally {
+      const remainingFeedbackTime =
+          MIN_REFRESH_FEEDBACK_MS - (Date.now() - startedAt);
+      if (remainingFeedbackTime > 0) {
+        await new Promise(resolve =>
+            window.setTimeout(resolve, remainingFeedbackTime),
+        );
+      }
+
+      setManualRefreshPending(false);
+    }
   };
   const nodePageCount = Math.ceil(nodes.length / NODE_PAGE_SIZE);
   const currentNodePage = Math.min(nodePage, Math.max(1, nodePageCount));
@@ -175,12 +199,10 @@ export default function Home() {
               <button
                   className={styles.refreshButton}
                   type="button"
-                  onClick={() =>
-                      dispatch(fetchNodes())
-                  }
-                  disabled={loading}
+                  onClick={handleRefreshNodes}
+                  disabled={loading || refreshing || manualRefreshPending}
               >
-                {loading
+                {loading || refreshing || manualRefreshPending
                     ? "Refreshing..."
                     : "Refresh"}
               </button>

@@ -97,6 +97,33 @@ public class ComputeNodeServiceIntegrationTests
         await _dbContext.DisposeAsync();
         await _postgres.DisposeAsync();
     }
+
+    [Test]
+    public async Task GetAllAsync_ShouldReturnNewestNodesFirst()
+    {
+        var olderNode = new ComputeNode(
+            $"older-node-{Guid.NewGuid():N}",
+            "NVIDIA A100",
+            1);
+        await _dbContext.ComputeNodes.AddAsync(olderNode);
+        await _dbContext.SaveChangesAsync();
+
+        await Task.Delay(10);
+
+        var newerNode = new ComputeNode(
+            $"newer-node-{Guid.NewGuid():N}",
+            "NVIDIA H100",
+            1);
+        await _dbContext.ComputeNodes.AddAsync(newerNode);
+        await _dbContext.SaveChangesAsync();
+
+        var nodes = await _service.GetAllAsync();
+
+        Assert.That(
+            nodes.Select(node => node.Id),
+            Is.EqualTo(new[] { newerNode.Id, olderNode.Id }));
+    }
+
     [Test]
     public async Task DeleteAsync_WhenNodeExists_ShouldPersistSoftDelete()
     {

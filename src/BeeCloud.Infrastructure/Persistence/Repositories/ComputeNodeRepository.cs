@@ -31,7 +31,8 @@ public class ComputeNodeRepository : IComputeNodeRepository
         return await _dbContext.ComputeNodes
             .AsNoTracking()
             .Where(node => node.DeletedAt == null)
-            .OrderBy(node => node.CreatedAt)
+            .OrderByDescending(node => node.CreatedAt)
+            .ThenByDescending(node => node.Id)
             .ToListAsync(cancellationToken);
     }
     public async Task<IReadOnlyList<ComputeNode>> GetByStatusAsync(

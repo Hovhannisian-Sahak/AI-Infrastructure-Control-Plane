@@ -99,6 +99,10 @@ describe("networksSlice", () => {
             );
 
             const store = createTestStore();
+            store.dispatch({
+                type: "networks/fetchNetworks/fulfilled",
+                payload: [secondNetwork],
+            });
 
             await store.dispatch(
                 createNetwork({
@@ -110,7 +114,10 @@ describe("networksSlice", () => {
             const state = store.getState().networks;
 
             expect(state.creating).toBe(false);
-            expect(state.networks).toEqual([network]);
+            expect(state.networks).toEqual([
+                network,
+                secondNetwork,
+            ]);
             expect(state.createSuccess).toBe(
                 'Network "Network 1" created successfully.',
             );

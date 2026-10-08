@@ -53,6 +53,76 @@ describe("nodesSlice", () => {
     expect(state.error).toBe("API unavailable");
     expect(state.nodes).toEqual([]);
   });
+
+  it("ignores an older fetch response after a newer refresh completes", async () => {
+    let resolveFirst!: (nodes: Awaited<ReturnType<typeof nodesApi.getAll>>) => void;
+    let resolveSecond!: (nodes: Awaited<ReturnType<typeof nodesApi.getAll>>) => void;
+    mockedNodesApi.getAll
+      .mockReturnValueOnce(new Promise(resolve => { resolveFirst = resolve; }))
+      .mockReturnValueOnce(new Promise(resolve => { resolveSecond = resolve; }));
+
+    const store = configureStore({
+      reducer: {
+        nodes: nodesReducer,
+      },
+    });
+    const olderFetch = store.dispatch(fetchNodes());
+    const newerFetch = store.dispatch(fetchNodes());
+    const latestNodes = [{
+      id: "latest-node",
+      name: "Latest node",
+      gpuModel: "NVIDIA H100",
+      gpuCount: 1,
+      status: "Available" as const,
+      activeFault: "None" as const,
+    }];
+
+    resolveSecond(latestNodes);
+    await newerFetch;
+    resolveFirst([]);
+    await olderFetch;
+
+    expect(store.getState().nodes.nodes).toEqual(latestNodes);
+  });
+
+  it("keeps newest nodes first when a refresh returns creation order", async () => {
+    const olderNode = {
+      id: "node-older",
+      name: "Older node",
+      gpuModel: "NVIDIA A100",
+      gpuCount: 1,
+      status: "Available" as const,
+      activeFault: "None" as const,
+      createdAt: "2026-10-08T10:00:00Z",
+    };
+    const newlyCreatedNode = {
+      id: "node-newer",
+      name: "Newly created node",
+      gpuModel: "NVIDIA H100",
+      gpuCount: 1,
+      status: "Available" as const,
+      activeFault: "None" as const,
+      createdAt: "2026-10-08T10:01:00Z",
+    };
+    mockedNodesApi.getAll.mockResolvedValue([
+      olderNode,
+      newlyCreatedNode,
+    ]);
+
+    const store = configureStore({
+      reducer: {
+        nodes: nodesReducer,
+      },
+    });
+
+    await store.dispatch(fetchNodes());
+
+    expect(store.getState().nodes.nodes).toEqual([
+      newlyCreatedNode,
+      olderNode,
+    ]);
+  });
+
   it("adds a node when createNode succeeds", async () => {
     const request = {
       name: "GPU Node 2",
@@ -76,6 +146,16 @@ describe("nodesSlice", () => {
         nodes: nodesReducer,
       },
     });
+    const existingNode = {
+      id: "node-1",
+      name: "GPU Node 1",
+      gpuModel: "NVIDIA A100",
+      gpuCount: 4,
+      status: "Available" as const,
+      activeFault: "None" as const,
+    };
+    store.dispatch(fetchNodes.pending("test-request", undefined));
+    store.dispatch(fetchNodes.fulfilled([existingNode], "test-request", undefined));
 
     await store.dispatch(createNode(request));
 
@@ -84,7 +164,7 @@ describe("nodesSlice", () => {
     expect(store.getState().nodes.createSuccess).toBe("Node created successfully.");
     expect(state.loading).toBe(false);
     expect(state.error).toBeNull();
-    expect(state.nodes).toEqual([createdNode]);
+    expect(state.nodes).toEqual([createdNode, existingNode]);
   });
 
   it("stores an error when createNode fails", async () => {
@@ -132,10 +212,8 @@ describe("nodesSlice", () => {
       },
     });
 
-    store.dispatch({
-      type: "nodes/fetchNodes/fulfilled",
-      payload: [node],
-    });
+    store.dispatch(fetchNodes.pending("test-request", undefined));
+    store.dispatch(fetchNodes.fulfilled([node], "test-request", undefined));
 
     const promise = store.dispatch(startNode(node.id));
 
@@ -175,10 +253,8 @@ describe("nodesSlice", () => {
       },
     });
 
-    store.dispatch({
-      type: "nodes/fetchNodes/fulfilled",
-      payload: [node],
-    });
+    store.dispatch(fetchNodes.pending("test-request", undefined));
+    store.dispatch(fetchNodes.fulfilled([node], "test-request", undefined));
 
     const promise = store.dispatch(stopNode(node.id));
 
@@ -267,10 +343,8 @@ describe("nodesSlice", () => {
       },
     });
 
-    store.dispatch({
-      type: "nodes/fetchNodes/fulfilled",
-      payload: [node],
-    });
+    store.dispatch(fetchNodes.pending("test-request", undefined));
+    store.dispatch(fetchNodes.fulfilled([node], "test-request", undefined));
 
     await store.dispatch(deleteNode(node.id));
 
@@ -301,10 +375,8 @@ describe("nodesSlice", () => {
       activeFault: "None" as const,
     };
 
-    store.dispatch({
-      type: "nodes/fetchNodes/fulfilled",
-      payload: [node],
-    });
+    store.dispatch(fetchNodes.pending("test-request", undefined));
+    store.dispatch(fetchNodes.fulfilled([node], "test-request", undefined));
 
     await store.dispatch(deleteNode(node.id));
 
