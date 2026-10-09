@@ -30,6 +30,13 @@ public abstract class UiTestBase
                 ViewportSize = new ViewportSize { Width = 1440, Height = 1000 }
             });
 
+        await Context.Tracing.StartAsync(new TracingStartOptions
+        {
+            Screenshots = true,
+            Snapshots = true,
+            Sources = true
+        });
+
         Page = await Context.NewPageAsync();
         Page.SetDefaultTimeout(UiTestSettings.DefaultTimeoutMs);
         Page.SetDefaultNavigationTimeout(30_000);
@@ -74,6 +81,21 @@ public abstract class UiTestBase
                 });
 
                 TestContext.AddTestAttachment(screenshotPath, "Screenshot on failure");
+
+                var tracePath = Path.Combine(
+                    screenshotDirectory,
+                    $"{safeTestName}-{DateTime.UtcNow:yyyyMMddHHmmssfff}.zip");
+
+                await Context.Tracing.StopAsync(new TracingStopOptions
+                {
+                    Path = tracePath
+                });
+
+                TestContext.AddTestAttachment(tracePath, "Playwright trace on failure");
+            }
+            else if (Context is not null)
+            {
+                await Context.Tracing.StopAsync();
             }
         }
         finally
