@@ -93,4 +93,40 @@ public sealed class NetworkAttachmentTests : UiTestBase
             AriaRole.Button,
             new() { Name = "Attach Node", Exact = true })).ToHaveCountAsync(0);
     }
+
+    [Test]
+    public async Task NetworkWithAttachments_ShouldRemainVisibleWhenDeleteConflicts()
+    {
+        var dashboard = new DashboardPage(Page);
+        await dashboard.OpenAsync();
+
+        var nodeName = await NodeTestHelper.CreateNodeAsync(Page);
+        await NodeTestHelper.WaitForNodeStatusAsync(
+            Page, nodeName, "Available", UiTestSettings.ProvisioningTimeoutMs);
+
+        var networkName = await NetworkTestHelper.CreateNetworkAsync(Page);
+        var card = dashboard.NetworkCard(networkName);
+
+        await card.GetByRole(
+            AriaRole.Button,
+            new() { Name = "Show Attachments", Exact = true }).ClickAsync();
+
+        var selector = card.Locator("select");
+        await selector.SelectOptionAsync(new SelectOptionValue { Label = nodeName });
+        await card.GetByRole(
+            AriaRole.Button,
+            new() { Name = "Attach Node", Exact = true }).ClickAsync();
+
+        await card.GetByText(
+            "Node attached successfully.", new() { Exact = true }).WaitForAsync();
+
+        Page.Dialog += async (_, dialog) => await dialog.AcceptAsync();
+        await card.GetByRole(
+            AriaRole.Button,
+            new() { Name = "Delete", Exact = true }).ClickAsync();
+
+        await card.GetByRole(AriaRole.Alert).WaitForAsync();
+        await Expect(card).ToBeVisibleAsync();
+        await Expect(dashboard.NetworkCard(networkName)).ToBeVisibleAsync();
+    }
 }
