@@ -37,7 +37,8 @@ public sealed class NodeValidationTests : UiTestBase
         await nodeLink.WaitForAsync(new() { State = WaitForSelectorState.Visible });
 
         var card = dashboard.NodeCard(expectedName);
-        await NodeTestHelper.WaitForStatusAsync(card, "Provisioning", 30_000);
+        await NodeTestHelper.WaitForNodeStatusAsync(
+            Page, expectedName, "Available", BeeCloud.UiTests.Configuration.UiTestSettings.ProvisioningTimeoutMs);
 
         Assert.That(
             await card.GetByText("NVIDIA A100", new() { Exact = true }).IsVisibleAsync(),
