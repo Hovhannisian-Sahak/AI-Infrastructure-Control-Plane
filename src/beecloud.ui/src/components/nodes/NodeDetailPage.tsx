@@ -368,7 +368,7 @@ export default function NodeDetailPage() {
                 </section>
 
                 <section className={styles.healthHeader}>
-                    <div>
+                    <div data-testid="node-detail-page-header">
                         <h2>Health</h2>
 
                         <p>

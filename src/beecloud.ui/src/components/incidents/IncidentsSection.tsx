@@ -170,7 +170,7 @@ export default function IncidentsSection() {
                 </span>
             </div>
 
-            <div className={styles.filters}>
+            <div className={styles.filters} data-testid="incident-filters">
                     <div className={styles.filterGroup}>
                         <label
                             htmlFor="incident-severity"
