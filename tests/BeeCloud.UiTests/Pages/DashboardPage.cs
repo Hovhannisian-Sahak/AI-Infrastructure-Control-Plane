@@ -42,6 +42,21 @@ public sealed class DashboardPage(IPage page)
         await GpuCountInput.FillAsync(gpuCount);
     }
 
+    public ILocator SearchNodesInput =>
+        Page.GetByRole(AriaRole.Searchbox, new() { Name = "Search nodes", Exact = true });
+
+    public ILocator NodeStatusFilter =>
+        Page.GetByLabel("Filter by status", new() { Exact = true });
+
+    public ILocator GpuModelFilter =>
+        Page.GetByLabel("Filter by GPU model", new() { Exact = true });
+
+    public ILocator ClearFiltersButton =>
+        Page.GetByRole(AriaRole.Button, new() { Name = "Clear filters", Exact = true });
+
+    public ILocator NoMatchingNodesHeading =>
+        Page.GetByRole(AriaRole.Heading, new() { Name = "No matching nodes", Exact = true });
+
     public ILocator NodeLink(string nodeName) =>
         Page.GetByRole(AriaRole.Link, new() { Name = nodeName, Exact = true });
 
