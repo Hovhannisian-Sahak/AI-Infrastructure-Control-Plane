@@ -113,6 +113,11 @@ public sealed class FaultRemediationWorkflowTests : UiTestBase
         await NodeTestHelper.WaitForNodeStatusAsync(
             Page, nodeName, "Available", UiTestSettings.LifecycleTimeoutMs);
 
+        // Resolved incidents are grouped inside a collapsed per-node history section.
+        var incidentHistory = Page.Locator("details").Filter(new() { HasText = nodeName });
+        await Expect(incidentHistory).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await incidentHistory.Locator("summary").ClickAsync();
+
         nodeCard = dashboard.NodeCard(nodeName);
         await Expect(nodeCard.GetByLabel(
             "Node status: Available",
