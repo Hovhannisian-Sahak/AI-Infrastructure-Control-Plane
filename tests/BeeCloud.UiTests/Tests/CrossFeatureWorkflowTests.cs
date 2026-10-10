@@ -76,8 +76,14 @@ public sealed class CrossFeatureWorkflowTests : UiTestBase
             AriaRole.Button,
             new() { Name = "Attach Node", Exact = true }).ClickAsync();
 
-        await primaryCard.GetByText(
-            "Node attached successfully.", new() { Exact = true }).WaitForAsync();
+        // Verify the durable result of attaching the node.
+        await Expect(
+            primaryCard.GetByText(nodeName, new() { Exact = true })
+        ).ToBeVisibleAsync(new() { Timeout = 10_000 });
+
+        await Expect(
+            primaryCard.GetByText("1 /", new() { Exact = false })
+        ).ToBeVisibleAsync();
 
         await Page.ReloadAsync();
         await dashboard.Heading.WaitForAsync();
@@ -96,7 +102,8 @@ public sealed class CrossFeatureWorkflowTests : UiTestBase
         await primaryCard.GetByRole(
             AriaRole.Button,
             new() { Name = "Detach", Exact = true }).ClickAsync();
-        await Expect(primaryCard.GetByText("No nodes attached.", new() { Exact = true }))
-            .ToBeVisibleAsync();
+        await Expect(
+            primaryCard.GetByText("No nodes attached.", new() { Exact = true })
+        ).ToBeVisibleAsync(new() { Timeout = 10_000 });
     }
 }

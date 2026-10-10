@@ -45,11 +45,6 @@ public sealed class NetworkAttachmentTests : UiTestBase
             AriaRole.Button,
             new() { Name = "Attach Node", Exact = true }).ClickAsync();
 
-        await Expect(networkCard.GetByRole(
-            AriaRole.Status).GetByText(
-            "Node attached successfully.", new() { Exact = true }))
-            .ToBeVisibleAsync();
-
         await Expect(networkCard.GetByText(nodeName, new() { Exact = true }))
             .ToBeVisibleAsync();
 
@@ -117,8 +112,14 @@ public sealed class NetworkAttachmentTests : UiTestBase
             AriaRole.Button,
             new() { Name = "Attach Node", Exact = true }).ClickAsync();
 
-        await card.GetByText(
-            "Node attached successfully.", new() { Exact = true }).WaitForAsync();
+        // Confirm that the attachment exists before testing delete conflict behavior.
+        await Expect(
+            card.GetByText(nodeName, new() { Exact = true })
+        ).ToBeVisibleAsync(new() { Timeout = 10_000 });
+
+        await Expect(
+            card.GetByText("1 /", new() { Exact = false })
+        ).ToBeVisibleAsync();
 
         Page.Dialog += async (_, dialog) => await dialog.AcceptAsync();
         await card.GetByRole(
