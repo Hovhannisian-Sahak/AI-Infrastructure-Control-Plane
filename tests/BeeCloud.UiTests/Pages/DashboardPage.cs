@@ -35,12 +35,25 @@ public sealed class DashboardPage(IPage page)
         await Heading.WaitForAsync();
     }
 
-    public async Task FillNodeFormAsync(string name, string gpuModel = "NVIDIA A100", string gpuCount = "1")
+  
+    public async Task FillNodeFormAsync(
+        string name,
+        string gpuModel,
+        string gpuCount)
     {
-        await NodeNameInput.FillAsync(name);
-        await GpuModelInput.FillAsync(gpuModel);
-        await GpuCountInput.FillAsync(gpuCount);
+        await Page.GetByLabel("Node Name").FillAsync(name);
+
+        await Page
+            .GetByRole(AriaRole.Textbox, new()
+            {
+                Name = "GPU Model",
+                Exact = true
+            })
+            .FillAsync(gpuModel);
+
+        await Page.GetByLabel("GPU Count").FillAsync(gpuCount);
     }
+
 
     public ILocator SearchNodesInput =>
         Page.GetByRole(AriaRole.Searchbox, new() { Name = "Search nodes", Exact = true });
