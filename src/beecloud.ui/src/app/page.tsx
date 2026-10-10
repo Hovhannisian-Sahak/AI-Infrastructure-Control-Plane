@@ -24,14 +24,22 @@ import NetworksSection from "@/components/networks/NetworksSection";
 import IncidentsSection from "@/components/incidents/IncidentsSection";
 import Pagination from "@/components/common/Pagination";
 
+import type { NodeStatus } from "@/lib/api/models/computeNode";
 import styles from "./page.module.css";
 
 const NODE_PAGE_SIZE = 8;
 const MIN_REFRESH_FEEDBACK_MS = 350;
+const NODE_STATUSES: NodeStatus[] = [
+  "Provisioning", "Available", "Running", "Stopping", "Stopped",
+  "Unhealthy", "Quarantined", "Remediating", "Failed",
+];
 
 export default function Home() {
   const dispatch = useAppDispatch();
   const [nodePage, setNodePage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<NodeStatus | "all">("all");
+  const [gpuModelFilter, setGpuModelFilter] = useState("all");
   const [manualRefreshPending, setManualRefreshPending] = useState(false);
 
   const {
@@ -174,9 +182,38 @@ export default function Home() {
       setManualRefreshPending(false);
     }
   };
-  const nodePageCount = Math.ceil(nodes.length / NODE_PAGE_SIZE);
+  const gpuModels = Array.from(
+      new Set(nodes.map((node) => node.gpuModel)),
+  ).sort((a, b) => a.localeCompare(b));
+
+  const normalizedSearch = searchTerm.trim().toLocaleLowerCase();
+  const filteredNodes = nodes.filter((node) => {
+    const matchesName =
+        normalizedSearch.length === 0 ||
+        node.name.toLocaleLowerCase().includes(normalizedSearch);
+    const matchesStatus =
+        statusFilter === "all" || node.status === statusFilter;
+    const matchesGpuModel =
+        gpuModelFilter === "all" || node.gpuModel === gpuModelFilter;
+
+    return matchesName && matchesStatus && matchesGpuModel;
+  });
+
+  const hasActiveFilters =
+      normalizedSearch.length > 0 ||
+      statusFilter !== "all" ||
+      gpuModelFilter !== "all";
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setGpuModelFilter("all");
+    setNodePage(1);
+  };
+
+  const nodePageCount = Math.ceil(filteredNodes.length / NODE_PAGE_SIZE);
   const currentNodePage = Math.min(nodePage, Math.max(1, nodePageCount));
-  const visibleNodes = nodes.slice(
+  const visibleNodes = filteredNodes.slice(
       (currentNodePage - 1) * NODE_PAGE_SIZE,
       currentNodePage * NODE_PAGE_SIZE,
   );
@@ -256,6 +293,74 @@ export default function Home() {
               </p>
           )}
 
+          {nodes.length > 0 && (
+              <section className={styles.filters} aria-label="Filter compute nodes">
+                <div className={styles.filterField}>
+                  <label className={styles.filterLabel} htmlFor="node-search">Search nodes</label>
+                  <input
+                      id="node-search"
+                      className={styles.filterInput}
+                      type="search"
+                      placeholder="Search by node name"
+                      value={searchTerm}
+                      onChange={(event) => {
+                        setSearchTerm(event.target.value);
+                        setNodePage(1);
+                      }}
+                  />
+                </div>
+                <div className={styles.filterField}>
+                  <label className={styles.filterLabel} htmlFor="node-status-filter">Filter by status</label>
+                  <select
+                      id="node-status-filter"
+                      className={styles.filterInput}
+                      value={statusFilter}
+                      onChange={(event) => {
+                        setStatusFilter(event.target.value as NodeStatus | "all");
+                        setNodePage(1);
+                      }}
+                  >
+                    <option value="all">All statuses</option>
+                    {NODE_STATUSES.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.filterField}>
+                  <label className={styles.filterLabel} htmlFor="node-gpu-filter">Filter by GPU model</label>
+                  <select
+                      id="node-gpu-filter"
+                      className={styles.filterInput}
+                      value={gpuModelFilter}
+                      onChange={(event) => {
+                        setGpuModelFilter(event.target.value);
+                        setNodePage(1);
+                      }}
+                  >
+                    <option value="all">All GPU models</option>
+                    {gpuModels.map((model) => (
+                        <option key={model} value={model}>{model}</option>
+                    ))}
+                  </select>
+                </div>
+                {hasActiveFilters && (
+                    <button className={styles.clearFiltersButton} type="button" onClick={clearFilters}>
+                      Clear filters
+                    </button>
+                )}
+                <p className={styles.filterSummary}>
+                  {filteredNodes.length} matching {filteredNodes.length === 1 ? "node" : "nodes"}
+                </p>
+              </section>
+          )}
+
+          {!loading && nodes.length > 0 && filteredNodes.length === 0 && (
+              <div className={styles.emptyState}>
+                <h2 className={styles.emptyTitle}>No matching nodes</h2>
+                <p className={styles.emptyMessage}>Try a different search or clear the active filters.</p>
+              </div>
+          )}
+
           {!loading &&
               nodes.length === 0 && (
                   <div
@@ -278,7 +383,7 @@ export default function Home() {
                   </div>
               )}
 
-          {nodes.length > 0 && (
+          {filteredNodes.length > 0 && (
                   <section
                       className={styles.nodes}
                   >
@@ -294,7 +399,7 @@ export default function Home() {
               <Pagination
                   page={currentNodePage}
                   pageSize={NODE_PAGE_SIZE}
-                  totalItems={nodes.length}
+                  totalItems={filteredNodes.length}
                   ariaLabel="Compute node pages"
                   itemLabel="nodes"
                   onPageChange={setNodePage}
