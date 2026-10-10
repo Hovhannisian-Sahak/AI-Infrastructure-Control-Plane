@@ -387,10 +387,16 @@ const networksSlice = createSlice({
 
                     state.deletingNetworkId = null;
 
-                    state.deleteErrorByNetworkId[networkId] =
-                        error.includes(
+                    const attachmentConflict =
+                        error.toLowerCase().includes(
+                            "cannot be deleted while nodes are attached",
+                        ) ||
+                        error.toLowerCase().includes(
                             "conflicts with the current state",
-                        )
+                        );
+
+                    state.deleteErrorByNetworkId[networkId] =
+                        attachmentConflict
                             ? "The network cannot be deleted while nodes are attached."
                             : error;
                 },
