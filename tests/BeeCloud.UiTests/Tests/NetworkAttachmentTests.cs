@@ -125,7 +125,9 @@ public sealed class NetworkAttachmentTests : UiTestBase
             AriaRole.Button,
             new() { Name = "Delete", Exact = true }).ClickAsync();
 
-        await card.GetByRole(AriaRole.Alert).WaitForAsync();
+        var deleteError = card.GetByRole(AriaRole.Alert);
+        await Expect(deleteError).ToHaveTextAsync(
+            "The network cannot be deleted while nodes are attached.");
         await Expect(card).ToBeVisibleAsync();
         await Expect(dashboard.NetworkCard(networkName)).ToBeVisibleAsync();
     }
