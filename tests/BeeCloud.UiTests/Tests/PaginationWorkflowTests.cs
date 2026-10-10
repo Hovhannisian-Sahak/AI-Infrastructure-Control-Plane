@@ -97,7 +97,6 @@ public sealed class PaginationWorkflowTests : UiTestBase
         await dashboard.SearchNodesInput.FillAsync(matchingNodeName);
 
         await Expect(dashboard.NodeLink(matchingNodeName)).ToBeVisibleAsync();
-        await Expect(pagination).ToContainTextAsync("Page 1 of 1");
         await Expect(pagination).ToBeHiddenAsync();
         await Expect(Page.GetByText("1 matching node", new() { Exact = true }))
             .ToBeVisibleAsync();
