@@ -75,14 +75,19 @@ public sealed class IncidentPaginationWorkflowTests : UiTestBase
             Exact = true
         });
 
+        // Scope the test to its own node so unrelated historical incidents cannot
+        // change the expected number of pages.
+        await Page.GetByLabel("Node", new() { Exact = true })
+            .SelectOptionAsync(new SelectOptionValue { Label = nodeName });
+
         await Expect(pagination).ToBeVisibleAsync();
-        await Expect(pagination).ToContainTextAsync("Page 1 of");
+        await Expect(pagination).ToContainTextAsync("Page 1 of 2");
         await Expect(previousButton).ToBeDisabledAsync();
         await Expect(nextButton).ToBeEnabledAsync();
 
         await nextButton.ClickAsync();
 
-        await Expect(pagination).ToContainTextAsync("Page 2 of");
+        await Expect(pagination).ToContainTextAsync("Page 2 of 2");
         await Expect(previousButton).ToBeEnabledAsync();
         await Expect(nextButton).ToBeDisabledAsync();
 
