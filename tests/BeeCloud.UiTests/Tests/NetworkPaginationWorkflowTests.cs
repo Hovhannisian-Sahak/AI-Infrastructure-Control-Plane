@@ -64,10 +64,11 @@ public sealed class NetworkPaginationWorkflowTests : UiTestBase
 
         await Expect(pagination).ToContainTextAsync("Page 2 of");
         await Expect(previousButton).ToBeEnabledAsync();
-        await Expect(networkCards).ToHaveCountAsync(
-            await networkCards.CountAsync() <= NetworkPageSize
-                ? await networkCards.CountAsync()
-                : NetworkPageSize);
+        var secondPageCardCount = await networkCards.CountAsync();
+        Assert.That(
+            secondPageCardCount,
+            Is.InRange(1, NetworkPageSize),
+            "The second page should show between one and six network cards.");
 
         await previousButton.ClickAsync();
 
