@@ -134,7 +134,7 @@ public sealed class FaultRemediationWorkflowTests : UiTestBase
             new() { Exact = true })).ToBeVisibleAsync();
         await Expect(incidentCard.GetByRole(
             AriaRole.Link,
-            new() { Name = nodeName, Exact = true })).ToBeVisibleAsync();
+            new() { Name = $"Affected node {nodeName}", Exact = true })).ToBeVisibleAsync();
     }
 
     private static async Task<NodeSnapshot?> FindNodeByNameAsync(
