@@ -63,11 +63,16 @@ public sealed class IncidentInvestigationWorkflowTests : UiTestBase
         await statusFilter.SelectOptionAsync("Resolved");
         await nodeFilter.SelectOptionAsync(new SelectOptionValue { Label = nodeName });
 
-        var incidentCard = Page.Locator("article").Filter(new()
+        // Resolved incidents are grouped in collapsed per-node history details.
+        var incidentHistory = Page.Locator("details").Filter(new() { HasText = nodeName });
+        await Expect(incidentHistory).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await incidentHistory.Locator("summary").ClickAsync();
+
+        var incidentCard = incidentHistory.Locator("article").Filter(new()
         {
             Has = Page.GetByRole(
                 AriaRole.Heading,
-                new() { Name = "GPU failure detected", Exact = true })
+                new() { Name = incident!.Title, Exact = true })
         });
 
         await Expect(incidentCard).ToBeVisibleAsync();
@@ -90,6 +95,15 @@ public sealed class IncidentInvestigationWorkflowTests : UiTestBase
 
         await statusFilter.SelectOptionAsync("Resolved");
         await nodeFilter.SelectOptionAsync(new SelectOptionValue { Label = nodeName });
+        incidentHistory = Page.Locator("details").Filter(new() { HasText = nodeName });
+        await Expect(incidentHistory).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await incidentHistory.Locator("summary").ClickAsync();
+        incidentCard = incidentHistory.Locator("article").Filter(new()
+        {
+            Has = Page.GetByRole(
+                AriaRole.Heading,
+                new() { Name = incident!.Title, Exact = true })
+        });
         await Expect(incidentCard).ToBeVisibleAsync();
         await Expect(incidentCard.GetByText("Resolved", new() { Exact = true }))
             .ToBeVisibleAsync();
