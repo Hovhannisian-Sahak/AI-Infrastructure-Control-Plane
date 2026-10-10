@@ -77,6 +77,8 @@ public sealed class PaginationWorkflowTests : UiTestBase
             await NodeTestHelper.CreateNodeAsync(Page, $"{prefix}-{i}");
         }
 
+        await dashboard.SearchNodesInput.FillAsync(prefix);
+
         var pagination = Page.GetByRole(AriaRole.Navigation, new()
         {
             Name = "Compute node pages",
