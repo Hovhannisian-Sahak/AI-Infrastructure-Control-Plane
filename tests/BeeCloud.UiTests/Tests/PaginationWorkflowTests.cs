@@ -3,7 +3,7 @@ using BeeCloud.UiTests.Helpers;
 using BeeCloud.UiTests.Pages;
 using Microsoft.Playwright;
 using NUnit.Framework;
-
+using static Microsoft.Playwright.Assertions;
 namespace BeeCloud.UiTests.Tests;
 
 [TestFixture]
