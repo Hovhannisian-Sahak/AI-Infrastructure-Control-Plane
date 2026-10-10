@@ -56,6 +56,19 @@ public sealed class IncidentPaginationWorkflowTests : UiTestBase
                 $"Creating test incident {index} failed with HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         }
 
+        // Verify the backend has persisted every seeded incident before checking the UI.
+        using (var verificationResponse = await api.GetAsync(
+                   $"api/v1/incidents/search?computeNodeId={nodeId}&page=1&pageSize=100"))
+        {
+            verificationResponse.EnsureSuccessStatusCode();
+            var seededIncidents = await verificationResponse.Content
+                .ReadFromJsonAsync<IncidentPageSnapshot>();
+            Assert.That(
+                seededIncidents?.TotalCount,
+                Is.EqualTo(IncidentPageSize + 1),
+                "The API must return all 13 incidents for the test node before the UI is checked.");
+        }
+
         await Page.ReloadAsync();
         await dashboard.Heading.WaitForAsync();
 
@@ -80,14 +93,14 @@ public sealed class IncidentPaginationWorkflowTests : UiTestBase
         await Page.GetByLabel("Node", new() { Exact = true })
             .SelectOptionAsync(new SelectOptionValue { Label = nodeName });
 
-        await Expect(pagination).ToBeVisibleAsync();
-        await Expect(pagination).ToContainTextAsync("Page 1 of 2");
+        await Expect(pagination).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await Expect(pagination).ToContainTextAsync("Page 1 of 2", new() { Timeout = 15_000 });
         await Expect(previousButton).ToBeDisabledAsync();
         await Expect(nextButton).ToBeEnabledAsync();
 
         await nextButton.ClickAsync();
 
-        await Expect(pagination).ToContainTextAsync("Page 2 of 2");
+        await Expect(pagination).ToContainTextAsync("Page 2 of 2", new() { Timeout = 15_000 });
         await Expect(previousButton).ToBeEnabledAsync();
         await Expect(nextButton).ToBeDisabledAsync();
 
@@ -110,8 +123,8 @@ public sealed class IncidentPaginationWorkflowTests : UiTestBase
             Exact = true
         }).ClickAsync();
 
-        await Expect(pagination).ToBeVisibleAsync();
-        await Expect(pagination).ToContainTextAsync("Page 1 of");
+        await Expect(pagination).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await Expect(pagination).ToContainTextAsync("Page 1 of", new() { Timeout = 15_000 });
         await Expect(previousButton).ToBeDisabledAsync();
     }
 
@@ -126,4 +139,16 @@ public sealed class IncidentPaginationWorkflowTests : UiTestBase
     }
 
     private sealed record NodeSnapshot(Guid Id, string Name);
+
+    private sealed record IncidentPageSnapshot(
+        List<IncidentSnapshot> Items,
+        int Page,
+        int PageSize,
+        int TotalCount);
+
+    private sealed record IncidentSnapshot(
+        Guid Id,
+        Guid ComputeNodeId,
+        string Status,
+        string Title);
 }
