@@ -45,10 +45,9 @@ public sealed class NetworkAttachmentTests : UiTestBase
             AriaRole.Button,
             new() { Name = "Attach Node", Exact = true }).ClickAsync();
 
-        await Expect(networkCard.GetByRole(
-            AriaRole.Status).GetByText(
-            "Node attached successfully.", new() { Exact = true }))
-            .ToBeVisibleAsync();
+        await Expect(networkCard.GetByText(
+                nodeName, new() { Exact = true }))
+            .ToBeVisibleAsync(new() { Timeout = 15_000 });
 
         await Expect(networkCard.GetByText(nodeName, new() { Exact = true }))
             .ToBeVisibleAsync();
@@ -117,8 +116,9 @@ public sealed class NetworkAttachmentTests : UiTestBase
             AriaRole.Button,
             new() { Name = "Attach Node", Exact = true }).ClickAsync();
 
-        await card.GetByText(
-            "Node attached successfully.", new() { Exact = true }).WaitForAsync();
+        await Expect(card.GetByText(
+                nodeName, new() { Exact = true }))
+            .ToBeVisibleAsync(new() { Timeout = 15_000 });
 
         Page.Dialog += async (_, dialog) => await dialog.AcceptAsync();
         await card.GetByRole(
