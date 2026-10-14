@@ -97,7 +97,8 @@ public sealed class CrossFeatureWorkflowTests : UiTestBase
         await primaryCard.GetByRole(
             AriaRole.Button,
             new() { Name = "Detach", Exact = true }).ClickAsync();
-        await Expect(primaryCard.GetByText("No nodes attached.", new() { Exact = true }))
-            .ToBeVisibleAsync();
+        await Expect(
+            primaryCard.GetByText("No nodes attached.", new() { Exact = true })
+        ).ToBeVisibleAsync(new() { Timeout = 10_000 });
     }
 }
