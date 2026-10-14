@@ -1,5 +1,3 @@
-using System.Net.Http.Json;
-using System.Text.Json;
 using BeeCloud.UiTests.Configuration;
 using BeeCloud.UiTests.Fixtures;
 using BeeCloud.UiTests.Helpers;
@@ -15,13 +13,13 @@ namespace BeeCloud.UiTests.Tests;
 [Category("Incidents")]
 public sealed class IncidentInvestigationWorkflowTests : UiTestBase
 {
-    private static readonly JsonSerializerOptions JsonOptions =
-        new(JsonSerializerDefaults.Web);
+    private const int MaxIncidentResolutionTimeoutSeconds = 120;
 
     [Test]
     [Timeout(180_000)]
     public async Task ResolvedGpuIncident_ShouldBeFilterableAndNavigateToAffectedNode()
     {
+        // Arrange: Create, start node, and simulate GPU fault
         var dashboard = new DashboardPage(Page);
         await dashboard.OpenAsync();
 
@@ -29,146 +27,137 @@ public sealed class IncidentInvestigationWorkflowTests : UiTestBase
         await NodeTestHelper.WaitForNodeStatusAsync(
             Page, nodeName, "Available", UiTestSettings.ProvisioningTimeoutMs);
 
-        await dashboard.NodeCard(nodeName).GetByRole(
-            AriaRole.Button,
-            new() { Name = "Start", Exact = true }).ClickAsync();
+        await dashboard.NodeCard(nodeName).GetByRole(AriaRole.Button, new()
+        {
+            Name = "Start",
+            Exact = true
+        }).ClickAsync();
+
         await NodeTestHelper.WaitForNodeStatusAsync(
             Page, nodeName, "Running", UiTestSettings.LifecycleTimeoutMs);
 
-        using var api = new HttpClient
-        {
-            BaseAddress = new Uri(UiTestSettings.ApiBaseUrl.TrimEnd('/') + "/")
-        };
+        using var api = ApiTestHelper.CreateApiClient();
 
-        var node = await FindNodeByNameAsync(api, nodeName);
-        Assert.That(node, Is.Not.Null, $"Created node '{nodeName}' was not found through the API.");
+        var node = await ApiTestHelper.FindNodeByNameAsync<NodeSnapshot>(api, nodeName);
+        Assert.That(node, Is.Not.Null,
+            $"Created node '{nodeName}' was not found through the API");
 
-        using var faultResponse = await api.PostAsJsonAsync(
-            $"api/v1/nodes/{node!.Id}/simulate/fault",
-            new { fault = "GpuFailure" });
+        // Act: Simulate GPU fault
+        await ApiTestHelper.SimulateFaultAsync(api, node!.Id, new { fault = "GpuFailure" });
+
+        // Assert: Wait for resolved incident
+        var incident = await ApiTestHelper.WaitForIncidentAsync<IncidentSnapshot>(
+            api,
+            node.Id,
+            inc => string.Equals(inc.Title, "GPU failure detected", StringComparison.Ordinal) &&
+                   string.Equals(inc.Status, "Resolved", StringComparison.OrdinalIgnoreCase),
+            TimeSpan.FromSeconds(MaxIncidentResolutionTimeoutSeconds));
+
         Assert.That(
-            faultResponse.IsSuccessStatusCode,
-            Is.True,
-            $"Fault simulation failed with HTTP {(int)faultResponse.StatusCode}: {await faultResponse.Content.ReadAsStringAsync()}");
+            incident,
+            Is.Not.Null,
+            "The GPU failure incident did not reach Resolved within the timeout");
 
-        var incident = await WaitForResolvedGpuIncidentAsync(api, node.Id, TimeSpan.FromSeconds(120));
-        Assert.That(incident, Is.Not.Null, "The GPU failure incident did not resolve within the timeout.");
-
+        // Assert: Filter and verify incident in UI
         await Page.ReloadAsync();
         await dashboard.Heading.WaitForAsync();
 
-        var statusFilter = Page.GetByLabel("Status", new() { Exact = true });
-        var nodeFilter = Page.GetByLabel("Node", new() { Exact = true });
+        await Page.GetByLabel("Status", new() { Exact = true })
+            .SelectOptionAsync("Resolved");
 
-        await statusFilter.SelectOptionAsync("Resolved");
-        await nodeFilter.SelectOptionAsync(new SelectOptionValue { Label = nodeName });
+        await Page.GetByLabel("Node", new() { Exact = true })
+            .SelectOptionAsync(new SelectOptionValue { Label = nodeName });
 
-        // Resolved incidents are grouped in collapsed per-node history details.
-        var incidentHistory = Page.Locator("details").Filter(new() { HasText = nodeName });
-        await Expect(incidentHistory).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        var incidentHistory = Page.Locator("details")
+            .Filter(new() { HasText = nodeName });
+
+        await Expect(incidentHistory).ToBeVisibleAsync(
+            new() { Timeout = 15_000 });
+
         await incidentHistory.Locator("summary").ClickAsync();
 
-        var incidentCard = incidentHistory.Locator("article").Filter(new()
+        var incidentCard = incidentHistory.Locator("article")
+            .Filter(new()
+            {
+                Has = Page.GetByRole(AriaRole.Heading, new()
+                {
+                    Name = incident!.Title,
+                    Exact = true
+                })
+            });
+
+        await Expect(incidentCard).ToBeVisibleAsync(
+            new() { Timeout = 15_000 });
+
+        await Expect(incidentCard.GetByText("Resolved", new()
         {
-            Has = Page.GetByRole(
-                AriaRole.Heading,
-                new() { Name = incident!.Title, Exact = true })
+            Exact = true
+        })).ToBeVisibleAsync();
+
+        var affectedNodeLink = incidentCard.GetByRole(AriaRole.Link, new()
+        {
+            Name = $"Affected node {nodeName}",
+            Exact = true
         });
-
-        await Expect(incidentCard).ToBeVisibleAsync();
-        await Expect(incidentCard.GetByText("Resolved", new() { Exact = true }))
-            .ToBeVisibleAsync();
-
-        var affectedNodeLink = incidentCard.GetByRole(
-            AriaRole.Link,
-            new() { Name = $"Affected node {nodeName}", Exact = true });
 
         await Expect(affectedNodeLink).ToBeVisibleAsync();
         await affectedNodeLink.ClickAsync();
 
         var detail = new NodeDetailPage(Page);
-        await Expect(detail.Heading(nodeName)).ToBeVisibleAsync();
-        await Expect(detail.ActiveFaultLabel).ToBeVisibleAsync();
 
+        await Expect(detail.Heading(nodeName)).ToBeVisibleAsync();
+
+        var card = dashboard.NodeCard(nodeName);
+
+        await Expect(
+            card.GetByText("Active Fault", new() { Exact = true })
+        ).ToBeVisibleAsync();
         await detail.BackToNodes.ClickAsync();
         await dashboard.Heading.WaitForAsync();
 
-        await statusFilter.SelectOptionAsync("Resolved");
-        await nodeFilter.SelectOptionAsync(new SelectOptionValue { Label = nodeName });
-        incidentHistory = Page.Locator("details").Filter(new() { HasText = nodeName });
-        await Expect(incidentHistory).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await Page.GetByLabel("Status", new() { Exact = true })
+            .SelectOptionAsync("Resolved");
+
+        await Page.GetByLabel("Node", new() { Exact = true })
+            .SelectOptionAsync(new SelectOptionValue { Label = nodeName });
+
+        incidentHistory = Page.Locator("details")
+            .Filter(new() { HasText = nodeName });
+
+        await Expect(incidentHistory).ToBeVisibleAsync(
+            new() { Timeout = 15_000 });
+
         await incidentHistory.Locator("summary").ClickAsync();
-        incidentCard = incidentHistory.Locator("article").Filter(new()
-        {
-            Has = Page.GetByRole(
-                AriaRole.Heading,
-                new() { Name = incident!.Title, Exact = true })
-        });
-        await Expect(incidentCard).ToBeVisibleAsync();
-        await Expect(incidentCard.GetByText("Resolved", new() { Exact = true }))
-            .ToBeVisibleAsync();
-    }
 
-    private static async Task<NodeSnapshot?> FindNodeByNameAsync(
-        HttpClient api,
-        string nodeName)
-    {
-        using var response = await api.GetAsync("api/v1/nodes");
-        response.EnsureSuccessStatusCode();
-
-        var nodes = await response.Content.ReadFromJsonAsync<List<NodeSnapshot>>(JsonOptions);
-        return nodes?.SingleOrDefault(node =>
-            string.Equals(node.Name, nodeName, StringComparison.Ordinal));
-    }
-
-    private static async Task<IncidentSnapshot?> WaitForResolvedGpuIncidentAsync(
-        HttpClient api,
-        Guid nodeId,
-        TimeSpan timeout)
-    {
-        var deadline = DateTime.UtcNow + timeout;
-
-        while (DateTime.UtcNow < deadline)
-        {
-            using var response = await api.GetAsync(
-                $"api/v1/incidents/search?computeNodeId={nodeId}&page=1&pageSize=20");
-            response.EnsureSuccessStatusCode();
-
-            var page = await response.Content.ReadFromJsonAsync<IncidentPageSnapshot>(JsonOptions);
-            var incident = page?.Items
-                .Where(item => string.Equals(
-                    item.Title, "GPU failure detected", StringComparison.Ordinal))
-                .OrderByDescending(item => item.CreatedAt)
-                .FirstOrDefault();
-
-            if (incident is not null
-                && string.Equals(incident.Status, "Resolved", StringComparison.OrdinalIgnoreCase))
+        incidentCard = incidentHistory.Locator("article")
+            .Filter(new()
             {
-                return incident;
-            }
+                Has = Page.GetByRole(AriaRole.Heading, new()
+                {
+                    Name = incident.Title,
+                    Exact = true
+                })
+            });
 
-            await Task.Delay(500);
-        }
+        await Expect(incidentCard).ToBeVisibleAsync(
+            new() { Timeout = 15_000 });
 
-        return null;
+        await Expect(incidentCard.GetByText("Resolved", new()
+        {
+            Exact = true
+        })).ToBeVisibleAsync();
     }
 
     private sealed record NodeSnapshot(
         Guid Id,
         string Name,
         string Status,
-        string ActiveFault);
+        string ActiveFault) : INodeWithStatus;
 
     private sealed record IncidentSnapshot(
         Guid Id,
         Guid ComputeNodeId,
         string Status,
         string Title,
-        DateTime CreatedAt);
-
-    private sealed record IncidentPageSnapshot(
-        List<IncidentSnapshot> Items,
-        int Page,
-        int PageSize,
-        int TotalCount);
+        DateTime CreatedAt) : IIncidentIdentifiable;
 }

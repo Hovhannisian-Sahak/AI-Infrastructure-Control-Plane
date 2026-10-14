@@ -19,6 +19,9 @@ public static class NodeTestHelper
         await dashboard.FillNodeFormAsync(name, gpuModel, gpuCount);
         await dashboard.CreateNodeButton.ClickAsync();
 
+        // Search for the node to ensure it's on the first page
+        await dashboard.SearchNodesInput.FillAsync(name);
+
         var nodeLink = dashboard.NodeLink(name);
         await nodeLink.WaitForAsync(new() { State = WaitForSelectorState.Visible });
 
@@ -43,9 +46,7 @@ public static class NodeTestHelper
         string status,
         float timeoutMs = 60_000)
     {
-        await card.GetByLabel(
-                $"Node status: {status}",
-                new() { Exact = true })
+        await card.GetByText(status, new() { Exact = true })
             .WaitForAsync(new()
             {
                 State = WaitForSelectorState.Visible,

@@ -16,58 +16,59 @@ namespace BeeCloud.UiTests.Tests;
 public sealed class IncidentPaginationWorkflowTests : UiTestBase
 {
     private const int IncidentPageSize = 12;
+    private const int MaxVerificationAttempts = 10;
+    private const int VerificationDelayMs = 500;
 
     [Test]
     [Timeout(180_000)]
     public async Task IncidentPagination_ShouldNavigateAndResetWhenFiltersChange()
     {
+        // Arrange: Create test node via API
         var dashboard = new DashboardPage(Page);
         await dashboard.OpenAsync();
 
-        var nodeName = await NodeTestHelper.CreateNodeAsync(Page);
-        await NodeTestHelper.WaitForNodeStatusAsync(
-            Page, nodeName, "Available", UiTestSettings.ProvisioningTimeoutMs);
+        using var api = ApiTestHelper.CreateApiClient();
+        var nodeName = TestData.NodeName();
 
-        using var api = new HttpClient
+        var createdNode = await ApiTestHelper.CreateNodeAsync<NodeSnapshot>(
+            api,
+            new
+            {
+                name = nodeName,
+                gpuModel = "NVIDIA A100",
+                gpuCount = 1
+            });
+
+        var nodeId = createdNode.Id;
+
+        // Arrange: Create 13 incidents to span 2 pages (12 per page)
+        var expectedIncidentCount = IncidentPageSize + 1;
+        for (var index = 1; index <= expectedIncidentCount; index++)
         {
-            BaseAddress = new Uri(UiTestSettings.ApiBaseUrl.TrimEnd('/') + "/")
-        };
-
-        var nodeId = await FindNodeIdByNameAsync(api, nodeName);
-        Assert.That(nodeId, Is.Not.EqualTo(Guid.Empty), "The test node must exist through the API.");
-
-        // Create 13 incidents through the API to exercise the real server-paginated UI
-        // without relying on historical incidents in the shared test database.
-        for (var index = 1; index <= IncidentPageSize + 1; index++)
-        {
-            using var response = await api.PostAsJsonAsync(
-                "api/v1/incidents",
+            await ApiTestHelper.CreateIncidentAsync<IncidentSnapshot>(
+                api,
                 new
                 {
                     computeNodeId = nodeId,
                     severity = "Medium",
                     title = $"pagination-e2e-{Guid.NewGuid():N}-{index}",
-                    description = "Created by IncidentPaginationWorkflowTests."
+                    description = "Created by IncidentPaginationWorkflowTests"
                 });
-
-            Assert.That(
-                response.IsSuccessStatusCode,
-                Is.True,
-                $"Creating test incident {index} failed with HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         }
 
-        // Verify the backend has persisted every seeded incident before checking the UI.
-        using (var verificationResponse = await api.GetAsync(
-                   $"api/v1/incidents/search?computeNodeId={nodeId}&page=1&pageSize=100"))
-        {
-            verificationResponse.EnsureSuccessStatusCode();
-            var seededIncidents = await verificationResponse.Content
-                .ReadFromJsonAsync<IncidentPageSnapshot>();
-            Assert.That(
-                seededIncidents?.TotalCount,
-                Is.EqualTo(IncidentPageSize + 1),
-                "The API must return all 13 incidents for the test node before the UI is checked.");
-        }
+        // Arrange: Wait for all incidents to be persisted
+        await ApiTestHelper.WaitForCountAsync<IncidentSnapshot>(
+            async () =>
+            {
+                using var response = await api.GetAsync(
+                    $"api/v1/incidents/search?computeNodeId={nodeId}&page=1&pageSize=100");
+                response.EnsureSuccessStatusCode();
+                var page = await response.Content.ReadFromJsonAsync<IncidentPageSnapshot>();
+                return page?.TotalCount ?? 0;
+            },
+            expectedIncidentCount,
+            TimeSpan.FromSeconds(30),
+            "incidents");
 
         await Page.ReloadAsync();
         await dashboard.Heading.WaitForAsync();
@@ -128,17 +129,7 @@ public sealed class IncidentPaginationWorkflowTests : UiTestBase
         await Expect(previousButton).ToBeDisabledAsync();
     }
 
-    private static async Task<Guid> FindNodeIdByNameAsync(HttpClient api, string nodeName)
-    {
-        using var response = await api.GetAsync("api/v1/nodes");
-        response.EnsureSuccessStatusCode();
-
-        var nodes = await response.Content.ReadFromJsonAsync<List<NodeSnapshot>>();
-        return nodes?.SingleOrDefault(node =>
-            string.Equals(node.Name, nodeName, StringComparison.Ordinal))?.Id ?? Guid.Empty;
-    }
-
-    private sealed record NodeSnapshot(Guid Id, string Name);
+    private sealed record NodeSnapshot(Guid Id, string Name) : INodeIdentifiable;
 
     private sealed record IncidentPageSnapshot(
         List<IncidentSnapshot> Items,
@@ -150,5 +141,6 @@ public sealed class IncidentPaginationWorkflowTests : UiTestBase
         Guid Id,
         Guid ComputeNodeId,
         string Status,
-        string Title);
+        string Title,
+        DateTime CreatedAt) : IIncidentIdentifiable;
 }

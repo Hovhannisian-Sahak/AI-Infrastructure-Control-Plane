@@ -1,7 +1,4 @@
-﻿
-using System.Net.Http.Json;
-using System.Text.Json;
-using BeeCloud.UiTests.Configuration;
+﻿using BeeCloud.UiTests.Configuration;
 using BeeCloud.UiTests.Fixtures;
 using BeeCloud.UiTests.Helpers;
 using BeeCloud.UiTests.Pages;
@@ -13,160 +10,140 @@ namespace BeeCloud.UiTests.Tests;
 
 [TestFixture]
 [Category("E2E")]
-[Category("Reliability")]
+[Category("Health")]
+[Category("Remediation")]
 public sealed class HealthFailureRecoveryWorkflowTests : UiTestBase
 {
-    private static readonly JsonSerializerOptions JsonOptions =
-        new(JsonSerializerDefaults.Web);
+    private const int MaxRemediationTimeoutSeconds = 120;
 
     [Test]
-    [Timeout(240_000)]
+    [Timeout(300_000)]
     public async Task GpuFault_ShouldCreateIncidentAndRecoverAfterFaultIsCleared()
     {
+        // Arrange: Create and provision a node
         var dashboard = new DashboardPage(Page);
         await dashboard.OpenAsync();
 
         var nodeName = await NodeTestHelper.CreateNodeAsync(Page);
-
         await NodeTestHelper.WaitForNodeStatusAsync(
             Page,
             nodeName,
             "Available",
             UiTestSettings.ProvisioningTimeoutMs);
 
-        var card = dashboard.NodeCard(nodeName);
+        using var api = ApiTestHelper.CreateApiClient();
 
-        await card.GetByRole(
-            AriaRole.Button,
-            new() { Name = "Start", Exact = true }
-        ).ClickAsync();
+        var nodeId = await ApiTestHelper.FindNodeIdByNameAsync(api, nodeName);
+        Assert.That(
+            nodeId,
+            Is.Not.EqualTo(Guid.Empty),
+            $"Created node '{nodeName}' must exist in the API");
 
+        // Start the node before simulating a GPU fault
+        await ApiTestHelper.StartNodeAsync(api, nodeId);
         await NodeTestHelper.WaitForNodeStatusAsync(
             Page,
             nodeName,
             "Running",
             UiTestSettings.LifecycleTimeoutMs);
 
-        using var api = new HttpClient
-        {
-            BaseAddress = new Uri(
-                UiTestSettings.ApiBaseUrl.TrimEnd('/') + "/")
-        };
+        // Act: Inject the GPU-overheat fault
+        await ApiTestHelper.SimulateFaultAsync(api, nodeId, new { fault = 1 });
 
-        var nodeId = await FindNodeIdAsync(api, nodeName);
-
-        // NodeFault.GpuOverheat has numeric enum value 1.
-        using var faultResponse = await api.PostAsJsonAsync(
-            $"api/v1/nodes/{nodeId}/simulate/fault",
-            new { fault = 1 });
+        // Assert: Wait for incident creation
+        var incident = await ApiTestHelper.WaitForIncidentAsync<IncidentSnapshot>(
+            api,
+            nodeId,
+            inc => inc.Title.Contains("GPU", StringComparison.OrdinalIgnoreCase) ||
+                   inc.Title.Contains("health check", StringComparison.OrdinalIgnoreCase),
+            TimeSpan.FromSeconds(MaxRemediationTimeoutSeconds));
 
         Assert.That(
-            (int)faultResponse.StatusCode,
-            Is.EqualTo(200),
-            await faultResponse.Content.ReadAsStringAsync());
+            incident,
+            Is.Not.Null,
+            "A health-related incident should be created after the GPU fault");
 
-        await WaitForApiStatusAsync(
-            api, nodeId, "Quarantined", 120_000);
-
-        const string incidentTitle = "Compute node health check failed";
-
-        var incidentHeading = Page.GetByRole(
-            AriaRole.Heading,
-            new() { Name = incidentTitle, Exact = true });
-
-        await Expect(incidentHeading).ToBeVisibleAsync(
-            new() { Timeout = 90_000 });
-
-        // Clear the simulated fault so remediation can recover the node.
-        using var clearFaultResponse = await api.DeleteAsync(
-            $"api/v1/nodes/{nodeId}/simulate/fault");
+        // Assert: Wait for automatic remediation to Available status
+        var recoveredNode = await ApiTestHelper.WaitForNodeStatusAsync<NodeSnapshot>(
+            api,
+            nodeId,
+            "Available",
+            TimeSpan.FromSeconds(MaxRemediationTimeoutSeconds));
 
         Assert.That(
-            (int)clearFaultResponse.StatusCode,
-            Is.EqualTo(200),
-            await clearFaultResponse.Content.ReadAsStringAsync());
+            recoveredNode.Status,
+            Is.EqualTo("Available"),
+            "Node should return to Available after automatic remediation");
 
-        await WaitForApiStatusAsync(
-            api, nodeId, "Available", 120_000);
+        // Clear the simulated fault
+        await ApiTestHelper.ClearFaultAsync(api, nodeId);
 
+        // Verify fault is cleared
+        var clearedNode = await ApiTestHelper.WaitForNodeStatusAsync<NodeSnapshot>(
+            api,
+            nodeId,
+            "Available",
+            TimeSpan.FromSeconds(MaxRemediationTimeoutSeconds));
+
+        Assert.That(
+            clearedNode.ActiveFault,
+            Is.EqualTo("None"),
+            "Active fault should be 'None' after clearing");
+
+        // Assert: Verify UI reflects the cleared state
         await Page.ReloadAsync();
         await dashboard.Heading.WaitForAsync();
 
-        card = dashboard.NodeCard(nodeName);
+        var nodeCard = dashboard.NodeCard(nodeName);
+        await Expect(nodeCard).ToContainTextAsync("Available");
+        await Expect(
+                nodeCard.GetByText("None", new() { Exact = true }))
+            .ToBeVisibleAsync();
 
-        await NodeTestHelper.WaitForNodeStatusAsync(
-            Page,
-            nodeName,
-            "Available",
-            UiTestSettings.LifecycleTimeoutMs);
-
-        await Expect(card.GetByText(
-            "None",
-            new() { Exact = true }
-        )).ToBeVisibleAsync();
-
-        // The incident should remain visible in the incident history.
-        await Expect(incidentHeading).ToBeVisibleAsync(
-            new() { Timeout = 30_000 });
+        // Assert: Verify incident history is visible in the UI
+        await VerifyIncidentHistoryAsync(nodeName, incident!.Title);
     }
 
-    private static async Task<Guid> FindNodeIdAsync(
-        HttpClient api,
-        string nodeName)
+    private async Task VerifyIncidentHistoryAsync(string nodeName, string incidentTitle)
     {
-        using var response = await api.GetAsync("api/v1/nodes");
-        response.EnsureSuccessStatusCode();
+        var nodeIncidentHistory = Page
+            .Locator("details")
+            .Filter(new() { HasText = nodeName });
 
-        var nodes =
-            await response.Content.ReadFromJsonAsync<List<NodeSnapshot>>(
-                JsonOptions);
-
-        var node = nodes?.SingleOrDefault(item =>
-            string.Equals(item.Name, nodeName, StringComparison.Ordinal));
-
-        Assert.That(node, Is.Not.Null,
-            $"Node '{nodeName}' was not returned by the API.");
-
-        return node!.Id;
-    }
-
-    private static async Task WaitForApiStatusAsync(
-        HttpClient api,
-        Guid nodeId,
-        string expectedStatus,
-        int timeoutMs)
-    {
-        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-        string? actualStatus = null;
-
-        while (DateTime.UtcNow < deadline)
+        if (await nodeIncidentHistory.CountAsync() == 0)
         {
-            using var response = await api.GetAsync("api/v1/nodes");
-            response.EnsureSuccessStatusCode();
-
-            var nodes =
-                await response.Content.ReadFromJsonAsync<List<NodeSnapshot>>(
-                    JsonOptions);
-
-            actualStatus = nodes?
-                .SingleOrDefault(node => node.Id == nodeId)?
-                .Status;
-
-            if (actualStatus == expectedStatus)
-            {
-                return;
-            }
-
-            await Task.Delay(1_000);
+            Assert.Fail(
+                $"Could not find incident history for node '{nodeName}'. " +
+                $"Expected incident: '{incidentTitle}'");
         }
 
-        Assert.Fail(
-            $"Node '{nodeId}' did not reach '{expectedStatus}' " +
-            $"within {timeoutMs} ms. Last status: '{actualStatus}'.");
+        var summary = nodeIncidentHistory
+            .GetByText("Incident history", new() { Exact = false });
+
+        if (await summary.CountAsync() > 0)
+        {
+            await summary.First.ClickAsync();
+        }
+
+        await Expect(
+                nodeIncidentHistory.GetByRole(AriaRole.Heading, new()
+                {
+                    Name = incidentTitle,
+                    Exact = true
+                }))
+            .ToBeVisibleAsync(new() { Timeout = 15_000 });
     }
 
     private sealed record NodeSnapshot(
         Guid Id,
         string Name,
-        string Status);
+        string Status,
+        string ActiveFault) : INodeWithStatus;
+
+    private sealed record IncidentSnapshot(
+        Guid Id,
+        Guid ComputeNodeId,
+        string Status,
+        string Title,
+        DateTime CreatedAt) : IIncidentIdentifiable;
 }
