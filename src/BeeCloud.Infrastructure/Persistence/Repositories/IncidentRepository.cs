@@ -62,30 +62,16 @@ public class IncidentRepository : IIncidentRepository
         CancellationToken cancellationToken = default)
     {
         var query = BuildQuery(severity, status, computeNodeId, from, to);
-        var nodeGroups = query
-            .GroupBy(incident => incident.ComputeNodeId)
-            .Select(group => new
-            {
-                ComputeNodeId = group.Key,
-                LatestIncidentAt = group.Max(incident => incident.CreatedAt)
-            });
-        var totalCount = await nodeGroups.CountAsync(cancellationToken);
+        var totalCount = await query.CountAsync(cancellationToken);
         var offset = (long)(page - 1) * pageSize;
         if (offset > int.MaxValue)
             return (Array.Empty<Incident>(), totalCount);
 
-        var pageNodeIds = await nodeGroups
-            .OrderByDescending(group => group.LatestIncidentAt)
-            .ThenBy(group => group.ComputeNodeId)
-            .Skip((int)offset)
-            .Take(pageSize)
-            .Select(group => group.ComputeNodeId)
-            .ToListAsync(cancellationToken);
-
         var items = await query
-            .Where(incident => pageNodeIds.Contains(incident.ComputeNodeId))
             .OrderByDescending(incident => incident.CreatedAt)
             .ThenByDescending(incident => incident.Id)
+            .Skip((int)offset)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
 
         return (items, totalCount);

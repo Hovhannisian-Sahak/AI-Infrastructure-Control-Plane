@@ -15,7 +15,9 @@ public sealed class DashboardPage(IPage page)
         Page.GetByRole(AriaRole.Heading, new() { Name = "Create Compute Node", Exact = true });
 
     public ILocator NodeNameInput => Page.GetByLabel("Node Name");
-    public ILocator GpuModelInput => Page.GetByLabel("GPU Model");
+    public ILocator GpuModelInput => Page.GetByRole(
+        AriaRole.Textbox,
+        new() { Name = "GPU Model", Exact = true });
     public ILocator GpuCountInput => Page.GetByLabel("GPU Count");
 
     public ILocator CreateNodeButton =>

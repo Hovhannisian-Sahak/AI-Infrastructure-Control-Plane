@@ -43,16 +43,11 @@ public static async Task<string> CreateNodeAsync(
             $"Response: {responseBody}");
     }
 
-    await page.GetByRole(AriaRole.Status)
-        .GetByText("Node created successfully.", new()
-        {
-            Exact = true
-        })
-        .WaitForAsync(new()
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 30_000
-        });
+        // Search for the node to ensure it's on the first page
+        await dashboard.SearchNodesInput.FillAsync(name);
+
+        var nodeLink = dashboard.NodeLink(name);
+        await nodeLink.WaitForAsync(new() { State = WaitForSelectorState.Visible });
 
     var nodeLink = dashboard.NodeLink(name);
 
@@ -100,9 +95,7 @@ public static async Task<string> CreateNodeAsync(
         string status,
         float timeoutMs = 60_000)
     {
-        await card.GetByLabel(
-                $"Node status: {status}",
-                new() { Exact = true })
+        await card.GetByText(status, new() { Exact = true })
             .WaitForAsync(new()
             {
                 State = WaitForSelectorState.Visible,

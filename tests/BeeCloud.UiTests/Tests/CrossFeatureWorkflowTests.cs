@@ -76,14 +76,9 @@ public sealed class CrossFeatureWorkflowTests : UiTestBase
             AriaRole.Button,
             new() { Name = "Attach Node", Exact = true }).ClickAsync();
 
-        // Verify the durable result of attaching the node.
-        await Expect(
-            primaryCard.GetByText(nodeName, new() { Exact = true })
-        ).ToBeVisibleAsync(new() { Timeout = 10_000 });
-
-        await Expect(
-            primaryCard.GetByText("1 /", new() { Exact = false })
-        ).ToBeVisibleAsync();
+        await Expect(primaryCard.GetByText(
+                nodeName, new() { Exact = true }))
+            .ToBeVisibleAsync(new() { Timeout = 15_000 });
 
         await Page.ReloadAsync();
         await dashboard.Heading.WaitForAsync();

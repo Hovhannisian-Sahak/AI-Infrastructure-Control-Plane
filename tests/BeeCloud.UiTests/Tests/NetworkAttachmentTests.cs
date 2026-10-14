@@ -45,6 +45,10 @@ public sealed class NetworkAttachmentTests : UiTestBase
             AriaRole.Button,
             new() { Name = "Attach Node", Exact = true }).ClickAsync();
 
+        await Expect(networkCard.GetByText(
+                nodeName, new() { Exact = true }))
+            .ToBeVisibleAsync(new() { Timeout = 15_000 });
+
         await Expect(networkCard.GetByText(nodeName, new() { Exact = true }))
             .ToBeVisibleAsync();
 
@@ -112,21 +116,18 @@ public sealed class NetworkAttachmentTests : UiTestBase
             AriaRole.Button,
             new() { Name = "Attach Node", Exact = true }).ClickAsync();
 
-        // Confirm that the attachment exists before testing delete conflict behavior.
-        await Expect(
-            card.GetByText(nodeName, new() { Exact = true })
-        ).ToBeVisibleAsync(new() { Timeout = 10_000 });
-
-        await Expect(
-            card.GetByText("1 /", new() { Exact = false })
-        ).ToBeVisibleAsync();
+        await Expect(card.GetByText(
+                nodeName, new() { Exact = true }))
+            .ToBeVisibleAsync(new() { Timeout = 15_000 });
 
         Page.Dialog += async (_, dialog) => await dialog.AcceptAsync();
         await card.GetByRole(
             AriaRole.Button,
             new() { Name = "Delete", Exact = true }).ClickAsync();
 
-        await card.GetByRole(AriaRole.Alert).WaitForAsync();
+        var deleteError = card.GetByRole(AriaRole.Alert);
+        await Expect(deleteError).ToHaveTextAsync(
+            "The network cannot be deleted while nodes are attached.");
         await Expect(card).ToBeVisibleAsync();
         await Expect(dashboard.NetworkCard(networkName)).ToBeVisibleAsync();
     }

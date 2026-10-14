@@ -1,4 +1,4 @@
-﻿using BeeCloud.UiTests.Fixtures;
+using BeeCloud.UiTests.Fixtures;
 using BeeCloud.UiTests.Helpers;
 using BeeCloud.UiTests.Pages;
 using Microsoft.Playwright;
