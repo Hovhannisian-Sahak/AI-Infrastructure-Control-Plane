@@ -76,6 +76,10 @@ GitHub environment named `performance`. Configure its variables:
 - `PERFORMANCE_UI_BASE_URL`: UI URL for the same environment.
 - `PERFORMANCE_NODE_ID` (optional): node ID for health/metrics history requests.
 
+If either URL is missing, the JMeter job is skipped; configure both URLs and
+dispatch the workflow again. GitHub-hosted runners cannot access services
+bound only to `localhost` on a developer's machine. Provide a URL reachable
+from the runner, or use a self-hosted runner and a dedicated staging endpoint.
 Protect that GitHub environment with required reviewers. Use a disposable
 database for `include_writes`; never point load profiles at production. Start
 with `baseline`, then use `load` when the environment is ready. `stress`, `spike`,
