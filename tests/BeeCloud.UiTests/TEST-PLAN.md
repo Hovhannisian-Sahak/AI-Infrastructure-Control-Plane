@@ -76,6 +76,59 @@ dotnet test tests/BeeCloud.UiTests/BeeCloud.UiTests.csproj --filter "TestCategor
 
 Override URLs with `BEECLOUD_UI_URL` and `BEECLOUD_API_URL`. Use `BEECLOUD_HEADLESS=false` to show the browser.
 
+## Apache JMeter performance tests
+
+The JMeter plan at `tests/performance/beecloud-api.jmx` measures the API read
+workload (nodes, networks, incidents, and optionally health/metrics for a known
+node) alongside the UI's dashboard document response. The optional write
+workflow creates a uniquely named network, reads it, and deletes it. Writes
+are disabled by default.
+
+Install Apache JMeter 5.6.3 or later and Java 17+, then run from the repository
+root in PowerShell:
+
+```powershell
+.\tests\performance\run-performance.ps1 -Profile baseline
+```
+
+Profiles:
+
+| Profile | Virtual users | Ramp-up | Steady period | Think time |
+|---|---:|---:|---:|---:|
+| `baseline` | 1 | 1 s | 60 s | 500 ms |
+| `load` | 10 | 30 s | 5 min | 500 ms |
+| `stress` | 50 | 60 s | 5 min | 250 ms |
+| `spike` | 100 | 1 s | 60 s | 250 ms |
+| `soak` | 20 | 60 s | 30 min | 750 ms |
+
+Use the runner options to target the local stack or a dedicated staging
+environment:
+
+```powershell
+.\tests\performance\run-performance.ps1 -Profile baseline `
+  -ApiBaseUrl "http://localhost:8081" `
+  -UiBaseUrl "http://localhost:3001" `
+  -NodeId "00000000-0000-0000-0000-000000000000"
+
+.\tests\performance\run-performance.ps1 -Profile load -IncludeWrites
+```
+
+Non-local hosts are blocked unless `-AllowRemoteTarget` is supplied. Only use
+that switch with a dedicated, disposable performance environment; stress, spike,
+and soak profiles can place substantial load on their target. `-IncludeWrites`
+creates and deletes temporary networks during the run, so only enable it against
+a disposable test database. Provide `-NodeId` for node health and metrics
+history requests; without it those requests are skipped.
+
+Each run saves a JTL results file and an HTML dashboard under
+`tests/performance/results/<timestamp>_<profile>/`. The generated results
+directory is git-ignored. JMeter records per-sampler response times and failures; the runner also enforces
+per-sampler p95 and error-rate limits (defaults: 1000 ms and 1%). Override them
+with `-MaxP95Ms` and `-MaxErrorRatePercent`. Review the HTML report's percentile,
+throughput, and error-rate charts against your environment's agreed
+service-level objectives. This is HTTP-level measurement, not real-browser
+rendering or client-side interaction timing.
+
 ## CI checklist
 
 1. Provision an isolated PostgreSQL database and apply the same migrations used by the app.
