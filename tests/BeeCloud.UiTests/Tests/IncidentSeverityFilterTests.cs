@@ -34,14 +34,17 @@ public sealed class IncidentSeverityFilterTests : UiTestBase
                 gpuCount = 1
             });
 
-        // Create incidents with different severities
+        var lowTitle = $"Low severity incident {Guid.NewGuid():N}";
+        var mediumTitle = $"Medium severity incident {Guid.NewGuid():N}";
+        var highTitle = $"High severity incident {Guid.NewGuid():N}";
+
         await ApiTestHelper.CreateIncidentAsync<IncidentSnapshot>(
             api,
             new
             {
                 computeNodeId = createdNode.Id,
                 severity = "Low",
-                title = $"Low severity incident {Guid.NewGuid():N}",
+                title = lowTitle,
                 description = "Low severity test incident"
             });
 
@@ -51,7 +54,7 @@ public sealed class IncidentSeverityFilterTests : UiTestBase
             {
                 computeNodeId = createdNode.Id,
                 severity = "Medium",
-                title = $"Medium severity incident {Guid.NewGuid():N}",
+                title = mediumTitle,
                 description = "Medium severity test incident"
             });
 
@@ -61,7 +64,7 @@ public sealed class IncidentSeverityFilterTests : UiTestBase
             {
                 computeNodeId = createdNode.Id,
                 severity = "High",
-                title = $"High severity incident {Guid.NewGuid():N}",
+                title = highTitle,
                 description = "High severity test incident"
             });
 
@@ -72,39 +75,59 @@ public sealed class IncidentSeverityFilterTests : UiTestBase
         await Page.GetByLabel("Node", new() { Exact = true })
             .SelectOptionAsync(new SelectOptionValue { Label = nodeName });
 
-        // Assert: Verify all incidents are visible initially
-        var incidentHistory = Page.Locator("details")
-            .Filter(new() { HasText = nodeName });
-
-        await Expect(incidentHistory).ToBeVisibleAsync(
-            new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
-
-        var summary = incidentHistory.Locator("summary");
-        if (await summary.CountAsync() > 0)
+        await Expect(Page.GetByRole(AriaRole.Heading, new()
         {
-            await summary.First.ClickAsync();
-        }
+            Name = lowTitle,
+            Exact = true
+        })).ToBeVisibleAsync(new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
+        await Expect(Page.GetByRole(AriaRole.Heading, new()
+        {
+            Name = mediumTitle,
+            Exact = true
+        })).ToBeVisibleAsync(new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
 
         // Assert: Filter by High severity
         await Page.GetByLabel("Severity", new() { Exact = true })
             .SelectOptionAsync("High");
 
-        await Expect(
-                Page.GetByText("High severity incident", new() { Exact = false }))
-            .ToBeVisibleAsync(new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
+        await Expect(Page.GetByRole(AriaRole.Heading, new()
+        {
+            Name = highTitle,
+            Exact = true
+        })).ToBeVisibleAsync(new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
 
         // Assert: Low and Medium should not be visible
         await Expect(
-                Page.GetByText("Low severity incident", new() { Exact = false }))
+                Page.GetByRole(AriaRole.Heading, new()
+                {
+                    Name = lowTitle,
+                    Exact = true
+                }))
+            .ToHaveCountAsync(0);
+        await Expect(
+                Page.GetByRole(AriaRole.Heading, new()
+                {
+                    Name = mediumTitle,
+                    Exact = true
+                }))
             .ToHaveCountAsync(0);
 
         // Assert: Filter by Medium severity
         await Page.GetByLabel("Severity", new() { Exact = true })
             .SelectOptionAsync("Medium");
 
+        await Expect(Page.GetByRole(AriaRole.Heading, new()
+        {
+            Name = mediumTitle,
+            Exact = true
+        })).ToBeVisibleAsync(new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
         await Expect(
-                Page.GetByText("Medium severity incident", new() { Exact = false }))
-            .ToBeVisibleAsync(new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
+                Page.GetByRole(AriaRole.Heading, new()
+                {
+                    Name = highTitle,
+                    Exact = true
+                }))
+            .ToHaveCountAsync(0);
 
         // Assert: Clear filters
         var filters = Page.GetByTestId("incident-filters");
@@ -114,9 +137,21 @@ public sealed class IncidentSeverityFilterTests : UiTestBase
             Exact = true
         }).ClickAsync();
 
-        // After clearing, all incidents should be visible again
-        await Expect(incidentHistory).ToBeVisibleAsync(
-            new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
+        await Expect(Page.GetByRole(AriaRole.Heading, new()
+        {
+            Name = lowTitle,
+            Exact = true
+        })).ToBeVisibleAsync(new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
+        await Expect(Page.GetByRole(AriaRole.Heading, new()
+        {
+            Name = mediumTitle,
+            Exact = true
+        })).ToBeVisibleAsync(new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
+        await Expect(Page.GetByRole(AriaRole.Heading, new()
+        {
+            Name = highTitle,
+            Exact = true
+        })).ToBeVisibleAsync(new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
     }
 
     private sealed record NodeSnapshot(Guid Id, string Name) : INodeIdentifiable;

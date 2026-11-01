@@ -27,6 +27,7 @@ public sealed class NetworkAttachmentPaginationTests : UiTestBase
         var networkName = await NetworkTestHelper.CreateNetworkAsync(
             Page,
             description: "Network for attachment pagination test");
+        var networkCard = dashboard.NetworkCard(networkName);
 
         var nodeNames = new List<string>();
         for (var i = 0; i < AttachmentPageSize + 1; i++)
@@ -56,7 +57,6 @@ public sealed class NetworkAttachmentPaginationTests : UiTestBase
         await Page.ReloadAsync();
         await dashboard.Heading.WaitForAsync();
 
-        var networkCard = dashboard.NetworkCard(networkName);
         await Expect(networkCard).ToBeVisibleAsync(
             new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
 
@@ -71,7 +71,7 @@ public sealed class NetworkAttachmentPaginationTests : UiTestBase
         // Verify pagination controls
         var pagination = networkCard.GetByRole(AriaRole.Navigation, new()
         {
-            Name = "Attachment pages",
+            Name = $"Attachments for {networkName}",
             Exact = true
         });
 
@@ -103,7 +103,7 @@ public sealed class NetworkAttachmentPaginationTests : UiTestBase
         await Expect(nextButton).ToBeDisabledAsync();
 
         // Verify only 1 attachment on page 2 (4 total, 3 per page)
-        var attachmentItems = networkCard.Locator("[data-testid='attachment-item']");
+        var attachmentItems = networkCard.Locator("ul > li");
         await Expect(attachmentItems).ToHaveCountAsync(1);
 
         // Navigate back to page 1

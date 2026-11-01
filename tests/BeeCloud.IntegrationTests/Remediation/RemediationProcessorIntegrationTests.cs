@@ -235,6 +235,7 @@ public class RemediationProcessorIntegrationTests
 
         // Act 1 - health monitoring.
         await _healthProcessor.ProcessAsync();
+        await _healthProcessor.ProcessAsync();
 
         // Assert - health monitoring should detect the fault.
         var unhealthyNode = await _dbContext.ComputeNodes

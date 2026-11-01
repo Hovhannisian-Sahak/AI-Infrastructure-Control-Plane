@@ -10,7 +10,7 @@ namespace BeeCloud.UiTests.Tests;
 public class NodeCreationTests : UiTestBase
 {
     [Test]
-    public async Task CreateNode_ShouldShowProvisioningAndThenAvailable()
+    public async Task CreateNode_ShouldBecomeAvailable()
     {
         await new DashboardPage(Page).OpenAsync();
 

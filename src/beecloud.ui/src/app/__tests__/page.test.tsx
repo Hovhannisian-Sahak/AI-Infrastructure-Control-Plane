@@ -73,6 +73,10 @@ describe("Home page", () => {
         mockedNodesApi.getNodeMetrics.mockResolvedValue([]);
     });
 
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
     it("renders the page heading", async () => {
         mockedNodesApi.getAll.mockResolvedValue([]);
 
@@ -114,7 +118,9 @@ describe("Home page", () => {
         ).toHaveLength(2);
 
         expect(
-            screen.getByText("NVIDIA A100"),
+            screen.getByText("NVIDIA A100", {
+                selector: "strong",
+            }),
         ).toBeInTheDocument();
 
         expect(
@@ -126,7 +132,7 @@ describe("Home page", () => {
         ).toBeInTheDocument();
 
         expect(
-            screen.getByText("Available"),
+            screen.getByLabelText("Node status: Available"),
         ).toBeInTheDocument();
     });
 
@@ -249,7 +255,9 @@ describe("Home page", () => {
         ).toBeInTheDocument();
 
         expect(
-            screen.getByText("NVIDIA H100"),
+            screen.getByText("NVIDIA H100", {
+                selector: "strong",
+            }),
         ).toBeInTheDocument();
 
         expect(
@@ -425,6 +433,9 @@ describe("Home page", () => {
     });
 
     it("refreshes nodes when the refresh button is clicked", async () => {
+        jest.spyOn(window, "setInterval").mockImplementation(
+            () => setTimeout(() => {}, 60_000),
+        );
         const user = userEvent.setup();
 
         mockedNodesApi.getAll

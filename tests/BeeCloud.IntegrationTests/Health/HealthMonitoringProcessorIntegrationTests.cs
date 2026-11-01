@@ -115,6 +115,7 @@ public class HealthMonitoringProcessorIntegrationTests
 
         // Act
         await _processor.ProcessAsync();
+        await _processor.ProcessAsync();
 
         // Assert
         var persistedNode = await _dbContext.ComputeNodes
@@ -318,6 +319,7 @@ public class HealthMonitoringProcessorIntegrationTests
 
         // Act
         await _processor.ProcessAsync();
+        await _processor.ProcessAsync();
 
         // Assert - health check
         var healthCheck = await _dbContext.HealthChecks
@@ -377,6 +379,7 @@ public class HealthMonitoringProcessorIntegrationTests
             NodeFault.GpuOverheat);
 
         // Act
+        await _processor.ProcessAsync();
         await _processor.ProcessAsync();
 
         // Assert - health check
@@ -438,6 +441,7 @@ public class HealthMonitoringProcessorIntegrationTests
 
         // Act
         await _processor.ProcessAsync();
+        await _processor.ProcessAsync();
 
         // Assert - health check
         var healthCheck = await _dbContext.HealthChecks
@@ -493,6 +497,7 @@ public class HealthMonitoringProcessorIntegrationTests
             NodeFault.ServiceCrash);
 
         // Act
+        await _processor.ProcessAsync();
         await _processor.ProcessAsync();
 
         // Assert - health check

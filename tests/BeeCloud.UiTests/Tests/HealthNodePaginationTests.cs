@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using BeeCloud.UiTests.Configuration;
 using BeeCloud.UiTests.Fixtures;
 using BeeCloud.UiTests.Helpers;
@@ -45,7 +46,7 @@ public sealed class HealthNodePaginationTests : UiTestBase
         // Assert: Verify pagination controls exist
         var pagination = Page.GetByRole(AriaRole.Navigation, new()
         {
-            Name = "Health node pages",
+            Name = "Node health pages",
             Exact = true
         });
 
@@ -78,6 +79,13 @@ public sealed class HealthNodePaginationTests : UiTestBase
 
         var tableRows = healthTable.Locator("tbody tr");
         await Expect(tableRows).ToHaveCountAsync(HealthPageSize);
+        var nodeCountText = await Page.GetByText(
+            new Regex(@"^\d+ of (?<total>\d+) nodes$"))
+            .InnerTextAsync();
+        var totalNodeCount = int.Parse(
+            Regex.Match(nodeCountText, @"^\d+ of (?<total>\d+) nodes$")
+                .Groups["total"]
+                .Value);
 
         // Navigate to page 2
         await nextButton.ClickAsync();
@@ -85,8 +93,12 @@ public sealed class HealthNodePaginationTests : UiTestBase
         await Expect(pagination).ToContainTextAsync("Page 2 of");
         await Expect(previousButton).ToBeEnabledAsync();
 
-        // Verify we have at least 1 row on page 2 (11th node)
-        await Expect(tableRows).ToHaveCountAsync(1, new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
+        var expectedSecondPageRows = Math.Min(
+            HealthPageSize,
+            totalNodeCount - HealthPageSize);
+        await Expect(tableRows).ToHaveCountAsync(
+            expectedSecondPageRows,
+            new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
 
         // Navigate back to page 1
         await previousButton.ClickAsync();

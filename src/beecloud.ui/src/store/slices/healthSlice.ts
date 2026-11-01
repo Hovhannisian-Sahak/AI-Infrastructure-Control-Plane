@@ -14,6 +14,12 @@ type HealthState = {
     errorByNodeId: Record<string, string | null>;
 };
 
+type HealthHistoryEntry = {
+    nodeId: string;
+    history?: HealthCheck[];
+    error?: string;
+};
+
 const initialState: HealthState = {
     historyByNodeId: {},
     latestByNodeId: {},
@@ -72,6 +78,53 @@ export const fetchHealthHistory = createAsyncThunk<
     },
 );
 
+export const fetchHealthHistories = createAsyncThunk<
+    HealthHistoryEntry[],
+    {
+        nodeIds: string[];
+        limit?: number;
+        from?: string;
+        to?: string;
+    }
+>(
+    "health/fetchHealthHistories",
+    async ({ nodeIds, limit = 100, from, to }) => {
+        const entries: HealthHistoryEntry[] = [];
+        const concurrency = 12;
+
+        for (let index = 0; index < nodeIds.length; index += concurrency) {
+            const batch = nodeIds.slice(index, index + concurrency);
+            const results = await Promise.all(batch.map(async nodeId => {
+                try {
+                    const history = from === undefined && to === undefined
+                        ? await nodesApi.getHealthHistory(nodeId, limit)
+                        : await nodesApi.getHealthHistory(nodeId, limit, from, to);
+
+                    return {
+                        nodeId,
+                        history: [...history].sort(
+                            (a, b) =>
+                                new Date(a.checkedAt).getTime() -
+                                new Date(b.checkedAt).getTime(),
+                        ),
+                    };
+                } catch (error) {
+                    return {
+                        nodeId,
+                        error: error instanceof Error
+                            ? error.message
+                            : "Failed to fetch health history.",
+                    };
+                }
+            }));
+
+            entries.push(...results);
+        }
+
+        return entries;
+    },
+);
+
 export const fetchLatestHealth = createAsyncThunk<
     {
         nodeId: string;
@@ -127,6 +180,45 @@ const healthSlice = createSlice({
 
     extraReducers: (builder) => {
         builder
+            .addCase(
+                fetchHealthHistories.pending,
+                (state, action) => {
+                    for (const nodeId of action.meta.arg.nodeIds) {
+                        state.loadingByNodeId[nodeId] = true;
+                        state.errorByNodeId[nodeId] = null;
+                    }
+                },
+            )
+            .addCase(
+                fetchHealthHistories.fulfilled,
+                (state, action) => {
+                    for (const entry of action.payload) {
+                        state.loadingByNodeId[entry.nodeId] = false;
+                        if (entry.error !== undefined) {
+                            state.errorByNodeId[entry.nodeId] = entry.error;
+                            continue;
+                        }
+
+                        const history = entry.history ?? [];
+                        state.historyByNodeId[entry.nodeId] = history;
+                        state.latestByNodeId[entry.nodeId] =
+                            history.length > 0
+                                ? history[history.length - 1]
+                                : null;
+                    }
+                },
+            )
+            .addCase(
+                fetchHealthHistories.rejected,
+                (state, action) => {
+                    for (const nodeId of action.meta.arg.nodeIds) {
+                        state.loadingByNodeId[nodeId] = false;
+                        state.errorByNodeId[nodeId] =
+                            action.error.message ??
+                            "Failed to fetch health history.";
+                    }
+                },
+            )
             .addCase(
                 fetchHealthHistory.pending,
                 (state, action) => {

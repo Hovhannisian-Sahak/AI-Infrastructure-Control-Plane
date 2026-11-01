@@ -408,9 +408,9 @@ public static class ApiTestHelper
         Guid nodeId,
         CancellationToken cancellationToken = default)
     {
-        using var response = await api.PostAsJsonAsync(
-            $"api/v1/networks/{networkId}/attachments",
-            new { nodeId },
+        using var response = await api.PostAsync(
+            $"api/v1/nodes/{nodeId}/networks/{networkId}",
+            content: null,
             cancellationToken);
 
         var body = await response.Content.ReadAsStringAsync(cancellationToken);

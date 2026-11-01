@@ -117,13 +117,7 @@ public sealed class HealthFailureRecoveryWorkflowTests : UiTestBase
                 $"Expected incident: '{incidentTitle}'");
         }
 
-        var summary = nodeIncidentHistory
-            .GetByText("Incident history", new() { Exact = false });
-
-        if (await summary.CountAsync() > 0)
-        {
-            await summary.First.ClickAsync();
-        }
+        await nodeIncidentHistory.Locator("summary").ClickAsync();
 
         await Expect(
                 nodeIncidentHistory.GetByRole(AriaRole.Heading, new()

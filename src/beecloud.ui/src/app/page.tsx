@@ -16,7 +16,10 @@ import {
   fetchHealthHistory,
 } from "@/store/slices/healthSlice";
 import { fetchNodeMetrics } from "@/store/slices/metricsSlice";
-import { getHealthMonitoringNodeIds } from "@/lib/health/healthMonitoring";
+import {
+  getHealthMonitoringNodeIds,
+  isHealthMonitored,
+} from "@/lib/health/healthMonitoring";
 
 import NodeCard from "@/components/nodes/NodeCard";
 import CreateNodeForm from "@/components/nodes/CreateNodeForm";
@@ -87,30 +90,7 @@ export default function Home() {
    */
   const monitoredNodeIds =
       getHealthMonitoringNodeIds(nodes, true);
-  const unmonitoredNodeIds =
-      getHealthMonitoringNodeIds(nodes, false);
-
   const monitoredNodeKey = monitoredNodeIds.join(",");
-  const unmonitoredNodeKey = unmonitoredNodeIds.join(",");
-
-  useEffect(() => {
-    if (!unmonitoredNodeKey) {
-      return;
-    }
-
-    for (const nodeId of unmonitoredNodeKey.split(",")) {
-      void dispatch(
-          fetchHealthHistory({
-            nodeId,
-            limit: 10,
-          }),
-      );
-      void dispatch(fetchNodeMetrics({
-        nodeId,
-        limit: 10,
-      }));
-    }
-  }, [dispatch, unmonitoredNodeKey]);
 
   useEffect(() => {
     if (!monitoredNodeKey) {
@@ -217,6 +197,21 @@ export default function Home() {
       (currentNodePage - 1) * NODE_PAGE_SIZE,
       currentNodePage * NODE_PAGE_SIZE,
   );
+  const visibleUnmonitoredNodeKey = visibleNodes
+      .filter(node => !isHealthMonitored(node.status))
+      .map(node => node.id)
+      .join(",");
+
+  useEffect(() => {
+    if (!visibleUnmonitoredNodeKey) {
+      return;
+    }
+
+    for (const nodeId of visibleUnmonitoredNodeKey.split(",")) {
+      void dispatch(fetchHealthHistory({ nodeId, limit: 10 }));
+      void dispatch(fetchNodeMetrics({ nodeId, limit: 10 }));
+    }
+  }, [dispatch, visibleUnmonitoredNodeKey]);
 
   return (
       <div className={styles.page}>

@@ -20,9 +20,12 @@ function PaginatedContent() {
 }
 
 function CursorPaginatedContent() {
-    const [cursors, setCursors] = useState({
+    const [cursors, setCursors] = useState<{
+        next: string | null;
+        previous: string | null;
+    }>({
         next: "older",
-        previous: null as string | null,
+        previous: null,
     });
 
     return (

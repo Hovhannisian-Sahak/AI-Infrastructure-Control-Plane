@@ -146,11 +146,14 @@ public class IncidentRepositoryIntegrationTests
             from: observedAt,
             to: observedAt.AddDays(1),
             page: 1,
-            pageSize: 1);
+            pageSize: 2);
 
-        Assert.That(firstPage.TotalCount, Is.EqualTo(2));
-        Assert.That(firstPage.Items, Has.Count.EqualTo(1));
+        Assert.That(firstPage.TotalCount, Is.EqualTo(3));
+        Assert.That(firstPage.Items, Has.Count.EqualTo(2));
         Assert.That(firstPage.Items[0].ComputeNodeId, Is.EqualTo(otherNode.Id));
+        Assert.That(
+            firstPage.Items.Select(incident => incident.Id),
+            Does.Contain(latestIncident.Id));
 
         var secondPage = await _repository.GetPageAsync(
             severity: null,
@@ -159,13 +162,13 @@ public class IncidentRepositoryIntegrationTests
             from: observedAt,
             to: observedAt.AddDays(1),
             page: 2,
-            pageSize: 1);
+            pageSize: 2);
 
-        Assert.That(secondPage.TotalCount, Is.EqualTo(2));
-        Assert.That(secondPage.Items, Has.Count.EqualTo(2));
+        Assert.That(secondPage.TotalCount, Is.EqualTo(3));
+        Assert.That(secondPage.Items, Has.Count.EqualTo(1));
         Assert.That(
             secondPage.Items.Select(incident => incident.Id),
-            Is.EquivalentTo(new[] { olderIncident.Id, latestIncident.Id }));
+            Is.EquivalentTo(new[] { olderIncident.Id }));
         Assert.That(
             secondPage.Items.Select(incident => incident.ComputeNodeId).Distinct(),
             Is.EquivalentTo(new[] { node.Id }));

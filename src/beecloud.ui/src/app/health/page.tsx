@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
     useAppDispatch,
@@ -10,7 +10,7 @@ import {
 import { fetchNodes } from "@/store/slices/nodesSlice";
 
 import {
-    fetchHealthHistory,
+    fetchHealthHistories,
 } from "@/store/slices/healthSlice";
 import { fetchNodeMetrics } from "@/store/slices/metricsSlice";
 
@@ -27,6 +27,7 @@ export default function HealthPage() {
     const dispatch = useAppDispatch();
     const [range, setRange] =
         useState<HealthTimeRange>("24h");
+    const requestedMetricsRef = useRef(new Set<string>());
 
     const nodes = useAppSelector(
         state => state.nodes.nodes,
@@ -69,26 +70,31 @@ export default function HealthPage() {
         }
 
         const { from, to } = getHealthRangeBounds(range);
-
-        for (const nodeId of allNodeKey.split(",")) {
-            void dispatch(
-                fetchHealthHistory({
-                    nodeId,
-                    limit: 100,
-                    from: from.toISOString(),
-                    to: to.toISOString(),
-                }),
-            );
-            void dispatch(
-                fetchNodeMetrics({
-                    nodeId,
-                    limit: 100,
-                    from: from.toISOString(),
-                    to: to.toISOString(),
-                }),
-            );
-        }
+        void dispatch(fetchHealthHistories({
+            nodeIds: allNodeKey.split(","),
+            limit: 100,
+            from: from.toISOString(),
+            to: to.toISOString(),
+        }));
     }, [dispatch, allNodeKey, range]);
+
+    const loadMetricsForNodes = useCallback((nodeIds: string[]) => {
+        const { from, to } = getHealthRangeBounds(range);
+        for (const nodeId of nodeIds) {
+            const requestKey = `${range}:${nodeId}`;
+            if (requestedMetricsRef.current.has(requestKey)) {
+                continue;
+            }
+
+            requestedMetricsRef.current.add(requestKey);
+            void dispatch(fetchNodeMetrics({
+                nodeId,
+                limit: 100,
+                from: from.toISOString(),
+                to: to.toISOString(),
+            }));
+        }
+    }, [dispatch, range]);
 
     useEffect(() => {
         if (!monitoredNodeKey) {
@@ -100,25 +106,12 @@ export default function HealthPage() {
 
         const loadHealth = () => {
             const { from, to } = getHealthRangeBounds(range);
-
-            for (const nodeId of nodeIds) {
-                void dispatch(
-                    fetchHealthHistory({
-                        nodeId,
-                        limit: 100,
-                        from: from.toISOString(),
-                        to: to.toISOString(),
-                    }),
-                );
-                void dispatch(
-                    fetchNodeMetrics({
-                        nodeId,
-                        limit: 100,
-                        from: from.toISOString(),
-                        to: to.toISOString(),
-                    }),
-                );
-            }
+            void dispatch(fetchHealthHistories({
+                nodeIds,
+                limit: 100,
+                from: from.toISOString(),
+                to: to.toISOString(),
+            }));
         };
 
         const intervalId = setInterval(
@@ -161,6 +154,7 @@ export default function HealthPage() {
                     metricsLoadingByNodeId={metricsLoadingByNodeId}
                     metricsErrorByNodeId={metricsErrorByNodeId}
                     onRangeChange={setRange}
+                    onVisibleNodeIdsChange={loadMetricsForNodes}
                 />
             </div>
         </main>

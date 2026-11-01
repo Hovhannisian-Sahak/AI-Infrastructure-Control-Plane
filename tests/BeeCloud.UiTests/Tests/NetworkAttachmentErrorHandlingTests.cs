@@ -16,70 +16,51 @@ public sealed class NetworkAttachmentErrorHandlingTests : UiTestBase
 {
     [Test]
     [Timeout(120_000)]
-    public async Task AttachNode_ShouldShowErrorWhenNetworkIsInactive()
+    public async Task InactiveNetwork_ShouldShowActivationWarningAndHideAttachControls()
     {
         // Arrange: Create a node and network
         var dashboard = new DashboardPage(Page);
         await dashboard.OpenAsync();
 
-        var nodeName = await NodeTestHelper.CreateNodeAsync(Page);
-        await NodeTestHelper.WaitForNodeStatusAsync(
-            Page,
-            nodeName,
-            "Available",
-            UiTestSettings.ProvisioningTimeoutMs);
-
         using var api = ApiTestHelper.CreateApiClient();
 
         var networkName = TestData.NetworkName();
-        var createdNetwork = await ApiTestHelper.CreateNetworkAsync<NetworkSnapshot>(
+        await ApiTestHelper.CreateNetworkAsync<NetworkSnapshot>(
             api,
             new
             {
                 name = networkName,
-                cidr = "10.0.0.0/24",
-                isActive = false // Inactive network
+                description = "Inactive network attachment test"
             });
 
         await Page.ReloadAsync();
         await dashboard.Heading.WaitForAsync();
 
-        // Act: Try to attach node to inactive network
         var networkCard = dashboard.NetworkCard(networkName);
         await Expect(networkCard).ToBeVisibleAsync(
             new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
 
-        var attachButton = networkCard.GetByRole(AriaRole.Button, new()
+        await networkCard.GetByRole(AriaRole.Button, new()
         {
-            Name = "Attach node",
+            Name = "Deactivate",
             Exact = true
-        });
+        }).ClickAsync();
 
-        if (await attachButton.IsVisibleAsync())
-        {
-            await attachButton.ClickAsync();
-
-            // Select the node from dropdown
-            var nodeSelect = networkCard.GetByLabel("Select node", new() { Exact = true });
-            if (await nodeSelect.IsVisibleAsync())
-            {
-                await nodeSelect.SelectOptionAsync(new SelectOptionValue { Label = nodeName });
-
-                var confirmButton = networkCard.GetByRole(AriaRole.Button, new()
-                {
-                    Name = "Confirm",
-                    Exact = true
-                });
-
-                await confirmButton.ClickAsync();
-            }
-        }
-
-        // Assert: Error message should be displayed
-        await Expect(
-                networkCard.GetByText("Cannot attach", new() { Exact = false }))
+        await Expect(networkCard.GetByText(
+                "Activate this network before attaching nodes.",
+                new() { Exact = false }))
             .ToBeVisibleAsync(
                 new() { Timeout = TestConstants.DefaultWaitTimeoutMs });
+
+        await Expect(networkCard.GetByRole(AriaRole.Button, new()
+        {
+            Name = "Attach Node",
+            Exact = true
+        })).ToHaveCountAsync(0);
+
+        await Expect(networkCard.GetByLabel(
+            "Select node",
+            new() { Exact = true })).ToHaveCountAsync(0);
     }
 
     [Test]

@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { ComputeNode } from "@/lib/api/models/computeNode";
 import type { HealthCheck } from "@/lib/api/models/healthCheck";
@@ -36,6 +36,7 @@ type HealthDashboardProps = {
     metricsLoadingByNodeId?: Record<string, boolean>;
     metricsErrorByNodeId?: Record<string, string | null>;
     onRangeChange?: (range: HealthTimeRange) => void;
+    onVisibleNodeIdsChange?: (nodeIds: string[]) => void;
 };
 
 type NodeHealthStatus =
@@ -74,6 +75,7 @@ export default function HealthDashboard({
                                             metricsLoadingByNodeId = {},
                                             metricsErrorByNodeId = {},
                                             onRangeChange,
+                                            onVisibleNodeIdsChange,
                                         }: HealthDashboardProps) {
     const [nodePage, setNodePage] = useState(1);
     const nodePageSize = 10;
@@ -170,6 +172,23 @@ export default function HealthDashboard({
     const selectedNodes = nodesWithHealth.filter(
         item => selectedNodeIds.has(item.node.id),
     );
+    const visibleNodeKey = visiblePageNodes
+        .map(({ node }) => node.id)
+        .join(",");
+    const selectedNodeKey = [...selectedNodeIds].sort().join(",");
+
+    useEffect(() => {
+        if (!onVisibleNodeIdsChange) {
+            return;
+        }
+
+        onVisibleNodeIdsChange([
+            ...new Set([
+                ...visibleNodeKey.split(",").filter(Boolean),
+                ...selectedNodeKey.split(",").filter(Boolean),
+            ]),
+        ]);
+    }, [onVisibleNodeIdsChange, selectedNodeKey, visibleNodeKey]);
 
     const toggleNodeComparison = (nodeId: string) => {
         setSelectedNodeIds(current => {
@@ -329,7 +348,10 @@ export default function HealthDashboard({
                     </div>
                 ) : (
                     <div className={styles.tableWrapper}>
-                        <table className={styles.table}>
+                        <table
+                            className={styles.table}
+                            aria-label="Node health status"
+                        >
                             <thead>
                             <tr>
                                 <th>Node</th>

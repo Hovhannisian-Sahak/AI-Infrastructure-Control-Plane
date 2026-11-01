@@ -24,6 +24,18 @@ type TrackedAlert = {
     clearedAt: number | null;
 };
 
+function getDisplayedAlertsSignature(alerts: TrackedAlert[]) {
+    return JSON.stringify(alerts.map(({ alert, clearedAt }) => [
+        alert.id,
+        alert.nodeId,
+        alert.nodeName,
+        alert.type,
+        alert.message,
+        alert.checkedAt,
+        clearedAt !== null,
+    ]));
+}
+
 function getAlertLabel(type: HealthAlert["type"]) {
     switch (type) {
         case "unhealthy":
@@ -161,6 +173,7 @@ export default function HealthAlerts({
     const trackedAlertsRef = useRef(
         new Map<string, TrackedAlert>(),
     );
+    const displayedAlertsSignatureRef = useRef("");
 
     const [displayedActiveAlerts, setDisplayedActiveAlerts] =
         useState<TrackedAlert[]>([]);
@@ -242,9 +255,12 @@ export default function HealthAlerts({
         /*
          * 3. Immediately publish the new tracked state.
          */
-        setDisplayedActiveAlerts(
-            buildDisplayedAlerts(now),
-        );
+        const nextDisplayedAlerts = buildDisplayedAlerts(now);
+        const nextSignature = getDisplayedAlertsSignature(nextDisplayedAlerts);
+        if (displayedAlertsSignatureRef.current !== nextSignature) {
+            displayedAlertsSignatureRef.current = nextSignature;
+            setDisplayedActiveAlerts(nextDisplayedAlerts);
+        }
     }, [
         alerts.active,
         buildDisplayedAlerts,
@@ -268,9 +284,12 @@ export default function HealthAlerts({
         const intervalId = window.setInterval(() => {
             const now = Date.now();
 
-            setDisplayedActiveAlerts(
-                buildDisplayedAlerts(now),
-            );
+            const nextDisplayedAlerts = buildDisplayedAlerts(now);
+            const nextSignature = getDisplayedAlertsSignature(nextDisplayedAlerts);
+            if (displayedAlertsSignatureRef.current !== nextSignature) {
+                displayedAlertsSignatureRef.current = nextSignature;
+                setDisplayedActiveAlerts(nextDisplayedAlerts);
+            }
         }, 1000);
 
         return () => {

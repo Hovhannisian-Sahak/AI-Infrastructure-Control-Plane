@@ -30,6 +30,8 @@ public sealed class PaginationTests : UiTestBase
             createdNames.Add(name);
         }
 
+        await dashboard.SearchNodesInput.FillAsync("");
+
         var pagination = Page.GetByRole(
             AriaRole.Navigation,
             new() { Name = "Compute node pages", Exact = true });
