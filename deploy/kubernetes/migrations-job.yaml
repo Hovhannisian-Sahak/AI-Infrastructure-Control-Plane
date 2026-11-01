@@ -33,3 +33,6 @@ spec:
             - src/BeeCloud.Infrastructure
             - --startup-project
             - src/BeeCloud.Api
+            - --configuration
+            - Release
+            - --no-build

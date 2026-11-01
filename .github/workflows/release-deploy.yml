@@ -1,0 +1,276 @@
+name: Publish and deploy staging
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: beecloud-staging-deployment
+  cancel-in-progress: false
+
+jobs:
+  publish-images:
+    name: Publish commit images
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/BeeCloud.Api/Dockerfile
+          push: true
+          tags: ghcr.io/hovhannisian-sahak/beecloud-api:${{ github.event.workflow_run.head_sha }}
+      - name: Publish worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/BeeCloud.Worker/Dockerfile
+          push: true
+          tags: ghcr.io/hovhannisian-sahak/beecloud-worker:${{ github.event.workflow_run.head_sha }}
+      - name: Publish UI image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/beecloud.ui/Dockerfile
+          push: true
+          tags: ghcr.io/hovhannisian-sahak/beecloud-ui:${{ github.event.workflow_run.head_sha }}
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=http://localhost:8081
+      - name: Publish migrations image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/migrations.Dockerfile
+          push: true
+          tags: ghcr.io/hovhannisian-sahak/beecloud-migrations:${{ github.event.workflow_run.head_sha }}
+
+  deploy-staging:
+    name: Deploy staging to Kubernetes
+    needs: publish-images
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == github.event.repository.default_branch
+    runs-on: [self-hosted, beecloud-kubernetes]
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Skip stale staging deployment
+        id: latest
+        shell: pwsh
+        env:
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          $latestMain = git ls-remote origin refs/heads/main
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not check the current main branch commit."
+          }
+          $latestSha = ($latestMain -split "\s+")[0]
+          if ($latestSha -eq $env:DEPLOY_SHA) {
+            "should_deploy=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "Skipping stale commit $($env:DEPLOY_SHA); main is now at $latestSha."
+            "should_deploy=false" >> $env:GITHUB_OUTPUT
+          }
+      - name: Validate runner and deployment secrets
+        if: steps.latest.outputs.should_deploy == 'true'
+        shell: pwsh
+        env:
+          BEE_CLOUD_DATABASE_CONNECTION: ${{ secrets.BEE_CLOUD_DATABASE_CONNECTION }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+        run: |
+          $required = @(
+            "BEE_CLOUD_DATABASE_CONNECTION",
+            "POSTGRES_DB",
+            "POSTGRES_USER",
+            "POSTGRES_PASSWORD",
+            "GHCR_USERNAME",
+            "GHCR_PULL_TOKEN"
+          )
+          foreach ($name in $required) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+              throw "Missing required staging environment secret: $name"
+            }
+          }
+          kubectl config current-context
+          if ($LASTEXITCODE -ne 0) {
+            throw "The self-hosted runner has no usable Kubernetes context."
+          }
+      - name: Prepare staging namespace and backing services
+        if: steps.latest.outputs.should_deploy == 'true'
+        shell: pwsh
+        env:
+          BEE_CLOUD_DATABASE_CONNECTION: ${{ secrets.BEE_CLOUD_DATABASE_CONNECTION }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+        run: |
+          $namespace = "beecloud"
+          kubectl get namespace $namespace
+          if ($LASTEXITCODE -ne 0) {
+            throw "Create namespace '$namespace' once with an administrator before deploying."
+          }
+
+          $registryAuth = [Convert]::ToBase64String(
+            [Text.Encoding]::UTF8.GetBytes("$($env:GHCR_USERNAME):$($env:GHCR_PULL_TOKEN)")
+          )
+          $dockerConfig = @{
+            auths = @{
+              "ghcr.io" = @{
+                username = $env:GHCR_USERNAME
+                password = $env:GHCR_PULL_TOKEN
+                auth = $registryAuth
+              }
+            }
+          } | ConvertTo-Json -Depth 5 -Compress
+          $dockerConfigEncoded = [Convert]::ToBase64String(
+            [Text.Encoding]::UTF8.GetBytes($dockerConfig)
+          )
+          $registrySecret = @{
+            apiVersion = "v1"
+            kind = "Secret"
+            type = "kubernetes.io/dockerconfigjson"
+            metadata = @{ name = "ghcr-pull"; namespace = $namespace }
+            data = @{ ".dockerconfigjson" = $dockerConfigEncoded }
+          } | ConvertTo-Json -Depth 5 -Compress
+          $registrySecret | kubectl apply --filename -
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not configure GHCR image pulls in Kubernetes."
+          }
+
+          $applicationSecret = @{
+            apiVersion = "v1"
+            kind = "Secret"
+            type = "Opaque"
+            metadata = @{ name = "beecloud-app-secrets"; namespace = $namespace }
+            stringData = @{
+              BeeCloudDatabase = $env:BEE_CLOUD_DATABASE_CONNECTION
+              POSTGRES_DB = $env:POSTGRES_DB
+              POSTGRES_USER = $env:POSTGRES_USER
+              POSTGRES_PASSWORD = $env:POSTGRES_PASSWORD
+            }
+          } | ConvertTo-Json -Depth 5 -Compress
+          $applicationSecret | kubectl apply --filename -
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not configure the BeeCloud application secret."
+          }
+
+          kubectl patch serviceaccount default --namespace $namespace `
+            --type merge --patch '{"imagePullSecrets":[{"name":"ghcr-pull"}]}'
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not attach the GHCR pull secret to the default service account."
+          }
+
+          kubectl apply --filename deploy/kubernetes/config/app-config.yaml
+          if ($LASTEXITCODE -ne 0) { throw "Could not apply the BeeCloud ConfigMap." }
+          kubectl apply --filename deploy/kubernetes/postgres.yaml
+          if ($LASTEXITCODE -ne 0) { throw "Could not apply PostgreSQL resources." }
+          kubectl apply --filename deploy/kubernetes/redis.yaml
+          if ($LASTEXITCODE -ne 0) { throw "Could not apply Redis resources." }
+          kubectl rollout status deployment/postgres --namespace $namespace --timeout=5m
+          if ($LASTEXITCODE -ne 0) { throw "PostgreSQL did not become ready." }
+          kubectl rollout status deployment/redis --namespace $namespace --timeout=3m
+          if ($LASTEXITCODE -ne 0) { throw "Redis did not become ready." }
+      - name: Apply database migrations
+        if: steps.latest.outputs.should_deploy == 'true'
+        shell: pwsh
+        env:
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          $image = "ghcr.io/hovhannisian-sahak/beecloud-migrations:$env:IMAGE_TAG"
+          $source = [IO.File]::ReadAllText("deploy/kubernetes/migrations-job.yaml")
+          if (-not $source.Contains("beecloud-migrations:dev")) {
+            throw "Migration manifest image placeholder was not found."
+          }
+          $manifestPath = Join-Path $env:RUNNER_TEMP "beecloud-migrations.yaml"
+          $rendered = $source.Replace("beecloud-migrations:dev", $image)
+          [IO.File]::WriteAllText(
+            $manifestPath,
+            $rendered,
+            [Text.UTF8Encoding]::new($false)
+          )
+          kubectl delete job beecloud-migrations --namespace beecloud `
+            --ignore-not-found=true --wait=true
+          if ($LASTEXITCODE -ne 0) { throw "Could not remove the previous migration job." }
+          kubectl apply --filename $manifestPath
+          if ($LASTEXITCODE -ne 0) { throw "Could not create the migration job." }
+          kubectl wait --for=condition=complete job/beecloud-migrations `
+            --namespace beecloud --timeout=10m
+          if ($LASTEXITCODE -ne 0) {
+            kubectl logs job/beecloud-migrations --namespace beecloud
+            throw "Database migrations did not complete."
+          }
+      - name: Roll out API, worker, and UI
+        if: steps.latest.outputs.should_deploy == 'true'
+        shell: pwsh
+        env:
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          $images = @{
+            "deploy/kubernetes/api.yaml" = @{
+              Placeholder = "beecloud-api:dev"
+              Image = "ghcr.io/hovhannisian-sahak/beecloud-api:$env:IMAGE_TAG"
+              Output = "beecloud-api.yaml"
+            }
+            "deploy/kubernetes/worker.yaml" = @{
+              Placeholder = "beecloud-worker:dev"
+              Image = "ghcr.io/hovhannisian-sahak/beecloud-worker:$env:IMAGE_TAG"
+              Output = "beecloud-worker.yaml"
+            }
+            "deploy/kubernetes/ui.yaml" = @{
+              Placeholder = "beecloud-ui:dev"
+              Image = "ghcr.io/hovhannisian-sahak/beecloud-ui:$env:IMAGE_TAG"
+              Output = "beecloud-ui.yaml"
+            }
+          }
+          foreach ($path in $images.Keys) {
+            $config = $images[$path]
+            $source = [IO.File]::ReadAllText($path)
+            if (-not $source.Contains($config.Placeholder)) {
+              throw "Image placeholder '$($config.Placeholder)' was not found in $path."
+            }
+            $manifestPath = Join-Path $env:RUNNER_TEMP $config.Output
+            $rendered = $source.Replace($config.Placeholder, $config.Image)
+            [IO.File]::WriteAllText(
+              $manifestPath,
+              $rendered,
+              [Text.UTF8Encoding]::new($false)
+            )
+            kubectl apply --filename $manifestPath
+            if ($LASTEXITCODE -ne 0) {
+              throw "Could not apply deployment manifest: $path"
+            }
+          }
+          kubectl rollout status deployment/beecloud-api --namespace beecloud --timeout=5m
+          if ($LASTEXITCODE -ne 0) { throw "The API rollout failed." }
+          kubectl rollout status deployment/beecloud-worker --namespace beecloud --timeout=5m
+          if ($LASTEXITCODE -ne 0) { throw "The worker rollout failed." }
+          kubectl rollout status deployment/beecloud-ui --namespace beecloud --timeout=5m
+          if ($LASTEXITCODE -ne 0) { throw "The UI rollout failed." }

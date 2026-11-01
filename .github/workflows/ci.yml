@@ -1,0 +1,195 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: src/beecloud.ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/beecloud.ui/package-lock.json
+      - run: npm ci
+      - run: npm test -- --ci --runInBand
+      - run: npm run lint
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8081
+
+  backend:
+    name: Backend unit and integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+      - run: dotnet test tests/BeeCloud.UnitTests/BeeCloud.UnitTests.csproj --configuration Release
+      - run: dotnet test tests/BeeCloud.IntegrationTests/BeeCloud.IntegrationTests.csproj --configuration Release
+
+  api-ui-e2e:
+    name: API and browser end-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: beecloud
+          POSTGRES_USER: beecloud
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U beecloud -d beecloud"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/beecloud.ui/package-lock.json
+      - run: dotnet build BeeCloud.sln --configuration Release
+      - run: dotnet tool install --global dotnet-ef --version 8.0.19
+      - name: Apply database migrations
+        run: dotnet ef database update --project src/BeeCloud.Infrastructure --startup-project src/BeeCloud.Api --configuration Release
+        env:
+          ConnectionStrings__BeeCloudDatabase: Host=localhost;Port=5432;Database=beecloud;Username=beecloud;Password=ci-only-password
+          ConnectionStrings__Redis: localhost:6379
+      - name: Start API and worker
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/beecloud"
+          export ASPNETCORE_ENVIRONMENT=Development
+          export ASPNETCORE_URLS=http://localhost:8081
+          export ConnectionStrings__BeeCloudDatabase='Host=localhost;Port=5432;Database=beecloud;Username=beecloud;Password=ci-only-password'
+          export ConnectionStrings__Redis=localhost:6379
+          nohup dotnet src/BeeCloud.Api/bin/Release/net8.0/BeeCloud.Api.dll > "$RUNNER_TEMP/beecloud/api.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/beecloud/api.pid"
+          nohup dotnet src/BeeCloud.Worker/bin/Release/net8.0/BeeCloud.Worker.dll > "$RUNNER_TEMP/beecloud/worker.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/beecloud/worker.pid"
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:8081/health > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/beecloud/api.log"
+          exit 1
+      - name: Run API contract tests
+        run: dotnet test tests/BeeCloud.ApiTests/BeeCloud.ApiTests.csproj --configuration Release --no-build
+        env:
+          BEE_CLOUD_API_URL: http://localhost:8081
+      - name: Install Chromium for Playwright
+        run: pwsh tests/BeeCloud.UiTests/bin/Release/net8.0/playwright.ps1 install --with-deps chromium
+      - name: Install frontend dependencies and build
+        working-directory: src/beecloud.ui
+        run: |
+          npm ci
+          npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8081
+      - name: Start frontend
+        shell: bash
+        working-directory: src/beecloud.ui
+        run: |
+          nohup npm run start -- --hostname 0.0.0.0 --port 3001 > "$RUNNER_TEMP/beecloud/ui.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/beecloud/ui.pid"
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:3001/ > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/beecloud/ui.log"
+          exit 1
+      - name: Run browser end-to-end tests
+        run: dotnet test tests/BeeCloud.UiTests/BeeCloud.UiTests.csproj --configuration Release --no-build
+        env:
+          BEECLOUD_API_URL: http://localhost:8081
+          BEECLOUD_UI_URL: http://localhost:3001
+          BEECLOUD_HEADLESS: "true"
+      - name: Upload service logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-ui-e2e-logs
+          path: ${{ runner.temp }}/beecloud/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  container-build:
+    name: Container image build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/BeeCloud.Api/Dockerfile
+          push: false
+          tags: beecloud-api:ci
+      - name: Build worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/BeeCloud.Worker/Dockerfile
+          push: false
+          tags: beecloud-worker:ci
+      - name: Build UI image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/beecloud.ui/Dockerfile
+          push: false
+          tags: beecloud-ui:ci
+      - name: Build migrations image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/migrations.Dockerfile
+          push: false
+          tags: beecloud-migrations:ci

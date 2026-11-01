@@ -38,6 +38,24 @@ spec:
                   name: beecloud-app-secrets
                   key: POSTGRES_PASSWORD
 
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 20
+            periodSeconds: 10
+
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
