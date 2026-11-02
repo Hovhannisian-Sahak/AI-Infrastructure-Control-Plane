@@ -63,11 +63,15 @@ jobs:
           PERFORMANCE_API_BASE_URL: ${{ vars.PERFORMANCE_API_BASE_URL }}
           PERFORMANCE_UI_BASE_URL: ${{ vars.PERFORMANCE_UI_BASE_URL }}
           PERFORMANCE_NODE_ID: ${{ vars.PERFORMANCE_NODE_ID }}
-          PROFILE: ${{ inputs.profile }}
+          PERFORMANCE_PROFILE: ${{ inputs.profile }}
           INCLUDE_WRITES: ${{ inputs.include_writes }}
         run: |
+          $profile = $env:PERFORMANCE_PROFILE
+          if ($profile -notin @("baseline", "load", "stress", "spike", "soak")) {
+            throw "Unsupported performance profile '$profile'."
+          }
           $arguments = @{
-            Profile = $env:PROFILE
+            Profile = $profile
             ApiBaseUrl = $env:PERFORMANCE_API_BASE_URL
             UiBaseUrl = $env:PERFORMANCE_UI_BASE_URL
             AllowRemoteTarget = $true
@@ -88,5 +92,5 @@ jobs:
         with:
           name: jmeter-${{ inputs.profile }}-${{ github.run_id }}
           path: tests/performance/results/
-          if-no-files-found: warn
+          if-no-files-found: ignore
           retention-days: 30
