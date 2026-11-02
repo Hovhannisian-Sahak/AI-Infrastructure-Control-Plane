@@ -66,17 +66,17 @@ jobs:
           PROFILE: ${{ inputs.profile }}
           INCLUDE_WRITES: ${{ inputs.include_writes }}
         run: |
-          $arguments = @(
-            "-Profile", $env:PROFILE,
-            "-ApiBaseUrl", $env:PERFORMANCE_API_BASE_URL,
-            "-UiBaseUrl", $env:PERFORMANCE_UI_BASE_URL,
-            "-AllowRemoteTarget"
-          )
+          $arguments = @{
+            Profile = $env:PROFILE
+            ApiBaseUrl = $env:PERFORMANCE_API_BASE_URL
+            UiBaseUrl = $env:PERFORMANCE_UI_BASE_URL
+            AllowRemoteTarget = $true
+          }
           if ($env:PERFORMANCE_NODE_ID) {
-            $arguments += @("-NodeId", $env:PERFORMANCE_NODE_ID)
+            $arguments.NodeId = $env:PERFORMANCE_NODE_ID
           }
           if ($env:INCLUDE_WRITES -eq "true") {
-            $arguments += "-IncludeWrites"
+            $arguments.IncludeWrites = $true
           }
           & ./tests/performance/run-performance.ps1 @arguments
           if ($LASTEXITCODE -ne 0) {

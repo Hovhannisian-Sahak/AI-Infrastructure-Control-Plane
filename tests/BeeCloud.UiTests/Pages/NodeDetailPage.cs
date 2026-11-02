@@ -20,4 +20,7 @@ public sealed class NodeDetailPage(IPage page)
   
     public ILocator ActiveFaultLabel =>
         Page.GetByText("Active Fault", new() { Exact = true });
+
+    public ILocator ActiveFault(string fault) =>
+        Page.GetByText(fault, new() { Exact = true });
 }

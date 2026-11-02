@@ -107,11 +107,8 @@ public sealed class IncidentInvestigationWorkflowTests : UiTestBase
 
         await Expect(detail.Heading(nodeName)).ToBeVisibleAsync();
 
-        var card = dashboard.NodeCard(nodeName);
-
-        await Expect(
-            card.GetByText("Active Fault", new() { Exact = true })
-        ).ToBeVisibleAsync();
+        await Expect(detail.ActiveFaultLabel).ToBeVisibleAsync();
+        await Expect(detail.ActiveFault("GpuFailure")).ToBeVisibleAsync();
         await detail.BackToNodes.ClickAsync();
         await dashboard.Heading.WaitForAsync();
 
