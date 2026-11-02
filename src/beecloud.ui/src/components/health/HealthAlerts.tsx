@@ -73,16 +73,6 @@ function AlertList({
         currentPage * pageSize,
     );
 
-    useEffect(() => {
-        if (page !== currentPage) {
-            setPage(currentPage);
-        }
-    }, [page, currentPage]);
-
-    useEffect(() => {
-        setPage(1);
-    }, [alerts.length]);
-
     if (alerts.length === 0) {
         return (
             <p className={styles.empty} role="status">
@@ -248,7 +238,10 @@ export default function HealthAlerts({
                 !currentKeys.has(key) &&
                 tracked.clearedAt === null
             ) {
-                tracked.clearedAt = now;
+                trackedAlerts.set(key, {
+                    ...tracked,
+                    clearedAt: now,
+                });
             }
         }
 
@@ -355,6 +348,7 @@ export default function HealthAlerts({
                 </h3>
 
                 <AlertList
+                    key={`active-${activeAlerts.length}`}
                     alerts={activeAlerts}
                     recentlyClearedIds={
                         recentlyClearedIds
@@ -371,6 +365,7 @@ export default function HealthAlerts({
                 </h3>
 
                 <AlertList
+                    key={`historical-${alerts.historical.length}`}
                     alerts={alerts.historical}
                     historical
                 />
