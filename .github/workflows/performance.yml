@@ -66,23 +66,18 @@ jobs:
           PERFORMANCE_PROFILE: ${{ inputs.profile }}
           INCLUDE_WRITES: ${{ inputs.include_writes }}
         run: |
-          $profile = $env:PERFORMANCE_PROFILE
-          if ($profile -notin @("baseline", "load", "stress", "spike", "soak")) {
-            throw "Unsupported performance profile '$profile'."
+          $selectedProfile = $env:PERFORMANCE_PROFILE
+          if ($selectedProfile -notin @("baseline", "load", "stress", "spike", "soak")) {
+            throw "Unsupported performance profile '$selectedProfile'."
           }
-          $arguments = @{
-            Profile = $profile
-            ApiBaseUrl = $env:PERFORMANCE_API_BASE_URL
-            UiBaseUrl = $env:PERFORMANCE_UI_BASE_URL
-            AllowRemoteTarget = $true
-          }
-          if ($env:PERFORMANCE_NODE_ID) {
-            $arguments.NodeId = $env:PERFORMANCE_NODE_ID
-          }
-          if ($env:INCLUDE_WRITES -eq "true") {
-            $arguments.IncludeWrites = $true
-          }
-          & ./tests/performance/run-performance.ps1 @arguments
+          $includeWrites = $env:INCLUDE_WRITES -eq "true"
+          & ./tests/performance/run-performance.ps1 `
+            -Profile $selectedProfile `
+            -ApiBaseUrl $env:PERFORMANCE_API_BASE_URL `
+            -UiBaseUrl $env:PERFORMANCE_UI_BASE_URL `
+            -NodeId $env:PERFORMANCE_NODE_ID `
+            -IncludeWrites:$includeWrites `
+            -AllowRemoteTarget
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
