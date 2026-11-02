@@ -64,7 +64,6 @@ jobs:
           PERFORMANCE_UI_BASE_URL: ${{ vars.PERFORMANCE_UI_BASE_URL }}
           PERFORMANCE_NODE_ID: ${{ vars.PERFORMANCE_NODE_ID }}
           PERFORMANCE_PROFILE: ${{ inputs.profile }}
-          PERFORMANCE_PROFILE: ${{ inputs.profile }}
           INCLUDE_WRITES: ${{ inputs.include_writes }}
         run: |
           $selectedProfile = $env:PERFORMANCE_PROFILE
