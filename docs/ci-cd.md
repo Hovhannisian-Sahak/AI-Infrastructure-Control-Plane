@@ -72,17 +72,25 @@ workflow.
 The `Performance tests` workflow is manually dispatched against a protected
 GitHub environment named `performance`. Configure its variables:
 
-- `PERFORMANCE_API_BASE_URL`: API URL for a dedicated performance environment.
-- `PERFORMANCE_UI_BASE_URL`: UI URL for the same environment.
+- `PERFORMANCE_API_BASE_URL`: `http://localhost:8081` when using the local
+  Kubernetes port-forward below.
+- `PERFORMANCE_UI_BASE_URL`: `http://localhost:3001` when using the local
+  Kubernetes port-forward below.
 - `PERFORMANCE_NODE_ID` (optional): node ID for health/metrics history requests.
 
-If either URL is missing, the JMeter job is skipped; configure both URLs and
-dispatch the workflow again. GitHub-hosted runners cannot access services
-bound only to `localhost` on a developer's machine. Provide a URL reachable
-from the runner, or use a self-hosted runner and a dedicated staging endpoint.
-Protect that GitHub environment with required reviewers. Use a disposable
-database for `include_writes`; never point load profiles at production. Start
-with `baseline`, then use `load` when the environment is ready. `stress`, `spike`,
+The workflow runs on a self-hosted runner. To use the localhost values, keep
+both Kubernetes port-forwards running on that runner's machine for the duration
+of the job:
+
+```powershell
+kubectl port-forward -n beecloud svc/beecloud-api 8081:80
+kubectl port-forward -n beecloud svc/beecloud-ui 3001:3001
+```
+
+Alternatively, configure URLs reachable from the runner. Protect the
+`performance` environment with required reviewers. Use a disposable database
+for `include_writes`; never point load profiles at production. Start with
+`baseline`, then use `load` when the environment is ready. `stress`, `spike`,
 and `soak` are explicit, manually selected runs. The runner enforces the
 configured p95 and error-rate thresholds and stores the JTL, JMeter log, and HTML
 report as a 30-day workflow artifact, even when a run fails.

@@ -29,7 +29,7 @@ concurrency:
 jobs:
   run-performance:
     name: Run JMeter profile
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 90
     environment: performance
     if: vars.PERFORMANCE_API_BASE_URL != '' && vars.PERFORMANCE_UI_BASE_URL != ''
